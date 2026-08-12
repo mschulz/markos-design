@@ -312,6 +312,52 @@ the union covered all four, while each individual run covered 75 percent.
 MarkOS now reports cited and uncited chunk counts during remapping so source
 coverage cannot be confused with graph-item provenance coverage.
 
+### Claude Sonnet Qualification
+
+The same four prepared Active Badge chunks were then tested twice through
+Graphify's `claude-cli` backend with the `sonnet` model alias, one request at a
+time. Claude Code 2.1.220 supplied JSON Schema constrained output, disabled
+session persistence, and used the authenticated Claude Team subscription.
+Nonessential Claude Code traffic was disabled for the trial.
+
+| Measure | Run 1 | Run 2 |
+|---|---:|---:|
+| Input/output tokens | 34,200 / 6,834 | 34,200 / 6,351 |
+| Nodes | 10 | 14 |
+| Edges | 9 | 15 |
+| Hyperedges | 1 | 3 |
+| Prepared chunks cited | 4/4 | 4/4 |
+| Source-location coverage | 100% | 100% |
+| Strict validation | Fail | Fail |
+
+Both runs kept source paths within the prepared-corpus allowlist. Hash-verified
+remapping located all graph items in the original `Active-Badge.md` ranges, and
+both runs cited every prepared chunk. Manual inspection found the entities
+generally grounded in the note, including its explicitly listed papers and
+applications.
+
+Neither graph passed the confidence contract. Run 1 gave eight `EXTRACTED`
+relationships probabilistic scores from 0.8 to 0.95 instead of the required
+fixed score of 1.0. Run 2 did the same for fourteen relationships and also used
+out-of-contract scores for one `AMBIGUOUS` and two `INFERRED` edges. MarkOS did
+not overwrite provider-supplied scores.
+
+The raw graphs differed. Using case-folded human labels, six of 18 unique node
+labels overlapped (33.3 percent Jaccard). Four of 20 unique
+label-relation-label edge signatures overlapped (20.0 percent Jaccard). Some of
+this drift was granularity rather than fabrication—for example, one run used a
+plain software label while the other qualified it—but it still makes graph
+identity and updates unstable.
+
+Claude therefore improves chunk coverage and grounding over the tested local
+models, but the current Graphify extraction prompt and unconstrained semantic
+identity do not meet MarkOS's validation or reproducibility gates. Do not scale
+the `claude-cli` backend to the vault. The next provider experiment should use a
+MarkOS-owned extraction contract with explicit conditional confidence rules,
+canonical entity identity and a stability-oriented prompt, tested first through
+the Anthropic API or a narrowly controlled Claude CLI adapter. Graphify can
+remain a downstream graph consumer if that normalized contract qualifies.
+
 ## Revised Responsibility Split
 
 ```text
@@ -375,7 +421,8 @@ support for later generated claims.
 
 Before adopting Graphify as an M13/M14 dependency:
 
-1. Replace or constrain the semantic provider so repeated runs meet an explicit
+1. Define a MarkOS-owned extraction contract with conditional confidence rules
+   and canonical entity identity, then require repeated runs to meet an explicit
    node/edge stability threshold and both pass strict validation.
 2. Define a prepared-chunk coverage policy and a bounded retry for chunks that
    produce no graph items; never silently treat omitted chunks as processed.

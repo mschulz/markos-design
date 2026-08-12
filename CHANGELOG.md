@@ -48,6 +48,9 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Measured narrow-chunk reproducibility: short ordinal chunk paths fixed model
   path corruption and reduced citation breadth, but repeated Qwen 3 graphs had
   low node/edge overlap and only 75-percent per-run chunk coverage.
+- Qualified Claude Sonnet through Graphify's Claude Code backend: both runs
+  cited all prepared chunks with complete mapped provenance, but both violated
+  the confidence contract and node/edge overlap remained too low to scale.
 
 ---
 
