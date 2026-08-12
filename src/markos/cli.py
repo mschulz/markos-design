@@ -695,7 +695,12 @@ def remap_graph_source_locations(
     except SemanticCorpusError as error:
         error_console.print(f"[bold red]Graph source remapping failed:[/bold red] {error}")
         raise typer.Exit(code=1) from error
-    console.print(f"Remapped provenance for {remapped.item_count} graph items into {remapped.path}")
+    console.print(
+        f"Remapped provenance for {remapped.item_count} graph items into {remapped.path}; "
+        f"cited {remapped.cited_chunk_count}/{remapped.total_chunk_count} prepared chunks."
+    )
+    if remapped.uncited_chunks:
+        console.print("Uncited prepared chunks: " + ", ".join(remapped.uncited_chunks))
 
 
 @app.command("para-audit")

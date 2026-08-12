@@ -215,6 +215,9 @@ uv run markos prepare-graph-corpus /path/to/copied-source \
 The command writes exact Markdown slices and a deterministic `source-map.json`.
 It records original and chunk hashes plus inclusive original line ranges, and
 refuses to write inside the source corpus or overwrite an existing output.
+Model-facing chunk paths use short deterministic ordinal identifiers; complete
+SHA-256 integrity remains in the manifest rather than in paths the model must
+copy exactly.
 Point Graphify at `/path/to/prepared-corpus`, then remap its output:
 
 ```console
@@ -233,6 +236,9 @@ Graphify defines every `EXTRACTED` relationship as confidence `1.0`, so a
 missing score on that explicit label is restored deterministically and marked
 `confidence_score_origin: markos_graphify_extracted_policy`. Missing scores on
 `INFERRED` or `AMBIGUOUS` relationships are never guessed and stop remapping.
+The remapping summary also reports how many prepared chunks the graph cites and
+lists uncited chunks. Uncited source sections are not automatically an error,
+but must remain visible during coverage review.
 
 Finally, validate the remapped graph against the original corpus before
 inspecting or importing it:

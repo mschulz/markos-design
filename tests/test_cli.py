@@ -291,6 +291,8 @@ def test_prepare_remap_and_validate_graph_workflow(tmp_path: Path) -> None:
     assert "1 Markdown source as 1 chunk" in preparation.stdout
     assert remapping.exit_code == 0
     assert "Remapped provenance for 1 graph items" in remapping.stdout
+    assert "cited 1/1 prepared" in remapping.stdout
+    assert "chunks." in remapping.stdout
     assert validation.exit_code == 0
     assert "source-location coverage 100.0%" in validation.stdout
 

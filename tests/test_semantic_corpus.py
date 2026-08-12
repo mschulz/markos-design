@@ -33,6 +33,10 @@ def test_preparation_splits_at_headings_and_is_deterministic(tmp_path: Path) -> 
 
     assert first.source_count == 1
     assert first.chunk_count == 2
+    assert [chunk.chunk_path for chunk in first_manifest.chunks] == [
+        "chunks/0001/0001.md",
+        "chunks/0001/0002.md",
+    ]
     assert first.manifest_path.read_bytes() == second.manifest_path.read_bytes()
     assert (first.path / GRAPHIFY_IGNORE_FILENAME).read_text(encoding="utf-8") == (
         "source-map.json\n"
@@ -98,6 +102,9 @@ def test_remap_supplies_original_path_and_broad_source_range(tmp_path: Path) -> 
     remapped = json.loads(output.read_text(encoding="utf-8"))
 
     assert result.item_count == 3
+    assert result.cited_chunk_count == 1
+    assert result.total_chunk_count == 1
+    assert result.uncited_chunks == ()
     assert remapped["nodes"][0]["source_file"] == "Note.md"
     assert remapped["nodes"][0]["source_location"] == "L1-L3"
     assert remapped["nodes"][0]["source_location_origin"] == "markos_chunk_range"
@@ -203,6 +210,44 @@ def test_remap_normalizes_only_missing_extracted_confidence(tmp_path: Path) -> N
     assert edge["confidence_score"] == 1.0
     assert edge["confidence_score_origin"] == "markos_graphify_extracted_policy"
     assert validate_graph_file(output, source).is_valid
+
+
+def test_remap_reports_uncited_prepared_chunks(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    contents = "# One\n" + ("alpha\n" * 50) + "# Two\n" + ("beta\n" * 50)
+    (source / "Note.md").write_text(contents, encoding="utf-8")
+    prepared = prepare_semantic_corpus(
+        source,
+        tmp_path / "prepared",
+        maximum_chunk_characters=256,
+    )
+    manifest = load_source_map(prepared.manifest_path)
+    graph = _write_graph(
+        tmp_path / "graph.json",
+        {
+            "nodes": [
+                {
+                    "id": "one",
+                    "label": "One",
+                    "source_file": manifest.chunks[0].chunk_path,
+                }
+            ],
+            "edges": [],
+        },
+    )
+
+    result = remap_graph_sources(
+        graph,
+        prepared.manifest_path,
+        source,
+        prepared.path,
+        tmp_path / "remapped.json",
+    )
+
+    assert result.cited_chunk_count == 1
+    assert result.total_chunk_count == len(manifest.chunks)
+    assert result.uncited_chunks == tuple(chunk.chunk_path for chunk in manifest.chunks[1:])
 
 
 @pytest.mark.parametrize("confidence", ["INFERRED", "AMBIGUOUS"])

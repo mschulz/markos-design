@@ -70,6 +70,9 @@ class RemappedGraph:
 
     path: Path
     item_count: int
+    cited_chunk_count: int
+    total_chunk_count: int
+    uncited_chunks: tuple[str, ...]
 
 
 def prepare_semantic_corpus(
@@ -97,7 +100,7 @@ def prepare_semantic_corpus(
         raise SemanticCorpusError("source corpus contains no Markdown files")
 
     chunks_with_content: list[tuple[SourceChunk, bytes]] = []
-    for relative_path in markdown_paths:
+    for source_number, relative_path in enumerate(markdown_paths, start=1):
         source_file = source / relative_path
         try:
             source_bytes = source_file.read_bytes()
@@ -108,10 +111,9 @@ def prepare_semantic_corpus(
             ) from error
         source_hash = sha256(source_bytes).hexdigest()
         slices = _heading_aware_slices(source_text, maximum_chunk_characters)
-        path_digest = sha256(relative_path.as_posix().encode()).hexdigest()
         for number, (start_line, end_line, content) in enumerate(slices, start=1):
             chunk_bytes = content.encode("utf-8")
-            chunk_path = f"chunks/{path_digest}/{number:04}.md"
+            chunk_path = f"chunks/{source_number:04}/{number:04}.md"
             chunks_with_content.append(
                 (
                     SourceChunk(
@@ -180,6 +182,7 @@ def remap_graph_sources(
     payload = _read_json_object(graph_path, label="graph")
 
     item_count = 0
+    cited_chunks: set[str] = set()
     for collection_name in ("nodes", "edges", "hyperedges"):
         collection = payload.get(collection_name, [] if collection_name == "hyperedges" else None)
         if not isinstance(collection, list):
@@ -187,7 +190,7 @@ def remap_graph_sources(
         for number, item in enumerate(collection):
             if not isinstance(item, dict):
                 raise SemanticCorpusError(f"{collection_name}[{number}] must be an object")
-            _remap_item(item, chunks, f"{collection_name}[{number}]")
+            cited_chunks.add(_remap_item(item, chunks, f"{collection_name}[{number}]"))
             if collection_name != "nodes":
                 _normalize_graphify_confidence(item, f"{collection_name}[{number}]")
             item_count += 1
@@ -197,7 +200,14 @@ def remap_graph_sources(
         output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     except OSError as error:
         raise SemanticCorpusError(f"could not write remapped graph: {output}") from error
-    return RemappedGraph(path=output, item_count=item_count)
+    uncited_chunks = tuple(sorted(chunks.keys() - cited_chunks))
+    return RemappedGraph(
+        path=output,
+        item_count=item_count,
+        cited_chunk_count=len(cited_chunks),
+        total_chunk_count=len(chunks),
+        uncited_chunks=uncited_chunks,
+    )
 
 
 def load_source_map(path: Path) -> SemanticCorpusManifest:
@@ -366,7 +376,7 @@ def _verify_manifest_files(
             raise SemanticCorpusError(f"prepared chunk hash changed: {chunk.chunk_path}")
 
 
-def _remap_item(item: dict[str, Any], chunks: dict[str, SourceChunk], location: str) -> None:
+def _remap_item(item: dict[str, Any], chunks: dict[str, SourceChunk], location: str) -> str:
     chunk_path = item.get("source_file")
     if not isinstance(chunk_path, str) or chunk_path not in chunks:
         raise SemanticCorpusError(
@@ -378,6 +388,7 @@ def _remap_item(item: dict[str, Any], chunks: dict[str, SourceChunk], location: 
     remapped_location, origin = _remapped_location(source_location, chunk)
     item["source_location"] = remapped_location
     item["source_location_origin"] = origin
+    return chunk_path
 
 
 def _normalize_graphify_confidence(item: dict[str, Any], location: str) -> None:

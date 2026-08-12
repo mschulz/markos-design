@@ -87,9 +87,13 @@ agents. Keep it concise, current, and free of secrets.
   corpus, records source and chunk hashes plus original line ranges, and remaps only allowlisted,
   hash-verified chunk provenance. Broad chunk-derived locations must be labelled distinctly from
   provider-supplied chunk line locations.
+- Keep model-facing chunk paths short and deterministic (ordinal IDs); retain cryptographic hashes
+  in the source-map manifest. Report uncited prepared chunks separately from graph-item provenance.
 - Normalize a missing confidence score only when Graphify explicitly labels the relationship
   `EXTRACTED`, whose specification fixes the score at `1.0`; label that normalization as MarkOS
   policy. Never infer missing `INFERRED` or `AMBIGUOUS` scores.
+- Two identical Qwen 3 14B runs over four narrower Active Badge chunks were not reproducible:
+  node-label overlap was 6/13 by union and edge-signature overlap 3/13. Do not scale this provider.
 
 ## Python Environment
 
