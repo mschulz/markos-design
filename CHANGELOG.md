@@ -6,6 +6,15 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ---
 
+## Unreleased
+
+### Proposed
+
+- Added the M10 Automated Read-Only Synchronization milestone proposal.
+- Recorded the implemented M0–M9 software milestone history.
+
+---
+
 ## Design Milestone D0 – Foundation
 
 ### Added

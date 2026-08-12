@@ -16,29 +16,38 @@ The implementation of MarkOS lives in the separate `markos` repository.
 | ADR-0000 Why MarkOS Exists | ⬜ |
 | ADR-0001 Markdown is the Source of Truth | ⬜ |
 | Engineering Charter | ⬜ |
-| Milestones | ⬜ |
+| Milestones | ✅ |
 | Home | ⬜ |
 
-Progress: **1 / 6**
+Progress: **2 / 6**
 
 ---
 
-# Current Software Milestone
+# Software Milestones
 
-## M0 — Foundation
+## Completed
 
-| Task | Status |
-|------|:------:|
-| Repository | ✅ |
-| uv Project | ✅ |
-| Typer CLI | ⬜ |
-| Configuration | ⬜ |
-| Logging | ⬜ |
-| Domain Model | ⬜ |
-| Tests | ⬜ |
-| Release v0.1.0 | ⬜ |
+| Milestone | Outcome | Status |
+|-----------|---------|:------:|
+| M0 — Foundation | Project, CLI, configuration, logging, domain model and tests | ✅ |
+| M1 — Markdown Discovery | Read-only Markdown discovery and parsing | ✅ |
+| M2 — DuckDB Index | Rebuildable external knowledge index | ✅ |
+| M3 — Index Search | Read-only indexed search and document queries | ✅ |
+| M4 — Link Graph | Link resolution and graph queries | ✅ |
+| M5 — Read-Only API | FastAPI interface over the index | ✅ |
+| M6 — Graph Analysis | Graph health metrics and path analysis | ✅ |
+| M7 — Ingestion Diagnostics | Resilient ingestion with rejection reporting | ✅ |
+| M8 — Index Freshness | Source fingerprints and change detection | ✅ |
+| M9 — Conditional Synchronization | No-op sync when current and transactional rebuild when stale | ✅ |
 
-Progress: **2 / 8**
+## Proposed
+
+### M10 — Automated Read-Only Synchronization
+
+M10 proposes a foreground watcher that keeps the external DuckDB index current
+without modifying the Markdown vault. The proposal is defined in [[Milestones]].
+
+Status: **Proposed — awaiting acceptance**
 
 ---
 
