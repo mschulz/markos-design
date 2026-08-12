@@ -77,6 +77,11 @@ agents. Keep it concise, current, and free of secrets.
   references.
 - Create and refresh concept memories through preview-and-confirm workflows with reviewable diffs.
 - Invalidate derived extraction, summaries, and memories when recorded source hashes change.
+- Treat semantic graph output as untrusted. Before import, require corpus-allowlisted source
+  paths, resolved endpoints, valid confidence fields and complete source-location coverage.
+- The local Ollama pilot rejected Qwen 2.5 7B for fabricated output and Qwen 3 14B because
+  Graphify emitted no source locations. Do not scale semantic extraction until MarkOS-owned
+  source mapping or an equivalent provider contract closes this grounding gap.
 
 ## Python Environment
 

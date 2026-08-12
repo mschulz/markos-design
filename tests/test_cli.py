@@ -215,6 +215,32 @@ def test_graph_caps_isolated_document_preview(tmp_path: Path) -> None:
     assert "and 5 more isolated documents" in result.stdout
 
 
+def test_validate_graph_reports_success_and_rejection(tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / "Note.md").write_text("# Note\n", encoding="utf-8")
+    graph = tmp_path / "graph.json"
+    graph.write_text(
+        '{"nodes":[{"id":"note","label":"Note","source_file":"Note.md",'
+        '"source_location":"L1"}],"edges":[]}',
+        encoding="utf-8",
+    )
+
+    passed = runner.invoke(app, ["validate-graph", str(graph), "--corpus", str(corpus)])
+    graph.write_text(
+        '{"nodes":[{"id":"fake","label":"Fake","source_file":"Fake.md",'
+        '"source_location":null}],"edges":[]}',
+        encoding="utf-8",
+    )
+    rejected = runner.invoke(app, ["validate-graph", str(graph), "--corpus", str(corpus)])
+
+    assert passed.exit_code == 0
+    assert "Graph passed validation" in passed.stdout
+    assert rejected.exit_code == 1
+    assert "Graph rejected" in rejected.stdout
+    assert "unknown_source_file" in rejected.stdout
+
+
 def test_freshness_exits_zero_when_current_and_one_when_stale(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
     vault = tmp_path / "vault"

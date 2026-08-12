@@ -13,6 +13,7 @@ from markos import __version__
 from markos.analysis import GraphAnalysisError, analyze_graph, shortest_path
 from markos.api import create_app
 from markos.freshness import FreshnessError, check_freshness
+from markos.graph_validation import GraphValidationError, validate_graph_file
 from markos.index import KnowledgeIndexError, rebuild_vault_index
 from markos.logging import configure_logging
 from markos.markdown import MarkdownDiscoveryError, MarkdownParseError
@@ -561,6 +562,57 @@ def graph(
         remaining = len(report.isolated_documents) - len(preview)
         if remaining:
             console.print(f"… and {remaining} more isolated documents")
+
+
+@app.command("validate-graph")
+def validate_graph(
+    graph_file: Annotated[
+        Path,
+        typer.Argument(help="Graphify graph.json file to validate."),
+    ],
+    corpus: Annotated[
+        Path,
+        typer.Option("--corpus", help="Exact corpus directory supplied to Graphify."),
+    ],
+    minimum_location_coverage: Annotated[
+        float,
+        typer.Option(
+            "--minimum-location-coverage",
+            min=0.0,
+            max=1.0,
+            help="Required fraction of graph items with source locations.",
+        ),
+    ] = 1.0,
+) -> None:
+    """Validate untrusted semantic graph output against its source corpus."""
+
+    try:
+        report = validate_graph_file(
+            graph_file,
+            corpus,
+            minimum_location_coverage=minimum_location_coverage,
+        )
+    except GraphValidationError as error:
+        error_console.print(f"[bold red]Graph validation failed:[/bold red] {error}")
+        raise typer.Exit(code=2) from error
+
+    console.print(
+        f"Checked {report.node_count} nodes, {report.edge_count} edges and "
+        f"{report.hyperedge_count} hyperedges; source-location coverage "
+        f"{report.location_coverage:.1%}."
+    )
+    if report.is_valid:
+        console.print("[bold green]Graph passed validation.[/bold green]")
+        return
+
+    table = Table(title="Graph rejected")
+    table.add_column("Code")
+    table.add_column("Location")
+    table.add_column("Problem")
+    for issue in report.issues:
+        table.add_row(issue.code, issue.location, issue.message)
+    console.print(table)
+    raise typer.Exit(code=1)
 
 
 @app.command("para-audit")

@@ -202,6 +202,34 @@ Find the shortest directed link path between two notes:
 uv run markos graph --from "Home.md" --to "Projects/MarkOS.md"
 ```
 
+### Validate an experimental semantic graph
+
+Treat graphs produced by an LLM as untrusted. Validate a Graphify `graph.json`
+against the exact copied corpus used for extraction before inspecting or
+importing it:
+
+```console
+uv run markos validate-graph /path/to/graphify-out/graph.json \
+  --corpus /path/to/copied-corpus
+```
+
+The validator is read-only. It rejects fabricated or unsafe source paths,
+dangling edge and hyperedge endpoints, duplicate IDs, missing provenance,
+invalid confidence fields, and insufficient source-location coverage. It exits
+with status `0` only when every check passes, `1` when the graph is rejected,
+and `2` when the graph or corpus cannot be read.
+
+Validation proves structural grounding, not semantic truth. Review extracted
+relationships against the cited source locations before accepting them. A
+lower location threshold may be useful for diagnosis but should not be used as
+an ingestion gate:
+
+```console
+uv run markos validate-graph /path/to/graph.json \
+  --corpus /path/to/copied-corpus \
+  --minimum-location-coverage 0.8
+```
+
 ### Audit existing folders before PARA migration
 
 Assess one or more existing vault folders without changing them:
