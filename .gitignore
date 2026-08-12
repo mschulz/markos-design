@@ -9,9 +9,9 @@ wheels/
 # macOS metadata
 .DS_Store
 
-# Virtual environments
+# Virtual environments (symlinked outside iCloud sync; see .envrc)
 .venv
-venv/
+venv
 
 # Personal Claude Code instructions
 CLAUDE.local.md
