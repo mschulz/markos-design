@@ -1,0 +1,52 @@
+[project]
+name = "markos"
+version = "0.1.0"
+description = "A local-first personal knowledge engine built on Markdown"
+readme = "README.md"
+authors = [
+    { name = "Mark Schulz", email = "mark.f.schulz@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "duckdb>=1.5.5",
+    "fastapi>=0.141.1",
+    "markdown-it-py>=4.2.0",
+    "networkx>=3.6.1",
+    "pyarrow>=25.0.0",
+    "pydantic>=2.13.4",
+    "python-frontmatter>=1.3.0",
+    "rich>=15.0.0",
+    "typer>=0.27.0",
+    "uvicorn>=0.52.1",
+]
+
+[project.scripts]
+markos = "markos.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.0",
+    "pre-commit>=4.6.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.1",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["src/markos", "tests"]
