@@ -40,14 +40,14 @@ Progress: **2 / 6**
 | M8 — Index Freshness | Source fingerprints and change detection | ✅ |
 | M9 — Conditional Synchronization | No-op sync when current and transactional rebuild when stale | ✅ |
 
-## Proposed
+## Current
 
 ### M10 — Automated Read-Only Synchronization
 
-M10 proposes a foreground watcher that keeps the external DuckDB index current
-without modifying the Markdown vault. The proposal is defined in [[Milestones]].
+M10 adds a foreground watcher that keeps the external DuckDB index current
+without modifying the Markdown vault. The accepted scope is defined in [[Milestones]].
 
-Status: **Proposed — awaiting acceptance**
+Status: **Accepted — implementation authorised**
 
 ---
 

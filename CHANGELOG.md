@@ -8,9 +8,10 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
-### Proposed
+### Accepted
 
 - Added the M10 Automated Read-Only Synchronization milestone proposal.
+- Accepted M10 for implementation.
 - Recorded the implemented M0–M9 software milestone history.
 
 ---

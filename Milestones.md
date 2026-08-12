@@ -1,12 +1,12 @@
 ---
 title: Milestones
 type: roadmap
-status: proposed
-version: 0.1
+status: active
+version: 1.0
 owner: Mark Schulz
 created: 2026-08-12
 updated: 2026-08-12
-reviewed:
+reviewed: 2026-08-12
 tags:
   - roadmap
   - architecture
@@ -31,7 +31,7 @@ tags:
 
 ## M10 — Automated Read-Only Synchronization
 
-Status: **Proposed — awaiting acceptance**
+Status: **Accepted — implementation authorised**
 
 ### Goal
 
@@ -78,9 +78,9 @@ as the read-only source of truth.
 - Watch behavior must be testable without depending on real-time sleeps or a
   user-owned vault.
 
-### Decision Required
+### Decision
 
-Accept, revise or reject this proposal before implementation begins.
+Accepted for implementation on 2026-08-12.
 
 ## Related
 
