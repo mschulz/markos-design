@@ -27,11 +27,14 @@ class Settings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     vault_path: Path
+    index_path: Path | None = None
     log_level: LogLevel = "INFO"
 
-    @field_validator("vault_path", mode="before")
+    @field_validator("vault_path", "index_path", mode="before")
     @classmethod
-    def expand_vault_path(cls, value: object) -> Path:
+    def expand_path(cls, value: object) -> Path | None:
+        if value is None:
+            return None
         return Path(str(value)).expanduser()
 
     @field_validator("log_level", mode="before")
@@ -49,8 +52,8 @@ class Settings(BaseModel):
         """Load settings, with environment variables overriding TOML values.
 
         Supported environment variables are ``MARKOS_CONFIG``,
-        ``MARKOS_VAULT_PATH``, and ``MARKOS_LOG_LEVEL``. The optional TOML file
-        uses a ``[markos]`` table.
+        ``MARKOS_VAULT_PATH``, ``MARKOS_INDEX_PATH``, and ``MARKOS_LOG_LEVEL``.
+        The optional TOML file uses a ``[markos]`` table.
         """
 
         env = os.environ if environ is None else environ
@@ -64,6 +67,8 @@ class Settings(BaseModel):
 
         if env.get("MARKOS_VAULT_PATH"):
             values["vault_path"] = env["MARKOS_VAULT_PATH"]
+        if env.get("MARKOS_INDEX_PATH"):
+            values["index_path"] = env["MARKOS_INDEX_PATH"]
         if env.get("MARKOS_LOG_LEVEL"):
             values["log_level"] = env["MARKOS_LOG_LEVEL"]
 
@@ -93,7 +98,8 @@ def _read_config_file(path: Path) -> dict[str, Any]:
         raise SettingsError("the [markos] configuration value must be a table")
 
     values = cast(dict[str, Any], section.copy())
-    vault_path = values.get("vault_path")
-    if vault_path and not Path(str(vault_path)).expanduser().is_absolute():
-        values["vault_path"] = path.parent / str(vault_path)
+    for key in ("vault_path", "index_path"):
+        configured_path = values.get(key)
+        if configured_path and not Path(str(configured_path)).expanduser().is_absolute():
+            values[key] = path.parent / str(configured_path)
     return values

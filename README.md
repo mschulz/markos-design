@@ -3,7 +3,7 @@
 MarkOS is a local-first personal knowledge engine. Markdown remains the
 canonical source of truth; applications and rebuildable indexes sit around it.
 
-## M1 Markdown ingestion
+## M2 Rebuildable index
 
 This repository currently provides:
 
@@ -13,12 +13,21 @@ This repository currently provides:
 - a storage-independent Markdown document model;
 - deterministic, recursive Markdown discovery within a configured vault;
 - frontmatter, title, body, Markdown-link, and wikilink parsing; and
-- automated tests for the foundation and read-only ingestion boundary.
+- an external DuckDB index rebuilt transactionally from Markdown; and
+- automated tests for the foundation, ingestion, and indexing boundaries.
 
-MarkOS does not modify a configured vault in M1. Discovery, parsing, and the
-`doctor` command are read-only.
+MarkOS does not modify a configured vault. Discovery and parsing are read-only;
+index writes are restricted to an explicitly configured path outside the vault.
 
 ## Development
+
+Allow the repository's direnv configuration once. It directs uv to a non-hidden
+`venv` directory so macOS hidden-file flags cannot suppress Python's editable
+package path:
+
+```console
+direnv allow
+```
 
 Install and run all checks:
 
@@ -34,6 +43,7 @@ Run the CLI:
 ```console
 uv run markos version
 uv run markos doctor --vault /path/to/vault
+uv run markos rebuild --vault /path/to/vault --index /path/to/index.duckdb
 ```
 
 Configuration can also be supplied in a TOML file:
@@ -41,9 +51,10 @@ Configuration can also be supplied in a TOML file:
 ```toml
 [markos]
 vault_path = "/path/to/vault"
+index_path = "/path/to/index.duckdb"
 log_level = "INFO"
 ```
 
 Use it with `markos doctor --config /path/to/markos.toml`. Environment
-variables `MARKOS_CONFIG`, `MARKOS_VAULT_PATH`, and `MARKOS_LOG_LEVEL` are also
-supported.
+variables `MARKOS_CONFIG`, `MARKOS_VAULT_PATH`, `MARKOS_INDEX_PATH`, and
+`MARKOS_LOG_LEVEL` are also supported.

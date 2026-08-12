@@ -7,10 +7,15 @@ from markos.settings import Settings, SettingsError
 
 def test_environment_loads_settings(tmp_path: Path) -> None:
     settings = Settings.load(
-        environ={"MARKOS_VAULT_PATH": str(tmp_path), "MARKOS_LOG_LEVEL": "debug"}
+        environ={
+            "MARKOS_VAULT_PATH": str(tmp_path),
+            "MARKOS_INDEX_PATH": str(tmp_path / "index.duckdb"),
+            "MARKOS_LOG_LEVEL": "debug",
+        }
     )
 
     assert settings.vault_path == tmp_path
+    assert settings.index_path == tmp_path / "index.duckdb"
     assert settings.log_level == "DEBUG"
 
 
@@ -28,13 +33,17 @@ def test_environment_overrides_configuration(tmp_path: Path) -> None:
     assert settings.log_level == "WARNING"
 
 
-def test_relative_vault_path_is_resolved_from_config_file(tmp_path: Path) -> None:
+def test_relative_paths_are_resolved_from_config_file(tmp_path: Path) -> None:
     config_path = tmp_path / "markos.toml"
-    config_path.write_text('[markos]\nvault_path = "vault"\n', encoding="utf-8")
+    config_path.write_text(
+        '[markos]\nvault_path = "vault"\nindex_path = "data/index.duckdb"\n',
+        encoding="utf-8",
+    )
 
     settings = Settings.load(environ={}, config_path=config_path)
 
     assert settings.vault_path == tmp_path / "vault"
+    assert settings.index_path == tmp_path / "data/index.duckdb"
 
 
 def test_vault_path_is_required() -> None:
