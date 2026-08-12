@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path, PurePath
 from typing import Any, cast
 
@@ -34,6 +35,47 @@ class LinkResult:
     ordinal: int
     target: str
     resolved_path: str | None
+
+
+@dataclass(frozen=True)
+class IndexStatus:
+    """Recorded state of one compatible rebuilt index."""
+
+    schema_version: int
+    rebuilt_at: datetime
+    document_count: int
+    link_count: int
+
+
+def index_status(index_path: Path) -> IndexStatus:
+    """Read rebuild metadata from a compatible index."""
+
+    connection = _open_index(index_path)
+    try:
+        row = connection.execute(
+            """
+            SELECT schema_version, CAST(rebuilt_at AS VARCHAR), document_count, link_count
+            FROM index_state
+            """
+        ).fetchone()
+    except duckdb.Error as error:
+        raise KnowledgeQueryError(f"could not read index state: {index_path}") from error
+    finally:
+        connection.close()
+
+    if row is None:  # guarded by _open_index, retained for type safety
+        raise KnowledgeQueryError(f"index state is missing: {index_path}")
+    schema_version, encoded_rebuilt_at, document_count, link_count = row
+    try:
+        rebuilt_at = datetime.fromisoformat(str(encoded_rebuilt_at))
+    except ValueError as error:
+        raise KnowledgeQueryError(f"invalid rebuild timestamp in index: {index_path}") from error
+    return IndexStatus(
+        schema_version=int(schema_version),
+        rebuilt_at=rebuilt_at,
+        document_count=int(document_count),
+        link_count=int(link_count),
+    )
 
 
 def search_index(index_path: Path, query: str, *, limit: int = 20) -> tuple[SearchResult, ...]:

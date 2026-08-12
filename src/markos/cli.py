@@ -5,10 +5,12 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+import uvicorn
 from rich.console import Console
 from rich.table import Table
 
 from markos import __version__
+from markos.api import create_app
 from markos.index import KnowledgeIndexError, rebuild_vault_index
 from markos.logging import configure_logging
 from markos.markdown import MarkdownDiscoveryError, MarkdownParseError
@@ -240,6 +242,37 @@ def links(
     for result in results:
         table.add_row(result.source_path, result.target, result.resolved_path or "Unresolved")
     console.print(table)
+
+
+@app.command()
+def serve(
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+    host: Annotated[
+        str,
+        typer.Option("--host", help="Interface on which to listen."),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option("--port", min=1, max=65535, help="TCP port on which to listen."),
+    ] = 8000,
+) -> None:
+    """Serve the read-only HTTP API using only the external index."""
+
+    settings = _load_settings(config, None, index, None, require_vault=False)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+    uvicorn.run(create_app(settings.index_path), host=host, port=port)
 
 
 def _required_vault_path(settings: Settings) -> Path:

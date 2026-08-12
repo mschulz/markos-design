@@ -130,3 +130,25 @@ def test_links_shows_outgoing_and_incoming_links(tmp_path: Path) -> None:
     assert "Unresolved" in outgoing.stdout
     assert incoming.exit_code == 0
     assert "One.md" in incoming.stdout
+
+
+def test_serve_starts_read_only_api_without_vault(
+    tmp_path: Path,
+    monkeypatch: object,
+) -> None:
+    calls: list[tuple[object, str, int]] = []
+
+    def fake_run(api: object, *, host: str, port: int) -> None:
+        calls.append((api, host, port))
+
+    monkeypatch.setattr("markos.cli.uvicorn.run", fake_run)  # type: ignore[attr-defined]
+
+    result = runner.invoke(
+        app,
+        ["serve", "--index", str(tmp_path / "index.duckdb"), "--port", "9000"],
+        env={"MARKOS_VAULT_PATH": ""},
+    )
+
+    assert result.exit_code == 0
+    assert len(calls) == 1
+    assert calls[0][1:] == ("127.0.0.1", 9000)
