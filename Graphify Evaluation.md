@@ -125,6 +125,65 @@ The run also exposed material limitations:
 - The report records zero model tokens despite containing semantic and inferred
   extraction, so provider-cost metadata is not sufficient for MarkOS auditing.
 
+## Local Ollama Pilot
+
+A follow-up pilot used Ollama 0.32.9 on an Apple M2 Pro with 16 GB unified
+memory. Graphify remained pinned at 0.9.40 and all inputs and outputs remained in
+the temporary evaluation directory. No Graphify semantic request used a cloud
+provider.
+
+Graphify's documented default `qwen2.5-coder:7b` model failed to return the
+required JSON for a copied 2,515-word research note. Graphify rejected the prose
+response and wrote an empty graph after 52 seconds. The general instruction model
+`qwen2.5:7b` failed in the same way after 41 seconds.
+
+A short controlled note succeeded:
+
+| Measure | First run | Repeat run |
+|---|---:|---:|
+| Nodes | 5 | 5 |
+| Edges | 4 | 4 |
+| Duration | 27.1 s | 23.8 s |
+| Input tokens | 883 | 883 |
+| Output tokens | 556 | 556 |
+
+The two `graph.json` files were byte-for-byte identical, with SHA-256
+`73c8f0ac71107a894afd9069549627df34451080749ed2b8a08abc38565c0865`.
+This demonstrates useful determinism when the model follows the extraction
+schema.
+
+The shortest genuine knowledge note in the copied corpus, `Active-Badge.md` at
+654 words, completed in 60 seconds and produced six nodes and four edges. Its
+content was not trustworthy:
+
+- it invented `src/auth/session.py`, which does not exist in the corpus;
+- it classified fabricated nodes as code entities;
+- three edges referred to source node identifiers absent from the graph;
+- it supplied no line locations; and
+- it labelled unsupported semantic associations as `EXTRACTED`.
+
+Graphify accepted this structurally valid but semantically invalid JSON. A
+MarkOS corpus-allowlist and endpoint validator would reject the fabricated paths
+and dangling edges, confirming that Graphify output must remain untrusted input.
+
+The `--token-budget` option did not split the 2,515-word Markdown file because
+Graphify only pre-splits files above its separate internal large-file threshold.
+Reducing the token budget therefore did not reduce the observed 2,050-token
+request. Reliable use with this class of local model would require either a
+larger capable model or MarkOS-owned heading-aware preprocessing and source-map
+validation.
+
+### Local Pilot Verdict
+
+`qwen2.5-coder:7b` and `qwen2.5:7b` fail the semantic acceptance gate. Do not
+scale either model to the complete concept corpus or Roam. The successful short
+control does not outweigh fabricated source paths in a genuine note.
+
+Ollama remains a viable provider boundary, but model qualification is mandatory.
+The next local candidate must pass a fixed validation corpus before any vault
+content is processed. Acceptance requires valid JSON, only allowlisted source
+paths, no dangling endpoints, location coverage and repeatable results.
+
 ## Revised Responsibility Split
 
 ```text
@@ -188,15 +247,17 @@ support for later generated claims.
 
 Before adopting Graphify as an M13/M14 dependency:
 
-1. Run a current-version semantic extraction against a temporary allowlisted
-   corpus using an explicitly approved local or external model.
-2. Measure entity duplication, source-location coverage, model cost and graph
-   reproducibility.
-3. Verify add, change, rename and deletion behaviour using Graphify's supported
+1. Qualify a more capable local model against the controlled note and genuine
+   copied notes; the tested Qwen 2.5 7B variants are rejected.
+2. Add deterministic validation for corpus paths, edge endpoints, source
+   locations and confidence labels before accepting a Graphify graph.
+3. Measure entity duplication, source-location coverage, runtime and graph
+   reproducibility on the qualified model.
+4. Verify add, change, rename and deletion behaviour using Graphify's supported
    incremental commands rather than only its structural cache.
-4. Test a representative, copied Roam batch and measure graph size and query
+5. Test a representative, copied Roam batch and measure graph size and query
    usefulness before attempting the complete legacy collection.
-5. Define and test the `GraphProvider` contract against both Graphify and the
+6. Define and test the `GraphProvider` contract against both Graphify and the
    existing DuckDB graph.
 
 ## Related
