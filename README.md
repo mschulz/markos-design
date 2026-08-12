@@ -204,13 +204,38 @@ uv run markos graph --from "Home.md" --to "Projects/MarkOS.md"
 
 ### Validate an experimental semantic graph
 
-Treat graphs produced by an LLM as untrusted. Validate a Graphify `graph.json`
-against the exact copied corpus used for extraction before inspecting or
-importing it:
+Treat graphs produced by an LLM as untrusted. First prepare an external,
+heading-aware corpus from a read-only source copy:
 
 ```console
-uv run markos validate-graph /path/to/graphify-out/graph.json \
-  --corpus /path/to/copied-corpus
+uv run markos prepare-graph-corpus /path/to/copied-source \
+  --output /path/to/prepared-corpus
+```
+
+The command writes exact Markdown slices and a deterministic `source-map.json`.
+It records original and chunk hashes plus inclusive original line ranges, and
+refuses to write inside the source corpus or overwrite an existing output.
+Point Graphify at `/path/to/prepared-corpus`, then remap its output:
+
+```console
+uv run markos remap-graph-sources /path/to/graphify-out/graph.json \
+  --manifest /path/to/prepared-corpus/source-map.json \
+  --source-corpus /path/to/copied-source \
+  --prepared-corpus /path/to/prepared-corpus \
+  --output /path/to/remapped-graph.json
+```
+
+Remapping rechecks both source and chunk hashes. Missing provider locations are
+grounded to the chunk's original line range and marked
+`source_location_origin: markos_chunk_range`; provider line locations are
+translated to original line numbers and marked `provider_chunk_line`.
+
+Finally, validate the remapped graph against the original corpus before
+inspecting or importing it:
+
+```console
+uv run markos validate-graph /path/to/remapped-graph.json \
+  --corpus /path/to/copied-source
 ```
 
 The validator is read-only. It rejects fabricated or unsafe source paths,

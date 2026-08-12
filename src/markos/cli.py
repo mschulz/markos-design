@@ -30,6 +30,11 @@ from markos.query import (
     outgoing_links,
     search_index,
 )
+from markos.semantic_corpus import (
+    SemanticCorpusError,
+    prepare_semantic_corpus,
+    remap_graph_sources,
+)
 from markos.settings import LogLevel, Settings, SettingsError
 from markos.sync import SyncError, sync_vault_index
 from markos.watch import WatchError, watch_vault_index
@@ -613,6 +618,84 @@ def validate_graph(
         table.add_row(issue.code, issue.location, issue.message)
     console.print(table)
     raise typer.Exit(code=1)
+
+
+@app.command("prepare-graph-corpus")
+def prepare_graph_corpus(
+    source: Annotated[
+        Path,
+        typer.Argument(help="Read-only Markdown source corpus."),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="New external directory for generated chunks."),
+    ],
+    maximum_chunk_characters: Annotated[
+        int,
+        typer.Option(
+            "--maximum-chunk-characters",
+            min=256,
+            help="Target maximum chunk size; headings remain intact when possible.",
+        ),
+    ] = 6000,
+) -> None:
+    """Prepare an external heading-aware corpus with deterministic source mapping."""
+
+    try:
+        prepared = prepare_semantic_corpus(
+            source,
+            output,
+            maximum_chunk_characters=maximum_chunk_characters,
+        )
+    except SemanticCorpusError as error:
+        error_console.print(f"[bold red]Corpus preparation failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+    source_label = "source" if prepared.source_count == 1 else "sources"
+    chunk_label = "chunk" if prepared.chunk_count == 1 else "chunks"
+    console.print(
+        f"Prepared {prepared.source_count} Markdown {source_label} as "
+        f"{prepared.chunk_count} {chunk_label} in {prepared.path}; "
+        f"source map: {prepared.manifest_path}"
+    )
+
+
+@app.command("remap-graph-sources")
+def remap_graph_source_locations(
+    graph_file: Annotated[
+        Path,
+        typer.Argument(help="Graphify graph.json produced from the prepared corpus."),
+    ],
+    manifest: Annotated[
+        Path,
+        typer.Option("--manifest", help="source-map.json from corpus preparation."),
+    ],
+    source_corpus: Annotated[
+        Path,
+        typer.Option("--source-corpus", help="Original read-only Markdown corpus."),
+    ],
+    prepared_corpus: Annotated[
+        Path,
+        typer.Option("--prepared-corpus", help="Generated corpus supplied to Graphify."),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="New external path for the remapped graph JSON."),
+    ],
+) -> None:
+    """Remap verified chunk provenance to original Markdown paths and line ranges."""
+
+    try:
+        remapped = remap_graph_sources(
+            graph_file,
+            manifest,
+            source_corpus,
+            prepared_corpus,
+            output,
+        )
+    except SemanticCorpusError as error:
+        error_console.print(f"[bold red]Graph source remapping failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+    console.print(f"Remapped provenance for {remapped.item_count} graph items into {remapped.path}")
 
 
 @app.command("para-audit")

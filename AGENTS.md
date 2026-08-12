@@ -79,9 +79,13 @@ agents. Keep it concise, current, and free of secrets.
 - Invalidate derived extraction, summaries, and memories when recorded source hashes change.
 - Treat semantic graph output as untrusted. Before import, require corpus-allowlisted source
   paths, resolved endpoints, valid confidence fields and complete source-location coverage.
-- The local Ollama pilot rejected Qwen 2.5 7B for fabricated output and Qwen 3 14B because
-  Graphify emitted no source locations. Do not scale semantic extraction until MarkOS-owned
-  source mapping or an equivalent provider contract closes this grounding gap.
+- The local Ollama pilot rejected Qwen 2.5 7B for fabricated output. MarkOS source mapping lets
+  the Qwen 3 14B control pass with complete provenance, but the genuine-note graph remains
+  rejected because Graphify omitted mandatory relationship confidence scores. Do not scale yet.
+- MarkOS-owned semantic preprocessing writes exact heading-aware chunks outside the source
+  corpus, records source and chunk hashes plus original line ranges, and remaps only allowlisted,
+  hash-verified chunk provenance. Broad chunk-derived locations must be labelled distinctly from
+  provider-supplied chunk line locations.
 
 ## Python Environment
 

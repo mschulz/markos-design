@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import duckdb
@@ -239,6 +240,59 @@ def test_validate_graph_reports_success_and_rejection(tmp_path: Path) -> None:
     assert rejected.exit_code == 1
     assert "Graph rejected" in rejected.stdout
     assert "unknown_source_file" in rejected.stdout
+
+
+def test_prepare_remap_and_validate_graph_workflow(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "Note.md").write_text("# Note\n\nGrounded text.\n", encoding="utf-8")
+    prepared = tmp_path / "prepared"
+
+    preparation = runner.invoke(
+        app,
+        ["prepare-graph-corpus", str(source), "--output", str(prepared)],
+    )
+    manifest = json.loads((prepared / "source-map.json").read_text(encoding="utf-8"))
+    chunk_path = manifest["chunks"][0]["chunk_path"]
+    graph = tmp_path / "graph.json"
+    graph.write_text(
+        json.dumps(
+            {
+                "nodes": [
+                    {"id": "note", "label": "Note", "source_file": chunk_path}
+                ],
+                "edges": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    remapped = tmp_path / "remapped.json"
+    remapping = runner.invoke(
+        app,
+        [
+            "remap-graph-sources",
+            str(graph),
+            "--manifest",
+            str(prepared / "source-map.json"),
+            "--source-corpus",
+            str(source),
+            "--prepared-corpus",
+            str(prepared),
+            "--output",
+            str(remapped),
+        ],
+    )
+    validation = runner.invoke(
+        app,
+        ["validate-graph", str(remapped), "--corpus", str(source)],
+    )
+
+    assert preparation.exit_code == 0
+    assert "1 Markdown source as 1 chunk" in preparation.stdout
+    assert remapping.exit_code == 0
+    assert "Remapped provenance for 1 graph items" in remapping.stdout
+    assert validation.exit_code == 0
+    assert "source-location coverage 100.0%" in validation.stdout
 
 
 def test_freshness_exits_zero_when_current_and_one_when_stale(tmp_path: Path) -> None:
