@@ -298,3 +298,30 @@ def test_watch_passes_configuration_and_timing_options(
     assert calls == [(vault, index_path, 2.0, 0.75)]
     assert "2 synchronization attempts" in result.stdout
     assert "1 rebuild" in result.stdout
+
+
+def test_para_audit_prints_preview_without_modifying_vault(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    source = vault / "Synthetic Biology"
+    source.mkdir(parents=True)
+    paper = source / "study.pdf"
+    paper.write_bytes(b"%PDF study")
+    index_path = tmp_path / "index.duckdb"
+    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+
+    result = runner.invoke(
+        app,
+        [
+            "para-audit",
+            "Synthetic Biology",
+            "--vault",
+            str(vault),
+            "--index",
+            str(index_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Resources/Synthetic Biology" in result.stdout
+    assert "Read-only assessment" in result.stdout
+    assert paper.read_bytes() == b"%PDF study"

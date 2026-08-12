@@ -202,6 +202,32 @@ Find the shortest directed link path between two notes:
 uv run markos graph --from "Home.md" --to "Projects/MarkOS.md"
 ```
 
+### Audit existing folders before PARA migration
+
+Assess one or more existing vault folders without changing them:
+
+```console
+uv run markos para-audit \
+  "Localization Research" \
+  "Remote Laboratories" \
+  "Synthetic Biology" \
+  "Roam"
+```
+
+The report inventories Markdown and non-Markdown files, existing `raw/`,
+`sources/`, and `knowledge/` structure, nested Git repositories, unresolved
+links, and inbound-link migration risk. It proposes a destination and migration
+strategy but never moves files or edits links.
+
+Save the report outside the vault when you want a review artifact:
+
+```console
+uv run markos para-audit "Roam" --output /path/to/roam-audit.md
+```
+
+MarkOS rejects report destinations inside the configured vault so an audit
+cannot accidentally become part of the knowledge source it is assessing.
+
 ## Read-only HTTP API
 
 Start the local API server:

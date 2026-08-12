@@ -16,6 +16,12 @@ from markos.freshness import FreshnessError, check_freshness
 from markos.index import KnowledgeIndexError, rebuild_vault_index
 from markos.logging import configure_logging
 from markos.markdown import MarkdownDiscoveryError, MarkdownParseError
+from markos.para_audit import (
+    ParaAuditError,
+    audit_para_migration,
+    render_para_audit,
+    write_para_audit,
+)
 from markos.query import (
     KnowledgeQueryError,
     backlinks,
@@ -555,6 +561,54 @@ def graph(
         remaining = len(report.isolated_documents) - len(preview)
         if remaining:
             console.print(f"… and {remaining} more isolated documents")
+
+
+@app.command("para-audit")
+def para_audit(
+    sources: Annotated[
+        list[str],
+        typer.Argument(help="One or more vault-relative folders to assess."),
+    ],
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    vault: Annotated[
+        Path | None,
+        typer.Option("--vault", help="Vault path; overrides configuration."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Optional Markdown report path outside the vault."),
+    ] = None,
+) -> None:
+    """Assess existing folders for a safe, preview-only PARA migration."""
+
+    settings = _load_settings(config, vault, index, None)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+    try:
+        report = audit_para_migration(
+            _required_vault_path(settings),
+            settings.index_path,
+            tuple(sources),
+        )
+        if output is not None:
+            destination = write_para_audit(report, output)
+            console.print(f"Wrote read-only PARA audit to {destination}")
+            return
+    except (KnowledgeQueryError, ParaAuditError) as error:
+        error_console.print(f"[bold red]PARA audit failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+    console.print(render_para_audit(report), markup=False)
 
 
 def _required_vault_path(settings: Settings) -> Path:

@@ -23,6 +23,12 @@ agents. Keep it concise, current, and free of secrets.
   - M11: controlled PARA filing and a safe vault-write boundary.
   - M12: raw-document ingestion and grounded source notes.
   - M13: filesystem-native research and Markdown concept memory.
+- M14 through M16 are accepted but not implemented:
+  - M14: periodic knowledge maintenance, index/link/provenance health and repair proposals.
+  - M15: native SwiftUI Mac app over the shared Python application services.
+  - M16: user-approved background scheduling, notifications, signing and distribution.
+- A read-only `markos para-audit` tool precedes M11 and assesses existing folders without
+  changing the vault.
 - The implementation repository is `https://github.com/mschulz/markos`.
 - Architecture and roadmap decisions live in the separate `markos-design` repository.
 
@@ -114,6 +120,8 @@ direnv exec . uv run markos search "query" --config pyproject.toml
   `/Users/markschulz/Library/Application Support/MarkOS/index.duckdb`.
 - A current `sync` or initial watcher sync must leave the index byte-for-byte unchanged.
 - `watch` is a foreground process; it is not installed as a system service.
+- Do not move the existing `Roam` corpus wholesale into inbox. Audit and migrate it in reviewed
+  batches from its current location because it is large and heavily linked.
 
 ## Working Agreements
 
