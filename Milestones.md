@@ -192,6 +192,7 @@ without embeddings or a vector database.
   refine queries instead of loading the entire vault into one context window.
 - Use DuckDB only as an optional rebuildable accelerator for lexical and graph queries.
 - Generate concept-memory Markdown that synthesizes grounded source notes and human notes.
+- Store generated synthesis under each concept folder's `knowledge/` directory.
 - Link factual conclusions to source or human notes and ultimately to original evidence.
 - Distinguish source-supported facts, cross-source synthesis, model inference and contradiction.
 - Mark generated memory with source hashes, generation status and review status.
@@ -220,17 +221,142 @@ without embeddings or a vector database.
 9. Research traces identify the searches, notes and evidence used to construct the memory.
 10. The complete workflow remains inspectable through ordinary Markdown and filesystem tools.
 
+## M14 — Knowledge Maintenance and Health
+
+Status: **Accepted — implementation not started**
+
+### Goal
+
+Maintain trustworthy indexes, links, provenance and generated knowledge through
+deterministic health checks and periodic, reviewable knowledge suggestions.
+
+### Scope
+
+- Add read-only index, link, provenance, folder and generated-memory health checks.
+- Verify every discoverable Markdown file is represented by a current source fingerprint.
+- Report rejected files, stale index rows, missing managed-link targets and ambiguous aliases.
+- Verify source notes point to existing raw artifacts whose hashes still match.
+- Verify generated knowledge resolves to source or human evidence rather than generated memory alone.
+- Detect stale knowledge when source hashes change or relevant sources are added.
+- Calculate deterministic graph deltas and relationship changes since the previous review.
+- Generate repair proposals separately from read-only health reports.
+- Generate weekly knowledge-review and research-question proposals only when meaningful changes exist.
+- Store periodic synthesis under the relevant concept folder's `knowledge/reviews/` directory.
+- Expose deterministic non-interactive commands suitable for external scheduling.
+
+### Non-Goals
+
+- Silent repair of vault files.
+- Real-time LLM synthesis after every edit.
+- Treating a note with no backlinks as invalid.
+- Embedding an operating-system scheduler in the Python core.
+
+### Acceptance Criteria
+
+1. Health checks never modify the vault or index.
+2. Index health detects missing, stale, rejected and incompatible state.
+3. Link health distinguishes unresolved, ambiguous, isolated and broken managed links.
+4. Provenance health detects missing raw artifacts, changed hashes and invalid evidence references.
+5. Repair and knowledge proposals are preview-only until explicitly confirmed.
+6. A weekly review is omitted when no meaningful knowledge change exists.
+7. LLM output is validated against deterministic graph facts and evidence identifiers.
+8. Scheduled commands are idempotent and emit machine-readable status.
+9. Daily, weekly and monthly cadences are configurable rather than hard-coded.
+
+## M15 — Native Mac App
+
+Status: **Accepted — implementation not started**
+
+### Goal
+
+Provide a native SwiftUI Mac interface for the same safe operations available
+through the MarkOS CLI.
+
+### Scope
+
+- Refactor new workflows into UI-neutral Python application services shared by CLI and app.
+- Bundle the Python core as a signed helper controlled through authenticated local IPC.
+- Provide dashboard, inbox, PARA proposal, multi-file diff, link review, health and audit views.
+- Provide source-summary, concept-memory and weekly-review approval workflows.
+- Provide LLM provider, disclosure, vault-write and scheduling settings.
+- Select the vault through a native folder picker and persist access with a security-scoped bookmark.
+- Store credentials in macOS Keychain rather than configuration files.
+- Provide menu-bar visibility for watcher state and pending reviews.
+- Keep the existing public FastAPI interface read-only.
+
+### Non-Goals
+
+- Rewriting the Python knowledge engine in Swift.
+- Making CLI and UI implementations with different business rules.
+- Exposing mutating vault operations through the public HTTP API.
+- App Store distribution in the first release.
+- Automatic application of proposed writes or external disclosure.
+
+### Acceptance Criteria
+
+1. CLI and UI invoke the same Python application-service contracts.
+2. The app cannot bypass hash, path, collision, approval or audit safeguards.
+3. Vault access is limited to the user-selected folder and persists securely across launches.
+4. Every multi-file mutation is displayed as a reviewable plan or diff before approval.
+5. External LLM disclosure is separately visible and controlled.
+6. Helper startup, shutdown, crash recovery and protocol-version mismatch are handled safely.
+7. The app remains useful with no LLM provider configured.
+8. Automated service-contract tests run independently of SwiftUI.
+
+## M16 — Background Operations and Distribution
+
+Status: **Accepted — implementation not started**
+
+### Goal
+
+Deliver user-approved background maintenance, notifications and a trustworthy
+installation and update path for the Mac app.
+
+### Scope
+
+- Register an optional per-user LaunchAgent through Apple's Service Management framework.
+- Provide daily freshness, weekly health/knowledge and monthly deep-integrity schedules.
+- Notify the user when reviewable reports or failures require attention.
+- Allow background work to be paused, resumed and unregistered from the app.
+- Package the Python helper and compiled dependencies inside the app bundle.
+- Sign with Developer ID, submit for notarization and staple the notarization ticket.
+- Define version compatibility between the SwiftUI client, helper protocol and index schema.
+- Provide a tested direct-download installation and update strategy.
+
+### Non-Goals
+
+- Root launch daemons.
+- Background vault repairs without approval.
+- Mandatory always-on operation.
+- Mac App Store distribution until sandbox and helper constraints are proven.
+
+### Acceptance Criteria
+
+1. Background registration is explicit, reversible and visible in macOS settings.
+2. Scheduled failures preserve existing index and vault content and notify the user.
+3. No scheduled job applies repair, filing or generated-memory proposals silently.
+4. The app bundle contains all required runtime components.
+5. Release builds pass code-signing, Gatekeeper and notarization verification.
+6. Helper and client version mismatches fail safely with actionable guidance.
+7. Clean installation, upgrade, rollback and removal are documented and tested.
+
 ## Sequencing Decision
 
-M11 establishes the safe write boundary. M12 builds raw-source provenance on
-that boundary. M13 consumes grounded Markdown from M12 and the existing vault to
-create concept memories. Implementation proceeds in this order; later milestones
-must not bypass safeguards established by earlier ones.
+The read-only PARA migration audit prepares the existing vault without enabling
+writes. M11 establishes the safe write boundary. M12 builds raw-source provenance
+on that boundary. M13 consumes grounded Markdown from M12 and the existing vault
+to create concept memories. M14 maintains their integrity and periodic review.
+M15 exposes the shared services through a native Mac app. M16 adds user-approved
+background operation and distribution. Later milestones must not bypass
+safeguards established by earlier ones.
 
-The accepted architecture is documented in [[Markdown Memory Architecture]].
+The accepted architecture is documented in [[Markdown Memory Architecture]],
+[[PARA Migration Strategy]], and [[Mac App Architecture]].
 
 ## Related
 
 - [[Vision]]
 - [[Markdown Memory Architecture]]
+- [[PARA Migration Strategy]]
+- [[Mac App Architecture]]
 - [[ADR-0001 Markdown is the Source of Truth]]

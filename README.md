@@ -48,9 +48,13 @@ Progress: **2 / 6**
 | M11 — Controlled PARA Filing | Human-approved filing from an in-vault inbox | Accepted |
 | M12 — Raw Document Ingestion | Immutable raw artifacts and grounded source notes | Accepted |
 | M13 — Markdown Concept Memory | Filesystem-native LLM research without vector search | Accepted |
+| M14 — Knowledge Maintenance | Periodic health, repair and research proposals | Accepted |
+| M15 — Native Mac App | SwiftUI interface over shared Python services | Accepted |
+| M16 — Background and Distribution | Scheduling, notifications and notarized delivery | Accepted |
 
 See [[Milestones]] for scope and acceptance criteria and
-[[Markdown Memory Architecture]] for the governing design.
+[[Markdown Memory Architecture]], [[PARA Migration Strategy]] and
+[[Mac App Architecture]] for the governing designs.
 
 ---
 
@@ -69,6 +73,8 @@ See [[Milestones]] for scope and acceptance criteria and
 - DuckDB is a rebuildable index.
 - Markdown is the durable semantic-memory layer; vector storage is not required.
 - Generated conclusions remain linked to inspectable source evidence.
+- CLI and UI use the same application services and safety rules.
+- Health and knowledge suggestions are periodic and reviewable, not silently applied.
 - Architecture before implementation.
 - Fixed milestone scope.
 - Small, releasable increments.

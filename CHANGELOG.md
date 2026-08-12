@@ -17,6 +17,11 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Accepted M12 Raw Document Ingestion and Grounded Source Notes.
 - Accepted M13 Filesystem-Native Research and Markdown Concept Memory.
 - Established Markdown as the durable semantic-memory layer without embeddings or vector search.
+- Accepted M14 Knowledge Maintenance and Health.
+- Accepted M15 Native Mac App.
+- Accepted M16 Background Operations and Distribution.
+- Established the read-only PARA migration-audit strategy and initial folder findings.
+- Recorded weekly knowledge review and periodic index, link and provenance health checks.
 
 ### Completed
 
