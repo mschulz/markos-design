@@ -8,15 +8,21 @@ agents. Keep it concise, current, and free of secrets.
 - MarkOS is a local-first personal knowledge engine for Markdown vaults.
 - Markdown is the canonical source of truth.
 - DuckDB is an external, disposable, fully rebuildable index.
-- MarkOS reads the vault but never edits, moves, renames, or deletes vault files.
+- MarkOS v0.2 reads the vault but never edits, moves, renames, or deletes vault files.
+- Accepted future milestones introduce opt-in, human-approved writes limited to configured
+  workflows and paths.
 - The HTTP API is read-only and opens only the external index.
+- Markdown, not a vector database, is the durable semantic-memory layer.
 
 ## Current State
 
 - Current release: `v0.2.0`.
 - Milestones M0 through M10 are complete.
 - M10 added conditional synchronization and the foreground `markos watch` command.
-- The next software milestone is intentionally undefined until it is designed and accepted.
+- M11 through M13 are accepted but not implemented:
+  - M11: controlled PARA filing and a safe vault-write boundary.
+  - M12: raw-document ingestion and grounded source notes.
+  - M13: filesystem-native research and Markdown concept memory.
 - The implementation repository is `https://github.com/mschulz/markos`.
 - Architecture and roadmap decisions live in the separate `markos-design` repository.
 
@@ -31,14 +37,40 @@ agents. Keep it concise, current, and free of secrets.
 
 ## Architecture Boundaries
 
-- Discovery and parsing must remain read-only with respect to the Markdown vault.
+- Existing discovery, parsing, indexing, queries, and HTTP operations remain read-only.
 - Reject index paths located inside the configured vault.
 - Preserve the last valid index if synchronization or rebuilding fails.
 - Serialize concurrent rebuilds.
 - Keep query and HTTP operations read-only.
 - Prefer composition of the existing discovery, freshness, indexing, and sync boundaries over
   creating alternate ingestion paths.
-- Do not add vault-writing behavior without an explicit architectural decision and user approval.
+- Vault writes are disabled by default and require explicit configuration and user approval.
+- Initial writes are limited to configured inbox and PARA paths. Do not overwrite existing files.
+- Recheck source hashes before applying a proposed move or generated-note write.
+- Keep vault-write permission separate from permission to send content to an external LLM.
+- Preserve raw imported artifacts byte-for-byte and identify them by SHA-256.
+
+## Markdown Memory Architecture
+
+- Use ordinary text, metadata, wikilink, backlink, and graph exploration rather than embeddings
+  or vector similarity.
+- DuckDB may accelerate deterministic lexical and link queries, but it is not the knowledge store
+  and must not become a vector database.
+- The LLM researches progressively: search, read promising notes, follow links, collect evidence,
+  and propose a Markdown synthesis.
+- Maintain three provenance layers:
+  1. immutable original artifacts under a concept folder's `raw/` directory;
+  2. grounded source notes under `sources/`, with claims linked to original pages or locations;
+  3. concept-memory Markdown that synthesizes multiple source and human notes.
+- Mark generated source notes and concept memories clearly in frontmatter, including generation
+  status, review status, source hashes, provider, and model where applicable.
+- Generated concept memories are navigation and synthesis aids, not independent evidence.
+- Future research must resolve generated claims back to source or human notes before relying on
+  them, preventing generated-memory feedback loops.
+- Label unsupported synthesis as inference, preserve contradictions, and never fabricate source
+  references.
+- Create and refresh concept memories through preview-and-confirm workflows with reviewable diffs.
+- Invalidate derived extraction, summaries, and memories when recorded source hashes change.
 
 ## Python Environment
 
