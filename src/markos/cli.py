@@ -24,6 +24,7 @@ from markos.query import (
     search_index,
 )
 from markos.settings import LogLevel, Settings, SettingsError
+from markos.sync import SyncError, sync_vault_index
 
 app = typer.Typer(
     name="markos",
@@ -290,6 +291,65 @@ def freshness(
             table.add_row(change, path)
     console.print(table)
     raise typer.Exit(code=1)
+
+
+@app.command()
+def sync(
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    vault: Annotated[
+        Path | None,
+        typer.Option("--vault", help="Vault path; overrides configuration."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Rebuild even when the index is current."),
+    ] = False,
+) -> None:
+    """Synchronize the index only when source Markdown has changed."""
+
+    settings = _load_settings(config, vault, index, None)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        result = sync_vault_index(
+            _required_vault_path(settings),
+            settings.index_path,
+            force=force,
+        )
+    except (
+        FreshnessError,
+        KnowledgeIndexError,
+        KnowledgeQueryError,
+        MarkdownDiscoveryError,
+        SyncError,
+    ) as error:
+        error_console.print(f"[bold red]Sync failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+
+    if not result.rebuilt:
+        console.print("Index is already current; no rebuild needed.")
+        return
+
+    summary = result.summary
+    if summary is None:  # guaranteed by SyncResult when rebuilt=True
+        raise RuntimeError("sync rebuild did not return a summary")
+    console.print(
+        f"Synchronized [bold]{summary.document_count}[/bold] documents and "
+        f"[bold]{summary.link_count}[/bold] links; rejected "
+        f"[bold]{summary.rejected_count}[/bold] documents ({result.reason})."
+    )
 
 
 @app.command()

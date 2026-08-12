@@ -236,3 +236,22 @@ def test_freshness_exits_zero_when_current_and_one_when_stale(tmp_path: Path) ->
     assert stale.exit_code == 1
     assert "Modified" in stale.stdout
     assert "Note.md" in stale.stdout
+
+
+def test_sync_skips_current_index_and_rebuilds_stale_index(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    note = vault / "Note.md"
+    note.write_text("# Before", encoding="utf-8")
+    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+
+    current = runner.invoke(app, ["sync", "--vault", str(vault), "--index", str(index_path)])
+    note.write_text("# After", encoding="utf-8")
+    stale = runner.invoke(app, ["sync", "--vault", str(vault), "--index", str(index_path)])
+
+    assert current.exit_code == 0
+    assert "already current" in current.stdout
+    assert stale.exit_code == 0
+    assert "Synchronized 1 documents" in stale.stdout
+    assert "stale" in stale.stdout
