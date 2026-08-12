@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+import os
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from fcntl import LOCK_EX, LOCK_UN, flock
 from pathlib import Path
 from typing import Any
 
@@ -41,8 +44,9 @@ def rebuild_vault_index(vault_path: Path, index_path: Path) -> IndexSummary:
     if _is_within(destination, root):
         raise KnowledgeIndexError("index path must be outside the Markdown vault")
 
-    report = load_markdown_report(root)
-    return rebuild_index(destination, report.documents, issues=report.issues)
+    with _rebuild_lock(destination):
+        report = load_markdown_report(root)
+        return rebuild_index(destination, report.documents, issues=report.issues)
 
 
 def rebuild_index(
@@ -239,6 +243,31 @@ def _is_within(path: Path, directory: Path) -> bool:
     except ValueError:
         return False
     return True
+
+
+@contextmanager
+def _rebuild_lock(index_path: Path) -> Iterator[None]:
+    """Serialize rebuilds using the index directory without creating lock files."""
+
+    try:
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        directory_fd = os.open(index_path.parent, os.O_RDONLY)
+    except OSError as error:
+        raise KnowledgeIndexError(f"could not open index directory: {index_path.parent}") from error
+
+    try:
+        flock(directory_fd, LOCK_EX)
+    except OSError as error:
+        os.close(directory_fd)
+        raise KnowledgeIndexError(f"could not lock index directory: {index_path.parent}") from error
+
+    try:
+        yield
+    finally:
+        try:
+            flock(directory_fd, LOCK_UN)
+        finally:
+            os.close(directory_fd)
 
 
 def _json_default(value: Any) -> str:

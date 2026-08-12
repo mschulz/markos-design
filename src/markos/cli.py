@@ -25,6 +25,7 @@ from markos.query import (
 )
 from markos.settings import LogLevel, Settings, SettingsError
 from markos.sync import SyncError, sync_vault_index
+from markos.watch import WatchError, watch_vault_index
 
 app = typer.Typer(
     name="markos",
@@ -349,6 +350,67 @@ def sync(
         f"Synchronized [bold]{summary.document_count}[/bold] documents and "
         f"[bold]{summary.link_count}[/bold] links; rejected "
         f"[bold]{summary.rejected_count}[/bold] documents ({result.reason})."
+    )
+
+
+@app.command()
+def watch(
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    vault: Annotated[
+        Path | None,
+        typer.Option("--vault", help="Vault path; overrides configuration."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+    poll_interval: Annotated[
+        float,
+        typer.Option("--poll-interval", min=0.05, help="Seconds between vault scans."),
+    ] = 1.0,
+    debounce: Annotated[
+        float,
+        typer.Option("--debounce", min=0.0, help="Quiet period before synchronization."),
+    ] = 0.5,
+    log_level: Annotated[
+        LogLevel | None,
+        typer.Option("--log-level", help="Logging level; overrides configuration."),
+    ] = None,
+) -> None:
+    """Watch Markdown and keep the external index current until interrupted."""
+
+    settings = _load_settings(config, vault, index, log_level)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+
+    console.print("Watching for Markdown changes. Press Ctrl-C to stop.")
+    try:
+        summary = watch_vault_index(
+            _required_vault_path(settings),
+            settings.index_path,
+            poll_interval=poll_interval,
+            debounce=debounce,
+        )
+    except KeyboardInterrupt:
+        console.print("Watcher stopped.")
+        return
+    except WatchError as error:
+        error_console.print(f"[bold red]Watch failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+
+    rebuild_label = "rebuild" if summary.rebuilds == 1 else "rebuilds"
+    error_label = "error" if summary.errors == 1 else "errors"
+    console.print(
+        f"Watcher stopped after {summary.sync_attempts} synchronization attempts; "
+        f"{summary.rebuilds} {rebuild_label} and "
+        f"{summary.errors} recoverable {error_label}."
     )
 
 

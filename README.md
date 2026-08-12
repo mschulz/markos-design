@@ -3,7 +3,7 @@
 MarkOS is a local-first personal knowledge engine. Markdown remains the
 canonical source of truth; applications and rebuildable indexes sit around it.
 
-## M9 Conditional synchronization
+## M10 Automated read-only synchronization
 
 This repository currently provides:
 
@@ -21,6 +21,8 @@ This repository currently provides:
 - resilient indexing of valid documents with explicit rejection diagnostics;
 - SHA-256 freshness checks for added, modified, and deleted Markdown sources;
 - no-op synchronization when current and transactional rebuilds when stale;
+- foreground monitoring with debounced, automatically retried synchronization;
+- cross-process rebuild serialization without persistent lock files;
 - automated tests across the foundation, ingestion, indexing, query, API, and analysis boundaries.
 
 MarkOS does not modify a configured vault. Discovery and parsing are read-only;
@@ -54,6 +56,7 @@ uv run markos rebuild --vault /path/to/vault --index /path/to/index.duckdb
 uv run markos issues --index /path/to/index.duckdb
 uv run markos freshness --vault /path/to/vault --index /path/to/index.duckdb
 uv run markos sync --vault /path/to/vault --index /path/to/index.duckdb
+uv run markos watch --vault /path/to/vault --index /path/to/index.duckdb
 uv run markos search "knowledge engine" --index /path/to/index.duckdb
 uv run markos links Vision.md --index /path/to/index.duckdb
 uv run markos links Vision.md --incoming --index /path/to/index.duckdb

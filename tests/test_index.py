@@ -1,12 +1,13 @@
 import json
 from pathlib import Path, PurePath
+from threading import Event, Lock, Thread
 
 import duckdb
 import pytest
 
 from markos.domain import KnowledgeDocument
 from markos.index import KnowledgeIndexError, rebuild_index, rebuild_vault_index
-from markos.markdown import IngestionIssue
+from markos.markdown import IngestionIssue, load_markdown_report
 
 
 def test_rebuild_stores_documents_links_metadata_and_state(tmp_path: Path) -> None:
@@ -158,3 +159,56 @@ def test_rebuild_migrates_an_older_rebuildable_schema(tmp_path: Path) -> None:
             "SELECT column_name FROM information_schema.columns WHERE table_name = 'document_links'"
         ).fetchall()
     assert ("resolved_path",) in columns
+
+
+def test_vault_rebuilds_are_serialized_without_lock_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "Note.md").write_text("# Note", encoding="utf-8")
+    index_path = tmp_path / "index.duckdb"
+    first_entered = Event()
+    release_first = Event()
+    second_entered = Event()
+    counter_lock = Lock()
+    call_count = 0
+    failures: list[BaseException] = []
+
+    def delayed_load(path: Path) -> object:
+        nonlocal call_count
+        with counter_lock:
+            call_count += 1
+            current_call = call_count
+        if current_call == 1:
+            first_entered.set()
+            if not release_first.wait(2):
+                raise AssertionError("timed out waiting to release first rebuild")
+        else:
+            second_entered.set()
+        return load_markdown_report(path)
+
+    monkeypatch.setattr("markos.index.load_markdown_report", delayed_load)
+
+    def rebuild() -> None:
+        try:
+            rebuild_vault_index(vault, index_path)
+        except BaseException as error:
+            failures.append(error)
+
+    first = Thread(target=rebuild)
+    second = Thread(target=rebuild)
+    first.start()
+    assert first_entered.wait(2)
+    second.start()
+    assert not second_entered.wait(0.1)
+    release_first.set()
+    first.join(2)
+    second.join(2)
+
+    assert not first.is_alive()
+    assert not second.is_alive()
+    assert second_entered.is_set()
+    assert failures == []
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["index.duckdb", "vault"]

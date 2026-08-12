@@ -1,10 +1,12 @@
 from pathlib import Path
 
 import duckdb
+import pytest
 from typer.testing import CliRunner
 
 from markos import __version__
 from markos.cli import app
+from markos.watch import WatchSummary
 
 runner = CliRunner()
 
@@ -255,3 +257,44 @@ def test_sync_skips_current_index_and_rebuilds_stale_index(tmp_path: Path) -> No
     assert stale.exit_code == 0
     assert "Synchronized 1 documents" in stale.stdout
     assert "stale" in stale.stdout
+
+
+def test_watch_passes_configuration_and_timing_options(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    index_path = tmp_path / "index.duckdb"
+    calls: list[tuple[Path, Path, float, float]] = []
+
+    def fake_watch(
+        source: Path,
+        destination: Path,
+        *,
+        poll_interval: float,
+        debounce: float,
+    ) -> WatchSummary:
+        calls.append((source, destination, poll_interval, debounce))
+        return WatchSummary(sync_attempts=2, rebuilds=1, errors=0)
+
+    monkeypatch.setattr("markos.cli.watch_vault_index", fake_watch)
+    result = runner.invoke(
+        app,
+        [
+            "watch",
+            "--vault",
+            str(vault),
+            "--index",
+            str(index_path),
+            "--poll-interval",
+            "2",
+            "--debounce",
+            "0.75",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert calls == [(vault, index_path, 2.0, 0.75)]
+    assert "2 synchronization attempts" in result.stdout
+    assert "1 rebuild" in result.stdout
