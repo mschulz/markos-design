@@ -49,3 +49,13 @@ def test_relative_paths_are_resolved_from_config_file(tmp_path: Path) -> None:
 def test_vault_path_is_required() -> None:
     with pytest.raises(SettingsError, match="vault path is required"):
         Settings.load(environ={})
+
+
+def test_index_only_settings_do_not_require_vault() -> None:
+    settings = Settings.load(
+        environ={"MARKOS_INDEX_PATH": "/tmp/index.duckdb"},
+        require_vault=False,
+    )
+
+    assert settings.vault_path is None
+    assert settings.index_path == Path("/tmp/index.duckdb")

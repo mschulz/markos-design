@@ -12,6 +12,7 @@ from markos import __version__
 from markos.index import KnowledgeIndexError, rebuild_vault_index
 from markos.logging import configure_logging
 from markos.markdown import MarkdownDiscoveryError, MarkdownParseError
+from markos.query import KnowledgeQueryError, search_index
 from markos.settings import LogLevel, Settings, SettingsError
 
 app = typer.Typer(
@@ -28,6 +29,8 @@ def _load_settings(
     vault: Path | None,
     index: Path | None,
     log_level: LogLevel | None,
+    *,
+    require_vault: bool = True,
 ) -> Settings:
     environment = dict(os.environ)
     if vault is not None:
@@ -38,7 +41,11 @@ def _load_settings(
         environment["MARKOS_LOG_LEVEL"] = log_level
 
     try:
-        settings = Settings.load(environ=environment, config_path=config)
+        settings = Settings.load(
+            environ=environment,
+            config_path=config,
+            require_vault=require_vault,
+        )
     except SettingsError as error:
         error_console.print(f"[bold red]Configuration error:[/bold red] {error}")
         raise typer.Exit(code=2) from error
@@ -72,7 +79,7 @@ def doctor(
     """Validate configuration and confirm that the vault can be read."""
 
     settings = _load_settings(config, vault, None, log_level)
-    vault_path = settings.vault_path
+    vault_path = _required_vault_path(settings)
 
     checks = Table(title="MarkOS diagnostics")
     checks.add_column("Check")
@@ -130,7 +137,7 @@ def rebuild(
         raise typer.Exit(code=2)
 
     try:
-        summary = rebuild_vault_index(settings.vault_path, settings.index_path)
+        summary = rebuild_vault_index(_required_vault_path(settings), settings.index_path)
     except (KnowledgeIndexError, MarkdownDiscoveryError, MarkdownParseError) as error:
         error_console.print(f"[bold red]Index rebuild failed:[/bold red] {error}")
         raise typer.Exit(code=1) from error
@@ -139,3 +146,54 @@ def rebuild(
         f"Indexed [bold]{summary.document_count}[/bold] documents and "
         f"[bold]{summary.link_count}[/bold] links into {summary.path}"
     )
+
+
+@app.command()
+def search(
+    query: Annotated[str, typer.Argument(help="Text to find in indexed documents.")],
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", min=1, max=100, help="Maximum number of results."),
+    ] = 20,
+) -> None:
+    """Search the external DuckDB index without opening the vault."""
+
+    settings = _load_settings(config, None, index, None, require_vault=False)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        results = search_index(settings.index_path, query, limit=limit)
+    except KnowledgeQueryError as error:
+        error_console.print(f"[bold red]Search failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+
+    if not results:
+        console.print("No matching documents.")
+        return
+
+    table = Table(title=f"Search results for {query!r}")
+    table.add_column("Path")
+    table.add_column("Title")
+    table.add_column("Snippet")
+    for result in results:
+        table.add_row(result.path, result.title, result.snippet)
+    console.print(table)
+
+
+def _required_vault_path(settings: Settings) -> Path:
+    if settings.vault_path is None:  # guarded by Settings.load(require_vault=True)
+        raise RuntimeError("vault path was not validated")
+    return settings.vault_path

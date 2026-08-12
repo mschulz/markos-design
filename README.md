@@ -3,7 +3,7 @@
 MarkOS is a local-first personal knowledge engine. Markdown remains the
 canonical source of truth; applications and rebuildable indexes sit around it.
 
-## M2 Rebuildable index
+## M3 Read-only search
 
 This repository currently provides:
 
@@ -14,7 +14,8 @@ This repository currently provides:
 - deterministic, recursive Markdown discovery within a configured vault;
 - frontmatter, title, body, Markdown-link, and wikilink parsing; and
 - an external DuckDB index rebuilt transactionally from Markdown; and
-- automated tests for the foundation, ingestion, and indexing boundaries.
+- deterministic read-only search over indexed paths, titles, and bodies; and
+- automated tests for the foundation, ingestion, indexing, and query boundaries.
 
 MarkOS does not modify a configured vault. Discovery and parsing are read-only;
 index writes are restricted to an explicitly configured path outside the vault.
@@ -44,6 +45,7 @@ Run the CLI:
 uv run markos version
 uv run markos doctor --vault /path/to/vault
 uv run markos rebuild --vault /path/to/vault --index /path/to/index.duckdb
+uv run markos search "knowledge engine" --index /path/to/index.duckdb
 ```
 
 Configuration can also be supplied in a TOML file:

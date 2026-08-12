@@ -74,3 +74,38 @@ def test_rebuild_requires_index_configuration(tmp_path: Path) -> None:
 
     assert result.exit_code == 2
     assert "index path is required" in result.stderr
+
+
+def test_search_reads_index_without_vault_configuration(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "Vision.md").write_text("# Vision\n\nKnowledge outlives tools.\n", encoding="utf-8")
+    rebuild_result = runner.invoke(
+        app,
+        ["rebuild", "--vault", str(vault), "--index", str(index_path)],
+    )
+    assert rebuild_result.exit_code == 0
+
+    result = runner.invoke(
+        app,
+        ["search", "knowledge", "--index", str(index_path)],
+        env={"MARKOS_VAULT_PATH": ""},
+    )
+
+    assert result.exit_code == 0
+    assert "Vision.md" in result.stdout
+    assert "Knowledge outlives tools" in result.stdout
+
+
+def test_search_reports_no_matches(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "Note.md").write_text("# Note", encoding="utf-8")
+    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+
+    result = runner.invoke(app, ["search", "absent", "--index", str(index_path)])
+
+    assert result.exit_code == 0
+    assert "No matching documents" in result.stdout

@@ -26,7 +26,7 @@ class Settings(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    vault_path: Path
+    vault_path: Path | None = None
     index_path: Path | None = None
     log_level: LogLevel = "INFO"
 
@@ -48,6 +48,7 @@ class Settings(BaseModel):
         *,
         environ: Mapping[str, str] | None = None,
         config_path: Path | None = None,
+        require_vault: bool = True,
     ) -> Settings:
         """Load settings, with environment variables overriding TOML values.
 
@@ -72,7 +73,7 @@ class Settings(BaseModel):
         if env.get("MARKOS_LOG_LEVEL"):
             values["log_level"] = env["MARKOS_LOG_LEVEL"]
 
-        if not values.get("vault_path"):
+        if require_vault and not values.get("vault_path"):
             raise SettingsError(
                 "vault path is required; set MARKOS_VAULT_PATH or add vault_path "
                 "to the [markos] configuration table"
