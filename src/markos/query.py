@@ -26,6 +26,16 @@ class SearchResult:
     snippet: str
 
 
+@dataclass(frozen=True)
+class LinkResult:
+    """One stored link and its optional resolved vault path."""
+
+    source_path: str
+    ordinal: int
+    target: str
+    resolved_path: str | None
+
+
 def search_index(index_path: Path, query: str, *, limit: int = 20) -> tuple[SearchResult, ...]:
     """Search paths, titles, and bodies in a compatible index."""
 
@@ -103,6 +113,56 @@ def read_document(index_path: Path, identifier: str) -> KnowledgeDocument | None
         body=str(body),
         metadata=cast(dict[str, Any], metadata),
         links=tuple(str(target) for (target,) in links),
+    )
+
+
+def outgoing_links(index_path: Path, identifier: str) -> tuple[LinkResult, ...]:
+    """Return all links from one document in source order."""
+
+    return _query_links(
+        index_path,
+        """
+        SELECT source_path, ordinal, target, resolved_path
+        FROM document_links
+        WHERE source_path = ?
+        ORDER BY ordinal
+        """,
+        identifier,
+    )
+
+
+def backlinks(index_path: Path, identifier: str) -> tuple[LinkResult, ...]:
+    """Return resolved links pointing to one document."""
+
+    return _query_links(
+        index_path,
+        """
+        SELECT source_path, ordinal, target, resolved_path
+        FROM document_links
+        WHERE resolved_path = ?
+        ORDER BY lower(source_path), source_path, ordinal
+        """,
+        identifier,
+    )
+
+
+def _query_links(index_path: Path, sql: str, identifier: str) -> tuple[LinkResult, ...]:
+    connection = _open_index(index_path)
+    try:
+        rows = connection.execute(sql, [identifier]).fetchall()
+    except duckdb.Error as error:
+        raise KnowledgeQueryError(f"could not query links: {index_path}") from error
+    finally:
+        connection.close()
+
+    return tuple(
+        LinkResult(
+            source_path=str(source_path),
+            ordinal=int(ordinal),
+            target=str(target),
+            resolved_path=None if resolved_path is None else str(resolved_path),
+        )
+        for source_path, ordinal, target, resolved_path in rows
     )
 
 

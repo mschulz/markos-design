@@ -29,7 +29,11 @@ def test_rebuild_stores_documents_links_metadata_and_state(tmp_path: Path) -> No
             "SELECT path, title, body, metadata FROM documents ORDER BY path"
         ).fetchall()
         links = connection.execute(
-            "SELECT source_path, ordinal, target FROM document_links ORDER BY source_path, ordinal"
+            """
+            SELECT source_path, ordinal, target, resolved_path
+            FROM document_links
+            ORDER BY source_path, ordinal
+            """
         ).fetchall()
         state = connection.execute(
             "SELECT schema_version, document_count, link_count FROM index_state"
@@ -40,10 +44,10 @@ def test_rebuild_stores_documents_links_metadata_and_state(tmp_path: Path) -> No
         ("Two.md", "Two", "", "{}"),
     ]
     assert links == [
-        ("One.md", 0, "Two"),
-        ("One.md", 1, "https://example.com"),
+        ("One.md", 0, "Two", "Two.md"),
+        ("One.md", 1, "https://example.com", None),
     ]
-    assert state == (1, 2, 2)
+    assert state == (2, 2, 2)
     assert summary.document_count == 2
     assert summary.link_count == 2
 
@@ -119,3 +123,22 @@ def test_parse_failure_preserves_existing_index(tmp_path: Path) -> None:
     with duckdb.connect(str(index_path), read_only=True) as connection:
         paths = connection.execute("SELECT path FROM documents").fetchall()
     assert paths == [("Existing.md",)]
+
+
+def test_rebuild_migrates_an_older_rebuildable_schema(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    with duckdb.connect(str(index_path)) as connection:
+        connection.execute("CREATE TABLE index_state (schema_version INTEGER)")
+        connection.execute("INSERT INTO index_state VALUES (1)")
+
+    rebuild_index(
+        index_path,
+        [KnowledgeDocument(path=PurePath("Current.md"), title="Current")],
+    )
+
+    with duckdb.connect(str(index_path), read_only=True) as connection:
+        assert connection.execute("SELECT schema_version FROM index_state").fetchone() == (2,)
+        columns = connection.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_name = 'document_links'"
+        ).fetchall()
+    assert ("resolved_path",) in columns

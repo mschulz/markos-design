@@ -109,3 +109,24 @@ def test_search_reports_no_matches(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "No matching documents" in result.stdout
+
+
+def test_links_shows_outgoing_and_incoming_links(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "One.md").write_text("# One\n\nSee [[Two]] and [[Missing]].", encoding="utf-8")
+    (vault / "Two.md").write_text("# Two", encoding="utf-8")
+    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+
+    outgoing = runner.invoke(app, ["links", "One.md", "--index", str(index_path)])
+    incoming = runner.invoke(
+        app,
+        ["links", "Two.md", "--incoming", "--index", str(index_path)],
+    )
+
+    assert outgoing.exit_code == 0
+    assert "Two.md" in outgoing.stdout
+    assert "Unresolved" in outgoing.stdout
+    assert incoming.exit_code == 0
+    assert "One.md" in incoming.stdout

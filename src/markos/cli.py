@@ -12,7 +12,7 @@ from markos import __version__
 from markos.index import KnowledgeIndexError, rebuild_vault_index
 from markos.logging import configure_logging
 from markos.markdown import MarkdownDiscoveryError, MarkdownParseError
-from markos.query import KnowledgeQueryError, search_index
+from markos.query import KnowledgeQueryError, backlinks, outgoing_links, search_index
 from markos.settings import LogLevel, Settings, SettingsError
 
 app = typer.Typer(
@@ -190,6 +190,55 @@ def search(
     table.add_column("Snippet")
     for result in results:
         table.add_row(result.path, result.title, result.snippet)
+    console.print(table)
+
+
+@app.command()
+def links(
+    identifier: Annotated[str, typer.Argument(help="Vault-relative document path.")],
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+    incoming: Annotated[
+        bool,
+        typer.Option("--incoming", help="Show backlinks instead of outgoing links."),
+    ] = False,
+) -> None:
+    """Show outgoing links or backlinks using the read-only index."""
+
+    settings = _load_settings(config, None, index, None, require_vault=False)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        results = (
+            backlinks(settings.index_path, identifier)
+            if incoming
+            else outgoing_links(settings.index_path, identifier)
+        )
+    except KnowledgeQueryError as error:
+        error_console.print(f"[bold red]Link query failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+
+    if not results:
+        console.print("No links found.")
+        return
+
+    table = Table(title=f"{'Backlinks' if incoming else 'Outgoing links'} for {identifier}")
+    table.add_column("Source")
+    table.add_column("Target")
+    table.add_column("Resolved path")
+    for result in results:
+        table.add_row(result.source_path, result.target, result.resolved_path or "Unresolved")
     console.print(table)
 
 

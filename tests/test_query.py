@@ -4,8 +4,14 @@ import duckdb
 import pytest
 
 from markos.domain import KnowledgeDocument
-from markos.index import rebuild_index
-from markos.query import KnowledgeQueryError, read_document, search_index
+from markos.index import SCHEMA_VERSION, rebuild_index
+from markos.query import (
+    KnowledgeQueryError,
+    backlinks,
+    outgoing_links,
+    read_document,
+    search_index,
+)
 
 
 def _build_search_index(path: Path) -> None:
@@ -88,7 +94,7 @@ def test_queries_reject_missing_and_incompatible_indexes(tmp_path: Path) -> None
         connection.execute("CREATE TABLE index_state (schema_version INTEGER)")
         connection.execute("INSERT INTO index_state VALUES (999)")
 
-    with pytest.raises(KnowledgeQueryError, match="expected 1, found 999"):
+    with pytest.raises(KnowledgeQueryError, match=f"expected {SCHEMA_VERSION}, found 999"):
         search_index(incompatible, "term")
 
 
@@ -100,3 +106,19 @@ def test_search_does_not_modify_index(tmp_path: Path) -> None:
     search_index(index_path, "knowledge")
 
     assert index_path.read_bytes() == before
+
+
+def test_outgoing_links_and_backlinks_use_resolved_paths(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    _build_search_index(index_path)
+
+    outgoing = outgoing_links(index_path, "Projects/MarkOS.md")
+    incoming = backlinks(index_path, "Vision.md")
+
+    assert [(link.target, link.resolved_path) for link in outgoing] == [
+        ("Vision", "Vision.md"),
+        ("Roadmap", None),
+    ]
+    assert [(link.source_path, link.target) for link in incoming] == [
+        ("Projects/MarkOS.md", "Vision")
+    ]

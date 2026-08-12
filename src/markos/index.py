@@ -12,9 +12,10 @@ from typing import Any
 import duckdb
 
 from markos.domain import KnowledgeDocument
+from markos.links import resolve_internal_link
 from markos.markdown import load_markdown
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class KnowledgeIndexError(ValueError):
@@ -66,8 +67,14 @@ def rebuild_index(index_path: Path, documents: Iterable[KnowledgeDocument]) -> I
         )
         for document in materialized
     ]
+    known_paths = tuple(document.identifier for document in materialized)
     link_rows = [
-        (document.identifier, ordinal, target)
+        (
+            document.identifier,
+            ordinal,
+            target,
+            resolve_internal_link(document.identifier, target, known_paths),
+        )
         for document in materialized
         for ordinal, target in enumerate(document.links)
     ]
@@ -79,10 +86,10 @@ def rebuild_index(index_path: Path, documents: Iterable[KnowledgeDocument]) -> I
 
     try:
         connection.begin()
+        connection.execute("DROP TABLE IF EXISTS document_links")
+        connection.execute("DROP TABLE IF EXISTS documents")
+        connection.execute("DROP TABLE IF EXISTS index_state")
         _create_schema(connection)
-        connection.execute("DELETE FROM document_links")
-        connection.execute("DELETE FROM documents")
-        connection.execute("DELETE FROM index_state")
         if document_rows:
             connection.executemany(
                 "INSERT INTO documents (path, title, body, metadata) VALUES (?, ?, ?, ?)",
@@ -90,7 +97,10 @@ def rebuild_index(index_path: Path, documents: Iterable[KnowledgeDocument]) -> I
             )
         if link_rows:
             connection.executemany(
-                "INSERT INTO document_links (source_path, ordinal, target) VALUES (?, ?, ?)",
+                """
+                INSERT INTO document_links (source_path, ordinal, target, resolved_path)
+                VALUES (?, ?, ?, ?)
+                """,
                 link_rows,
             )
         connection.execute(
@@ -119,7 +129,7 @@ def rebuild_index(index_path: Path, documents: Iterable[KnowledgeDocument]) -> I
 def _create_schema(connection: duckdb.DuckDBPyConnection) -> None:
     connection.execute(
         """
-        CREATE TABLE IF NOT EXISTS documents (
+        CREATE TABLE documents (
             path VARCHAR PRIMARY KEY,
             title VARCHAR NOT NULL,
             body VARCHAR NOT NULL,
@@ -129,17 +139,21 @@ def _create_schema(connection: duckdb.DuckDBPyConnection) -> None:
     )
     connection.execute(
         """
-        CREATE TABLE IF NOT EXISTS document_links (
+        CREATE TABLE document_links (
             source_path VARCHAR NOT NULL,
             ordinal INTEGER NOT NULL,
             target VARCHAR NOT NULL,
+            resolved_path VARCHAR,
             PRIMARY KEY (source_path, ordinal)
         )
         """
     )
     connection.execute(
+        "CREATE INDEX document_links_resolved_path_idx ON document_links (resolved_path)"
+    )
+    connection.execute(
         """
-        CREATE TABLE IF NOT EXISTS index_state (
+        CREATE TABLE index_state (
             singleton BOOLEAN PRIMARY KEY CHECK (singleton),
             schema_version INTEGER NOT NULL,
             rebuilt_at TIMESTAMPTZ NOT NULL,
