@@ -272,6 +272,46 @@ This is a structural and provenance pass, not yet full model qualification. All
 precision, repeatability and human semantic review remain gating criteria. The
 pilot was not scaled beyond this copied note.
 
+### Reproducibility and Citation Precision
+
+The copied `Active-Badge.md` note was prepared again with a 1,500-character
+target. Heading-aware preparation produced four exact chunks covering `L1-L22`,
+`L23-L49`, `L50-L65` and `L66-L74`.
+
+An initial two-run trial retained full SHA-256 digests in model-facing chunk
+paths. Both raw graphs were byte-for-byte identical, including the same
+one-character corruption in one cited digest. Strict remapping rejected both.
+This demonstrated reproducibility but also that long cryptographic identifiers
+are unsuitable strings for a model to reproduce.
+
+MarkOS now exposes short deterministic paths such as `chunks/0001/0004.md` and
+keeps the complete source and chunk hashes only in the verified source-map
+manifest. Two identical Qwen 3 14B runs then produced:
+
+| Measure | Run 1 | Run 2 |
+|---|---:|---:|
+| Duration | 171.8 s | 165.9 s |
+| Input/output tokens | 2,084 / 1,908 | 2,084 / 2,086 |
+| Nodes | 9 | 10 |
+| Edges | 8 | 8 |
+| Hyperedges | 1 | 1 |
+| Prepared chunks cited | 3/4 | 3/4 |
+| Strict validation | Pass | Fail |
+
+Run 1 passed and narrowed every accepted location to one of `L1-L22`,
+`L23-L49` or `L50-L65`. Run 2 cited `L1-L22`, `L23-L49` and `L66-L74`, but
+failed because an `INFERRED` hyperedge omitted its required score. The two raw
+graphs had different SHA-256 digests. Using case-folded human labels, six of 13
+unique node labels overlapped (46.2 percent Jaccard). Only three of 13 unique
+label-relation-label edge signatures overlapped (23.1 percent Jaccard).
+
+The finer corpus therefore improved citation breadth from 74 lines to at most
+27 lines and eliminated path-transcription failure, but Qwen 3 14B did not meet
+the reproducibility gate. Each run also omitted one different prepared chunk;
+the union covered all four, while each individual run covered 75 percent.
+MarkOS now reports cited and uncited chunk counts during remapping so source
+coverage cannot be confused with graph-item provenance coverage.
+
 ## Revised Responsibility Split
 
 ```text
@@ -335,10 +375,10 @@ support for later generated claims.
 
 Before adopting Graphify as an M13/M14 dependency:
 
-1. Repeat the controlled and genuine-note model runs to measure reproducibility;
-   both must pass the same strict validator after deterministic normalization.
-2. Reduce and measure source-range breadth so accepted relationships cite a
-   useful heading or line window rather than an entire 74-line note.
+1. Replace or constrain the semantic provider so repeated runs meet an explicit
+   node/edge stability threshold and both pass strict validation.
+2. Define a prepared-chunk coverage policy and a bounded retry for chunks that
+   produce no graph items; never silently treat omitted chunks as processed.
 3. Perform human semantic review and measure entity duplication, runtime and graph
    reproducibility on the qualified model.
 4. Verify add, change, rename and deletion behaviour using Graphify's supported

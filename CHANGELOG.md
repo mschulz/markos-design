@@ -45,6 +45,9 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Added constrained Graphify confidence normalization; reprocessing now lets
   both existing Qwen 3 artifacts pass structurally while preserving explicit
   normalization provenance and rejecting missing non-extracted scores.
+- Measured narrow-chunk reproducibility: short ordinal chunk paths fixed model
+  path corruption and reduced citation breadth, but repeated Qwen 3 graphs had
+  low node/edge overlap and only 75-percent per-run chunk coverage.
 
 ---
 
