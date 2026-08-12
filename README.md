@@ -229,6 +229,10 @@ Remapping rechecks both source and chunk hashes. Missing provider locations are
 grounded to the chunk's original line range and marked
 `source_location_origin: markos_chunk_range`; provider line locations are
 translated to original line numbers and marked `provider_chunk_line`.
+Graphify defines every `EXTRACTED` relationship as confidence `1.0`, so a
+missing score on that explicit label is restored deterministically and marked
+`confidence_score_origin: markos_graphify_extracted_policy`. Missing scores on
+`INFERRED` or `AMBIGUOUS` relationships are never guessed and stop remapping.
 
 Finally, validate the remapped graph against the original corpus before
 inspecting or importing it:

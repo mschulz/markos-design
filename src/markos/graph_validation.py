@@ -10,7 +10,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 _LINE_LOCATION = re.compile(r"(?:L|line\s+)(?P<start>\d+)(?:\s*[-–]\s*(?:L)?(?P<end>\d+))?", re.I)
-_CONFIDENCE_LABELS = frozenset({"EXTRACTED", "INFERRED"})
+_CONFIDENCE_LABELS = frozenset({"AMBIGUOUS", "EXTRACTED", "INFERRED"})
+_INFERRED_SCORES = frozenset({0.55, 0.65, 0.75, 0.85, 0.95})
 
 
 class GraphValidationError(RuntimeError):
@@ -307,5 +308,30 @@ def _validate_confidence(
                 "invalid_confidence_score",
                 f"{location}.confidence_score",
                 "must be a number between 0 and 1",
+            )
+        )
+        return
+    if label == "EXTRACTED" and score != 1.0:
+        issues.append(
+            ValidationIssue(
+                "inconsistent_confidence_score",
+                f"{location}.confidence_score",
+                "EXTRACTED relationships must have score 1.0",
+            )
+        )
+    elif label == "INFERRED" and score not in _INFERRED_SCORES:
+        issues.append(
+            ValidationIssue(
+                "inconsistent_confidence_score",
+                f"{location}.confidence_score",
+                f"INFERRED score must be one of {sorted(_INFERRED_SCORES)}",
+            )
+        )
+    elif label == "AMBIGUOUS" and not 0.1 <= score <= 0.3:
+        issues.append(
+            ValidationIssue(
+                "inconsistent_confidence_score",
+                f"{location}.confidence_score",
+                "AMBIGUOUS score must be between 0.1 and 0.3",
             )
         )

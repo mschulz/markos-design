@@ -188,6 +188,8 @@ def remap_graph_sources(
             if not isinstance(item, dict):
                 raise SemanticCorpusError(f"{collection_name}[{number}] must be an object")
             _remap_item(item, chunks, f"{collection_name}[{number}]")
+            if collection_name != "nodes":
+                _normalize_graphify_confidence(item, f"{collection_name}[{number}]")
             item_count += 1
 
     try:
@@ -376,6 +378,20 @@ def _remap_item(item: dict[str, Any], chunks: dict[str, SourceChunk], location: 
     remapped_location, origin = _remapped_location(source_location, chunk)
     item["source_location"] = remapped_location
     item["source_location_origin"] = origin
+
+
+def _normalize_graphify_confidence(item: dict[str, Any], location: str) -> None:
+    if item.get("confidence_score") is not None:
+        return
+    confidence = item.get("confidence")
+    if confidence == "EXTRACTED":
+        item["confidence_score"] = 1.0
+        item["confidence_score_origin"] = "markos_graphify_extracted_policy"
+        return
+    if confidence in {"INFERRED", "AMBIGUOUS"}:
+        raise SemanticCorpusError(
+            f"{location}.confidence_score is required for {confidence} relationships"
+        )
 
 
 def _remapped_location(value: object, chunk: SourceChunk) -> tuple[str, str]:

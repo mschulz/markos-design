@@ -169,3 +169,73 @@ def test_manifest_records_source_and_chunk_hashes(tmp_path: Path) -> None:
 
     assert chunk.source_hash == sha256(note.read_bytes()).hexdigest()
     assert chunk.chunk_hash == sha256((prepared.path / chunk.chunk_path).read_bytes()).hexdigest()
+
+
+def test_remap_normalizes_only_missing_extracted_confidence(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "Note.md").write_text("# Note\n", encoding="utf-8")
+    prepared = prepare_semantic_corpus(source, tmp_path / "prepared")
+    chunk = load_source_map(prepared.manifest_path).chunks[0]
+    graph = _write_graph(
+        tmp_path / "graph.json",
+        {
+            "nodes": [
+                {"id": "one", "label": "One", "source_file": chunk.chunk_path},
+                {"id": "two", "label": "Two", "source_file": chunk.chunk_path},
+            ],
+            "edges": [
+                {
+                    "source": "one",
+                    "target": "two",
+                    "relation": "mentions",
+                    "confidence": "EXTRACTED",
+                    "source_file": chunk.chunk_path,
+                }
+            ],
+        },
+    )
+    output = tmp_path / "remapped.json"
+
+    remap_graph_sources(graph, prepared.manifest_path, source, prepared.path, output)
+    edge = json.loads(output.read_text(encoding="utf-8"))["edges"][0]
+
+    assert edge["confidence_score"] == 1.0
+    assert edge["confidence_score_origin"] == "markos_graphify_extracted_policy"
+    assert validate_graph_file(output, source).is_valid
+
+
+@pytest.mark.parametrize("confidence", ["INFERRED", "AMBIGUOUS"])
+def test_remap_rejects_missing_non_extracted_score(tmp_path: Path, confidence: str) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "Note.md").write_text("# Note\n", encoding="utf-8")
+    prepared = prepare_semantic_corpus(source, tmp_path / "prepared")
+    chunk = load_source_map(prepared.manifest_path).chunks[0]
+    graph = _write_graph(
+        tmp_path / "graph.json",
+        {
+            "nodes": [
+                {"id": "one", "label": "One", "source_file": chunk.chunk_path},
+                {"id": "two", "label": "Two", "source_file": chunk.chunk_path},
+            ],
+            "edges": [
+                {
+                    "source": "one",
+                    "target": "two",
+                    "relation": "mentions",
+                    "confidence": confidence,
+                    "source_file": chunk.chunk_path,
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(SemanticCorpusError, match=f"required for {confidence}"):
+        remap_graph_sources(
+            graph,
+            prepared.manifest_path,
+            source,
+            prepared.path,
+            tmp_path / "remapped.json",
+        )

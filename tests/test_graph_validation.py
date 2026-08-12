@@ -34,7 +34,7 @@ def _valid_graph() -> dict[str, Any]:
                 "target": "two",
                 "relation": "mentions",
                 "confidence": "EXTRACTED",
-                "confidence_score": 0.9,
+                "confidence_score": 1.0,
                 "source_file": "notes/One.md",
                 "source_location": "L1-L2",
             }
@@ -128,6 +128,28 @@ def test_rejects_duplicate_ids_bad_confidence_and_out_of_range_lines(tmp_path: P
     assert "invalid_confidence" in codes
     assert "invalid_confidence_score" in codes
     assert "invalid_source_location" in codes
+
+
+@pytest.mark.parametrize(
+    ("label", "score"),
+    [("EXTRACTED", 0.9), ("INFERRED", 0.5), ("AMBIGUOUS", 0.5)],
+)
+def test_rejects_confidence_scores_inconsistent_with_labels(
+    tmp_path: Path,
+    label: str,
+    score: float,
+) -> None:
+    corpus = tmp_path / "corpus"
+    (corpus / "notes").mkdir(parents=True)
+    (corpus / "notes" / "One.md").write_text("# One\n", encoding="utf-8")
+    (corpus / "notes" / "Two.md").write_text("# Two\n", encoding="utf-8")
+    payload = _valid_graph()
+    payload["edges"][0]["confidence"] = label
+    payload["edges"][0]["confidence_score"] = score
+
+    report = validate_graph_file(_write_graph(tmp_path / "graph.json", payload), corpus)
+
+    assert any(issue.code == "inconsistent_confidence_score" for issue in report.issues)
 
 
 def test_rejects_malformed_graph_json(tmp_path: Path) -> None:
