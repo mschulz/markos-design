@@ -36,6 +36,9 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Ran a local Ollama pilot and rejected the tested Qwen 2.5 7B variants for
   production semantic extraction after malformed output and fabricated source
   paths; recorded the required qualification and validation gates.
+- Added the MarkOS graph-validation contract and recorded that `qwen3:14b`
+  produced a structurally consistent control graph but failed the strict gate
+  because Graphify emitted zero source-location coverage.
 
 ---
 

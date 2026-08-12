@@ -184,6 +184,31 @@ The next local candidate must pass a fixed validation corpus before any vault
 content is processed. Acceptance requires valid JSON, only allowlisted source
 paths, no dangling endpoints, location coverage and repeatable results.
 
+### Qwen 3 14B Qualification
+
+MarkOS subsequently added a fail-closed, read-only validator for Graphify JSON.
+It checks corpus-allowlisted paths, node and hyperedge identifier uniqueness,
+edge and hyperedge endpoints, source-location coverage, confidence fields and
+line-range bounds. Empty graphs are rejected. A reduced location threshold is
+available only for diagnosis; the ingestion gate remains 100 percent.
+
+The validator rejected the earlier `Active-Badge.md` graph for its fabricated
+`src/auth/session.py` path, dangling endpoints and zero location coverage.
+
+`qwen3:14b` was then tested through Ollama against the same short controlled
+note. The run produced six nodes, five edges and one hyperedge from 885 input
+and 1,539 output tokens in 137 seconds. The entities and endpoints were
+structurally consistent, all source paths were allowlisted, and a diagnostic
+validation with a zero-percent location threshold passed. Strict validation
+failed because Graphify supplied no `source_location` values: coverage was zero
+percent.
+
+The 14B model was therefore stopped at the controlled-note gate. No genuine
+note or larger corpus was processed with it. This result indicates that model
+capacity alone does not solve the grounding gap: MarkOS-owned heading-aware
+chunking and source mapping, or a Graphify extraction-contract change, is
+required before further model qualification can pass.
+
 ## Revised Responsibility Split
 
 ```text
@@ -247,10 +272,11 @@ support for later generated claims.
 
 Before adopting Graphify as an M13/M14 dependency:
 
-1. Qualify a more capable local model against the controlled note and genuine
-   copied notes; the tested Qwen 2.5 7B variants are rejected.
-2. Add deterministic validation for corpus paths, edge endpoints, source
-   locations and confidence labels before accepting a Graphify graph.
+1. Add MarkOS-owned heading-aware preprocessing and source mapping, or require
+   Graphify to emit source locations; `qwen3:14b` otherwise fails at zero-percent
+   location coverage.
+2. Requalify the local model against the controlled note and genuine copied
+   notes only after the location contract can be satisfied.
 3. Measure entity duplication, source-location coverage, runtime and graph
    reproducibility on the qualified model.
 4. Verify add, change, rename and deletion behaviour using Graphify's supported
