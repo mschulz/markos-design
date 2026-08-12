@@ -41,10 +41,16 @@ Progress: **2 / 6**
 | M9 — Conditional Synchronization | No-op sync when current and transactional rebuild when stale | ✅ |
 | M10 — Automated Read-Only Synchronization | Foreground monitoring and serialized rebuilds | ✅ |
 
-## Next
+## Accepted — Not Yet Implemented
 
-The next software milestone has not been defined. See [[Milestones]] for the
-implemented roadmap and M10 acceptance criteria.
+| Milestone | Outcome | Status |
+|-----------|---------|:------:|
+| M11 — Controlled PARA Filing | Human-approved filing from an in-vault inbox | Accepted |
+| M12 — Raw Document Ingestion | Immutable raw artifacts and grounded source notes | Accepted |
+| M13 — Markdown Concept Memory | Filesystem-native LLM research without vector search | Accepted |
+
+See [[Milestones]] for scope and acceptance criteria and
+[[Markdown Memory Architecture]] for the governing design.
 
 ---
 
@@ -61,6 +67,8 @@ implemented roadmap and M10 acceptance criteria.
 
 - Markdown is the source of truth.
 - DuckDB is a rebuildable index.
+- Markdown is the durable semantic-memory layer; vector storage is not required.
+- Generated conclusions remain linked to inspectable source evidence.
 - Architecture before implementation.
 - Fixed milestone scope.
 - Small, releasable increments.

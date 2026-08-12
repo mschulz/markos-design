@@ -13,6 +13,10 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Added the M10 Automated Read-Only Synchronization milestone proposal.
 - Accepted M10 for implementation.
 - Recorded the implemented M0–M9 software milestone history.
+- Accepted M11 Controlled PARA Filing.
+- Accepted M12 Raw Document Ingestion and Grounded Source Notes.
+- Accepted M13 Filesystem-Native Research and Markdown Concept Memory.
+- Established Markdown as the durable semantic-memory layer without embeddings or vector search.
 
 ### Completed
 
