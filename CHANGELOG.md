@@ -39,6 +39,9 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Added the MarkOS graph-validation contract and recorded that `qwen3:14b`
   produced a structurally consistent control graph but failed the strict gate
   because Graphify emitted zero source-location coverage.
+- Added deterministic heading-aware source mapping: the Qwen 3 control now
+  passes with complete mapped provenance, while the genuine-note run remains
+  rejected because Graphify omitted mandatory relationship confidence scores.
 
 ---
 

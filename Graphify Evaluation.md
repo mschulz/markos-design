@@ -209,6 +209,44 @@ capacity alone does not solve the grounding gap: MarkOS-owned heading-aware
 chunking and source mapping, or a Graphify extraction-contract change, is
 required before further model qualification can pass.
 
+### MarkOS Source Mapping Follow-up
+
+MarkOS now prepares a deterministic external corpus of exact Markdown slices.
+It preserves heading boundaries where possible and records every chunk's
+original path, inclusive line range, source SHA-256 and chunk SHA-256 in a
+portable manifest. A generated `.graphifyignore` prevents that manifest from
+entering Graphify's evidence graph. Remapping fails if either hash changed or a
+model cites a path absent from the chunk allowlist. Broad chunk-derived ranges
+are labelled separately from provider-supplied chunk line locations.
+
+The controlled note was repeated through this pipeline using `qwen3:14b`:
+
+| Measure | Result |
+|---|---:|
+| Prepared chunks | 1 |
+| Nodes | 6 |
+| Edges | 5 |
+| Hyperedges | 1 |
+| Duration | 192 s |
+| Input/output tokens | 946 / 2,091 |
+| Original-path coverage | 100% |
+| Source-location coverage | 100% |
+| Strict validation | Pass |
+
+The pipeline then advanced to the copied 654-word `Active-Badge.md` note. The
+first run exposed Ollama's 4,096-token default context and was truncated. A
+temporary model alias with an explicit 8,192-token context completed without
+truncation in 296 seconds, using 1,868 input and 3,073 output tokens. It produced
+nine relevant nodes, eight resolved edges and two resolved hyperedges, with no
+fabricated corpus paths. Remapping achieved 100-percent original-path and
+source-location coverage.
+
+Strict validation nevertheless rejected the genuine-note graph because all
+eight edges and both hyperedges omitted `confidence_score`, despite Graphify's
+extraction specification making that field mandatory. MarkOS did not invent
+the missing scores. The temporary 8K alias was removed after the test; the
+underlying model remains installed. No larger corpus was processed.
+
 ## Revised Responsibility Split
 
 ```text
@@ -272,11 +310,11 @@ support for later generated claims.
 
 Before adopting Graphify as an M13/M14 dependency:
 
-1. Add MarkOS-owned heading-aware preprocessing and source mapping, or require
-   Graphify to emit source locations; `qwen3:14b` otherwise fails at zero-percent
-   location coverage.
-2. Requalify the local model against the controlled note and genuine copied
-   notes only after the location contract can be satisfied.
+1. Define a constrained provider-normalization rule: `EXTRACTED` may map to its
+   specified score of `1.0` with explicit MarkOS provenance, while missing
+   `INFERRED` or `AMBIGUOUS` scores remain rejection conditions.
+2. Repeat the controlled and genuine-note runs to measure reproducibility after
+   normalization; both must pass the same strict validator.
 3. Measure entity duplication, source-location coverage, runtime and graph
    reproducibility on the qualified model.
 4. Verify add, change, rename and deletion behaviour using Graphify's supported
