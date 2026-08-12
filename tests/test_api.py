@@ -147,3 +147,30 @@ def test_api_exposes_no_mutating_http_methods(tmp_path: Path) -> None:
     }
 
     assert exposed_methods <= {"GET", "HEAD"}
+
+
+def test_graph_summary_and_path_routes(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    _build_api_index(index_path)
+    app = create_app(index_path)
+
+    summary_status, summary = _request(app, "/graph/summary")
+    path_status, path = _request(
+        app,
+        "/graph/path",
+        "source=Projects%2FMarkOS.md&target=Vision.md",
+    )
+    missing_status, missing = _request(
+        app,
+        "/graph/path",
+        "source=Vision.md&target=Projects%2FMarkOS.md",
+    )
+
+    assert summary_status == 200
+    assert summary["document_count"] == 2
+    assert summary["resolved_link_count"] == 1
+    assert summary["unresolved_link_count"] == 1
+    assert path_status == 200
+    assert path["path"] == ["Projects/MarkOS.md", "Vision.md"]
+    assert missing_status == 404
+    assert "no directed path" in missing["detail"]

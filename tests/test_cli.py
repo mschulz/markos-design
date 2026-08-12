@@ -152,3 +152,23 @@ def test_serve_starts_read_only_api_without_vault(
     assert result.exit_code == 0
     assert len(calls) == 1
     assert calls[0][1:] == ("127.0.0.1", 9000)
+
+
+def test_graph_shows_health_and_shortest_path(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "One.md").write_text("# One\n\n[[Two]]", encoding="utf-8")
+    (vault / "Two.md").write_text("# Two", encoding="utf-8")
+    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+
+    health = runner.invoke(app, ["graph", "--index", str(index_path)])
+    path = runner.invoke(
+        app,
+        ["graph", "--index", str(index_path), "--from", "One.md", "--to", "Two.md"],
+    )
+
+    assert health.exit_code == 0
+    assert "Resolved links" in health.stdout
+    assert path.exit_code == 0
+    assert "One.md → Two.md" in path.stdout

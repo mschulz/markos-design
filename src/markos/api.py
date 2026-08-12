@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 
 from markos import __version__
+from markos.analysis import GraphAnalysisError, analyze_graph, shortest_path
 from markos.query import (
     KnowledgeQueryError,
     backlinks,
@@ -53,6 +54,21 @@ class LinkResponse(ApiModel):
     ordinal: int
     target: str
     resolved_path: str | None
+
+
+class GraphReportResponse(ApiModel):
+    document_count: int
+    resolved_link_count: int
+    unresolved_link_count: int
+    isolated_document_count: int
+    weak_component_count: int
+    isolated_documents: tuple[str, ...]
+
+
+class PathResponse(ApiModel):
+    source: str
+    target: str
+    path: tuple[str, ...]
 
 
 def create_app(index_path: Path) -> FastAPI:
@@ -108,6 +124,27 @@ def create_app(index_path: Path) -> FastAPI:
     @app.get("/graph/backlinks", response_model=list[LinkResponse])
     def incoming(path: str = Query(min_length=1)) -> list[LinkResponse]:
         return _link_response(index_path, path, incoming=True)
+
+    @app.get("/graph/summary", response_model=GraphReportResponse)
+    def graph_summary() -> GraphReportResponse:
+        try:
+            report = analyze_graph(index_path)
+        except KnowledgeQueryError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        return GraphReportResponse(**report.__dict__)
+
+    @app.get("/graph/path", response_model=PathResponse)
+    def graph_path(
+        source: str = Query(min_length=1),
+        target: str = Query(min_length=1),
+    ) -> PathResponse:
+        try:
+            path = shortest_path(index_path, source, target)
+        except KnowledgeQueryError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except GraphAnalysisError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+        return PathResponse(source=source, target=target, path=path)
 
     return app
 

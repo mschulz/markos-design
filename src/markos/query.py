@@ -47,6 +47,14 @@ class IndexStatus:
     link_count: int
 
 
+@dataclass(frozen=True)
+class GraphSnapshot:
+    """All document nodes and stored links needed for graph analysis."""
+
+    document_paths: tuple[str, ...]
+    links: tuple[LinkResult, ...]
+
+
 def index_status(index_path: Path) -> IndexStatus:
     """Read rebuild metadata from a compatible index."""
 
@@ -188,6 +196,32 @@ def backlinks(index_path: Path, identifier: str) -> tuple[LinkResult, ...]:
     )
 
 
+def graph_snapshot(index_path: Path) -> GraphSnapshot:
+    """Read the complete graph input from a compatible index."""
+
+    connection = _open_index(index_path)
+    try:
+        document_rows = connection.execute(
+            "SELECT path FROM documents ORDER BY lower(path), path"
+        ).fetchall()
+        link_rows = connection.execute(
+            """
+            SELECT source_path, ordinal, target, resolved_path
+            FROM document_links
+            ORDER BY lower(source_path), source_path, ordinal
+            """
+        ).fetchall()
+    except duckdb.Error as error:
+        raise KnowledgeQueryError(f"could not read graph: {index_path}") from error
+    finally:
+        connection.close()
+
+    return GraphSnapshot(
+        document_paths=tuple(str(path) for (path,) in document_rows),
+        links=_link_results(link_rows),
+    )
+
+
 def _query_links(index_path: Path, sql: str, identifier: str) -> tuple[LinkResult, ...]:
     connection = _open_index(index_path)
     try:
@@ -197,10 +231,14 @@ def _query_links(index_path: Path, sql: str, identifier: str) -> tuple[LinkResul
     finally:
         connection.close()
 
+    return _link_results(rows)
+
+
+def _link_results(rows: list[tuple[object, ...]]) -> tuple[LinkResult, ...]:
     return tuple(
         LinkResult(
             source_path=str(source_path),
-            ordinal=int(ordinal),
+            ordinal=int(str(ordinal)),
             target=str(target),
             resolved_path=None if resolved_path is None else str(resolved_path),
         )

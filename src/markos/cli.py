@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.table import Table
 
 from markos import __version__
+from markos.analysis import GraphAnalysisError, analyze_graph, shortest_path
 from markos.api import create_app
 from markos.index import KnowledgeIndexError, rebuild_vault_index
 from markos.logging import configure_logging
@@ -273,6 +274,64 @@ def serve(
         )
         raise typer.Exit(code=2)
     uvicorn.run(create_app(settings.index_path), host=host, port=port)
+
+
+@app.command()
+def graph(
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+    source: Annotated[
+        str | None,
+        typer.Option("--from", help="Starting document for a directed path."),
+    ] = None,
+    target: Annotated[
+        str | None,
+        typer.Option("--to", help="Destination document for a directed path."),
+    ] = None,
+) -> None:
+    """Show graph health or find a shortest directed path."""
+
+    if (source is None) != (target is None):
+        error_console.print(
+            "[bold red]Usage error:[/bold red] --from and --to must be used together"
+        )
+        raise typer.Exit(code=2)
+
+    settings = _load_settings(config, None, index, None, require_vault=False)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        if source is not None and target is not None:
+            path = shortest_path(settings.index_path, source, target)
+            console.print(" → ".join(path))
+            return
+        report = analyze_graph(settings.index_path)
+    except (KnowledgeQueryError, GraphAnalysisError) as error:
+        error_console.print(f"[bold red]Graph query failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+
+    table = Table(title="Knowledge graph health")
+    table.add_column("Metric")
+    table.add_column("Count", justify="right")
+    table.add_row("Documents", str(report.document_count))
+    table.add_row("Resolved links", str(report.resolved_link_count))
+    table.add_row("Unresolved links", str(report.unresolved_link_count))
+    table.add_row("Isolated documents", str(report.isolated_document_count))
+    table.add_row("Weak components", str(report.weak_component_count))
+    console.print(table)
+    if report.isolated_documents:
+        console.print("Isolated: " + ", ".join(report.isolated_documents))
 
 
 def _required_vault_path(settings: Settings) -> Path:
