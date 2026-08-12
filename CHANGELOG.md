@@ -14,6 +14,10 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Accepted M10 for implementation.
 - Recorded the implemented M0–M9 software milestone history.
 
+### Completed
+
+- Recorded M10 implementation in `markos` commit `c60400d`.
+
 ---
 
 ## Design Milestone D0 – Foundation

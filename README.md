@@ -39,15 +39,12 @@ Progress: **2 / 6**
 | M7 — Ingestion Diagnostics | Resilient ingestion with rejection reporting | ✅ |
 | M8 — Index Freshness | Source fingerprints and change detection | ✅ |
 | M9 — Conditional Synchronization | No-op sync when current and transactional rebuild when stale | ✅ |
+| M10 — Automated Read-Only Synchronization | Foreground monitoring and serialized rebuilds | ✅ |
 
-## Current
+## Next
 
-### M10 — Automated Read-Only Synchronization
-
-M10 adds a foreground watcher that keeps the external DuckDB index current
-without modifying the Markdown vault. The accepted scope is defined in [[Milestones]].
-
-Status: **Accepted — implementation authorised**
+The next software milestone has not been defined. See [[Milestones]] for the
+implemented roadmap and M10 acceptance criteria.
 
 ---
 

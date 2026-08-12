@@ -31,7 +31,7 @@ tags:
 
 ## M10 — Automated Read-Only Synchronization
 
-Status: **Accepted — implementation authorised**
+Status: **Complete — implemented in `markos` commit `c60400d`**
 
 ### Goal
 
@@ -81,6 +81,12 @@ as the read-only source of truth.
 ### Decision
 
 Accepted for implementation on 2026-08-12.
+
+### Completion
+
+Implemented and verified on 2026-08-12. The implementation provides the
+foreground watcher, debounced change handling, retry behavior, clean shutdown,
+and cross-process rebuild serialization without persistent lock files.
 
 ## Related
 
