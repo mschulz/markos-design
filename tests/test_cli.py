@@ -7,6 +7,7 @@ from typer.testing import CliRunner
 
 from markos import __version__
 from markos.cli import app
+from markos.semantic_extraction import ExtractionSummary
 from markos.watch import WatchSummary
 
 runner = CliRunner()
@@ -295,6 +296,58 @@ def test_prepare_remap_and_validate_graph_workflow(tmp_path: Path) -> None:
     assert "chunks." in remapping.stdout
     assert validation.exit_code == 0
     assert "source-location coverage 100.0%" in validation.stdout
+
+
+def test_semantic_extraction_cli_requires_consent_and_reports_summary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_extract(*args: object, **kwargs: object) -> ExtractionSummary:
+        calls.append({"args": args, "kwargs": kwargs})
+        return ExtractionSummary(
+            path=tmp_path / "graph.json",
+            node_count=2,
+            edge_count=1,
+            rejected_relationship_count=0,
+            cited_chunk_count=1,
+            total_chunk_count=1,
+            citation_skipped_chunk_count=0,
+            input_tokens=100,
+            output_tokens=20,
+        )
+
+    common = [
+        "extract-semantic-graph",
+        str(tmp_path / "prepared"),
+        "--manifest",
+        str(tmp_path / "source-map.json"),
+        "--source-corpus",
+        str(tmp_path / "source"),
+        "--output",
+        str(tmp_path / "graph.json"),
+    ]
+
+    without_consent = runner.invoke(app, common)
+    monkeypatch.setattr("markos.cli.extract_semantic_graph", fake_extract)
+    with_consent = runner.invoke(app, [*common, "--allow-external-llm"])
+
+    assert without_consent.exit_code == 1
+    assert "explicit" in without_consent.stderr
+    assert "consent" in without_consent.stderr
+    assert with_consent.exit_code == 0
+    assert len(calls) == 1
+    assert calls[0]["kwargs"] == {
+        "allow_external_llm": True,
+        "model": "sonnet",
+        "effort": "low",
+        "timeout_seconds": 600,
+    }
+    stdout = " ".join(with_consent.stdout.split())
+    assert "Extracted 2 nodes and 1 edges" in stdout
+    assert "skipped 0 chunk(s) fully covered by deterministic citations" in stdout
+    assert "rejected 0 relationships" in stdout
 
 
 def test_freshness_exits_zero_when_current_and_one_when_stale(tmp_path: Path) -> None:

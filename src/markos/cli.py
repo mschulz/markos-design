@@ -35,6 +35,7 @@ from markos.semantic_corpus import (
     prepare_semantic_corpus,
     remap_graph_sources,
 )
+from markos.semantic_extraction import ClaudeEffort, SemanticExtractionError, extract_semantic_graph
 from markos.settings import LogLevel, Settings, SettingsError
 from markos.sync import SyncError, sync_vault_index
 from markos.watch import WatchError, watch_vault_index
@@ -701,6 +702,70 @@ def remap_graph_source_locations(
     )
     if remapped.uncited_chunks:
         console.print("Uncited prepared chunks: " + ", ".join(remapped.uncited_chunks))
+
+
+@app.command("extract-semantic-graph")
+def extract_semantic_graph_command(
+    prepared_corpus: Annotated[
+        Path,
+        typer.Argument(help="Verified prepared corpus to transmit."),
+    ],
+    manifest: Annotated[
+        Path,
+        typer.Option("--manifest", help="source-map.json from corpus preparation."),
+    ],
+    source_corpus: Annotated[
+        Path,
+        typer.Option("--source-corpus", help="Original read-only Markdown corpus."),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="New external path for extracted graph JSON."),
+    ],
+    model: Annotated[
+        str,
+        typer.Option("--model", help="Claude model alias or complete model identifier."),
+    ] = "sonnet",
+    effort: Annotated[
+        ClaudeEffort,
+        typer.Option("--effort", help="Claude reasoning effort for stable extraction."),
+    ] = "low",
+    timeout_seconds: Annotated[
+        int,
+        typer.Option("--timeout-seconds", min=1, help="Claude request timeout."),
+    ] = 600,
+    allow_external_llm: Annotated[
+        bool,
+        typer.Option(
+            "--allow-external-llm",
+            help="Consent to transmit the verified prepared chunks to Claude.",
+        ),
+    ] = False,
+) -> None:
+    """Extract an evidence-grounded graph using the MarkOS Claude contract."""
+
+    try:
+        summary = extract_semantic_graph(
+            prepared_corpus,
+            manifest,
+            source_corpus,
+            output,
+            allow_external_llm=allow_external_llm,
+            model=model,
+            effort=effort,
+            timeout_seconds=timeout_seconds,
+        )
+    except SemanticExtractionError as error:
+        error_console.print(f"[bold red]Semantic extraction failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+    console.print(
+        f"Extracted {summary.node_count} nodes and {summary.edge_count} edges into "
+        f"{summary.path}; cited {summary.cited_chunk_count}/{summary.total_chunk_count} "
+        f"prepared chunks; skipped {summary.citation_skipped_chunk_count} chunk(s) fully "
+        f"covered by deterministic citations; rejected "
+        f"{summary.rejected_relationship_count} relationships; "
+        f"tokens {summary.input_tokens} in / {summary.output_tokens} out."
+    )
 
 
 @app.command("para-audit")

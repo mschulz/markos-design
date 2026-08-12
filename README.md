@@ -218,6 +218,47 @@ refuses to write inside the source corpus or overwrite an existing output.
 Model-facing chunk paths use short deterministic ordinal identifiers; complete
 SHA-256 integrity remains in the manifest rather than in paths the model must
 copy exactly.
+
+To use MarkOS's evidence-grounded Claude extraction contract instead of asking
+Graphify to call a model directly, run:
+
+```console
+uv run markos extract-semantic-graph /path/to/prepared-corpus \
+  --manifest /path/to/prepared-corpus/source-map.json \
+  --source-corpus /path/to/copied-source \
+  --output /path/to/provider-graph.json \
+  --model sonnet \
+  --effort low \
+  --allow-external-llm
+```
+
+The final flag is deliberately separate from vault-write permission: it gives
+one invocation permission to transmit only the hash-verified prepared chunks
+to Claude. MarkOS disables Claude tools and session persistence, requests
+schema-constrained output, verifies exact evidence quotes and cited chunk line
+ranges, enforces conditional confidence scores, and derives stable typed entity
+identifiers. Low reasoning effort is the default to reduce latency and semantic
+drift in this structured task. Each prepared chunk is dispatched separately so
+one section cannot silently crowd another out, then results are merged and
+deduplicated deterministically. MarkOS refuses changed source/chunk hashes,
+existing output files, and outputs inside either the source or prepared corpus. Omit
+`--allow-external-llm` to fail before any provider call.
+
+An `EXTRACTED` relationship whose exact quote does not name both endpoints is
+dropped rather than guessed or downgraded. The command reports the rejection
+count and records only the rejection code and provider-array location in the
+graph. Other schema, identity, path, hash, or evidence failures reject the
+entire result.
+
+The command intentionally keeps only `EXTRACTED` relationships in this stable
+evidence graph. Provider-suggested `INFERRED` or `AMBIGUOUS` relationships are
+recorded as rejected; inference belongs in the separately reviewable knowledge
+note workflow.
+
+The provider graph still needs source remapping and validation. Use it as the
+input to `remap-graph-sources` below, then run `validate-graph`; successful
+extraction does not itself establish semantic truth.
+
 Point Graphify at `/path/to/prepared-corpus`, then remap its output:
 
 ```console

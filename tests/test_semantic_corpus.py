@@ -10,6 +10,7 @@ from markos.semantic_corpus import (
     GRAPHIFY_IGNORE_FILENAME,
     SOURCE_MAP_FILENAME,
     SemanticCorpusError,
+    extract_citations,
     load_source_map,
     prepare_semantic_corpus,
     remap_graph_sources,
@@ -284,3 +285,35 @@ def test_remap_rejects_missing_non_extracted_score(tmp_path: Path, confidence: s
             prepared.path,
             tmp_path / "remapped.json",
         )
+
+
+def test_extract_citations_parses_references_across_source_files(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "Cited.md").write_text(
+        "# Cited\n\n## References\n\n- Doe, J. *A Title.* Some Journal, 2001.\n",
+        encoding="utf-8",
+    )
+    (source / "Uncited.md").write_text("# Uncited\n\nNo bibliography here.\n", encoding="utf-8")
+
+    results = extract_citations(source)
+
+    assert [result.source_path for result in results] == ["Cited.md"]
+    citations = results[0].citations
+    assert len(citations) == 1
+    assert citations[0].title == "A Title"
+    assert citations[0].authors == ("Doe, J.",)
+    assert citations[0].source_location == "L5"
+
+
+def test_extract_citations_with_no_references_is_empty(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "Note.md").write_text("# Note\n\nNo bibliography here.\n", encoding="utf-8")
+
+    assert extract_citations(source) == ()
+
+
+def test_extract_citations_refuses_unresolvable_source(tmp_path: Path) -> None:
+    with pytest.raises(SemanticCorpusError, match="cannot be resolved"):
+        extract_citations(tmp_path / "missing")

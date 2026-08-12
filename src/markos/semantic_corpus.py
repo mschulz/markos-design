@@ -12,6 +12,7 @@ from hashlib import sha256
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from markos.citations import Citation, parse_citations
 from markos.markdown import MarkdownDiscoveryError, discover_markdown
 
 SOURCE_MAP_FORMAT = "markos-source-map-v1"
@@ -157,6 +158,42 @@ def prepare_semantic_corpus(
         source_count=len(markdown_paths),
         chunk_count=len(chunks_with_content),
     )
+
+
+@dataclass(frozen=True)
+class SourceCitations:
+    """Deterministically parsed citations for one Markdown source document."""
+
+    source_path: str
+    citations: tuple[Citation, ...]
+
+
+def extract_citations(source_path: Path) -> tuple[SourceCitations, ...]:
+    """Deterministically parse References sections across a Markdown source corpus.
+
+    Runs entirely in code against the read-only source tree, so results need no
+    provider call and are reproducible by construction.
+    """
+
+    source = _resolved_directory(source_path, label="source corpus")
+    try:
+        markdown_paths = discover_markdown(source)
+    except MarkdownDiscoveryError as error:
+        raise SemanticCorpusError(str(error)) from error
+
+    results: list[SourceCitations] = []
+    for relative_path in markdown_paths:
+        source_file = source / relative_path
+        try:
+            text = source_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as error:
+            raise SemanticCorpusError(
+                f"could not read Markdown source: {relative_path.as_posix()}"
+            ) from error
+        citations = parse_citations(text)
+        if citations:
+            results.append(SourceCitations(relative_path.as_posix(), citations))
+    return tuple(results)
 
 
 def remap_graph_sources(
