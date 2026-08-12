@@ -12,6 +12,7 @@ from rich.table import Table
 from markos import __version__
 from markos.analysis import GraphAnalysisError, analyze_graph, shortest_path
 from markos.api import create_app
+from markos.freshness import FreshnessError, check_freshness
 from markos.index import KnowledgeIndexError, rebuild_vault_index
 from markos.logging import configure_logging
 from markos.markdown import MarkdownDiscoveryError, MarkdownParseError
@@ -240,6 +241,55 @@ def issues(
     for result in results:
         table.add_row(result.path, result.error)
     console.print(table)
+
+
+@app.command()
+def freshness(
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    vault: Annotated[
+        Path | None,
+        typer.Option("--vault", help="Vault path; overrides configuration."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+) -> None:
+    """Report Markdown files changed since the latest index rebuild."""
+
+    settings = _load_settings(config, vault, index, None)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        report = check_freshness(_required_vault_path(settings), settings.index_path)
+    except (FreshnessError, KnowledgeQueryError, MarkdownDiscoveryError) as error:
+        error_console.print(f"[bold red]Freshness check failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+
+    if report.is_current:
+        console.print("Index is current.")
+        return
+
+    table = Table(title="Index is stale")
+    table.add_column("Change")
+    table.add_column("Path")
+    for change, paths in (
+        ("Added", report.added),
+        ("Modified", report.modified),
+        ("Deleted", report.deleted),
+    ):
+        for path in paths:
+            table.add_row(change, path)
+    console.print(table)
+    raise typer.Exit(code=1)
 
 
 @app.command()

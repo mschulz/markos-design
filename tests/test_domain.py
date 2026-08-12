@@ -22,3 +22,15 @@ def test_document_rejects_path_outside_vault(path: PurePath) -> None:
 def test_document_requires_markdown_path() -> None:
     with pytest.raises(ValidationError, match="Markdown file"):
         KnowledgeDocument(path=PurePath("note.txt"), title="Note")
+
+
+def test_document_validates_optional_source_hash() -> None:
+    document = KnowledgeDocument(
+        path=PurePath("note.md"),
+        title="Note",
+        source_hash="a" * 64,
+    )
+
+    assert document.source_hash == "a" * 64
+    with pytest.raises(ValidationError):
+        KnowledgeDocument(path=PurePath("note.md"), title="Note", source_hash="invalid")

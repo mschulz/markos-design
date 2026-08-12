@@ -73,7 +73,7 @@ def test_health_reports_rebuild_state(tmp_path: Path) -> None:
 
     assert status == 200
     assert body["status"] == "ok"
-    assert body["schema_version"] == 3
+    assert body["schema_version"] == 4
     assert body["document_count"] == 2
     assert body["link_count"] == 2
     assert body["rejected_count"] == 0

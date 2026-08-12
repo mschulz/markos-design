@@ -211,3 +211,28 @@ def test_graph_caps_isolated_document_preview(tmp_path: Path) -> None:
     assert "Note-19.md" in result.stdout
     assert "Note-20.md" not in result.stdout
     assert "and 5 more isolated documents" in result.stdout
+
+
+def test_freshness_exits_zero_when_current_and_one_when_stale(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    note = vault / "Note.md"
+    note.write_text("# Before", encoding="utf-8")
+    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+
+    current = runner.invoke(
+        app,
+        ["freshness", "--vault", str(vault), "--index", str(index_path)],
+    )
+    note.write_text("# After", encoding="utf-8")
+    stale = runner.invoke(
+        app,
+        ["freshness", "--vault", str(vault), "--index", str(index_path)],
+    )
+
+    assert current.exit_code == 0
+    assert "Index is current" in current.stdout
+    assert stale.exit_code == 1
+    assert "Modified" in stale.stdout
+    assert "Note.md" in stale.stdout

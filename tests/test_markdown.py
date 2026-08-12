@@ -1,3 +1,4 @@
+from hashlib import sha256
 from pathlib import Path, PurePath
 
 import pytest
@@ -73,6 +74,7 @@ Repeat [[Architecture]]. Do not parse `[[inline code]]`.
     }
     assert document.body.startswith("# Ignored heading")
     assert document.links == ("Architecture", "Roadmap", "Vision.md")
+    assert document.source_hash == sha256(note.read_bytes()).hexdigest()
 
 
 @pytest.mark.parametrize(
@@ -145,3 +147,4 @@ def test_load_report_records_parse_failures_and_continues(tmp_path: Path) -> Non
     assert [document.identifier for document in report.documents] == ["valid.md"]
     assert [issue.path for issue in report.issues] == ["broken.md"]
     assert "invalid frontmatter" in report.issues[0].error
+    assert report.issues[0].source_hash == sha256((tmp_path / "broken.md").read_bytes()).hexdigest()

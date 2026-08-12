@@ -18,6 +18,7 @@ def test_rebuild_stores_documents_links_metadata_and_state(tmp_path: Path) -> No
             body="# One",
             metadata={"status": "active"},
             links=("Two", "https://example.com"),
+            source_hash="a" * 64,
         ),
         KnowledgeDocument(path=PurePath("Two.md"), title="Two"),
     )
@@ -47,7 +48,7 @@ def test_rebuild_stores_documents_links_metadata_and_state(tmp_path: Path) -> No
         ("One.md", 0, "Two", "Two.md"),
         ("One.md", 1, "https://example.com", None),
     ]
-    assert state == (3, 2, 2, 0)
+    assert state == (4, 2, 2, 0)
     assert summary.document_count == 2
     assert summary.link_count == 2
     assert summary.rejected_count == 0
@@ -152,7 +153,7 @@ def test_rebuild_migrates_an_older_rebuildable_schema(tmp_path: Path) -> None:
     )
 
     with duckdb.connect(str(index_path), read_only=True) as connection:
-        assert connection.execute("SELECT schema_version FROM index_state").fetchone() == (3,)
+        assert connection.execute("SELECT schema_version FROM index_state").fetchone() == (4,)
         columns = connection.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name = 'document_links'"
         ).fetchall()

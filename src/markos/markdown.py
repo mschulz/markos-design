@@ -6,6 +6,7 @@ import os
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path, PurePath
 
 import frontmatter
@@ -32,6 +33,7 @@ class IngestionIssue:
 
     path: str
     error: str
+    source_hash: str | None = None
 
 
 @dataclass(frozen=True)
@@ -103,7 +105,8 @@ def parse_markdown(vault_path: Path, relative_path: PurePath) -> KnowledgeDocume
         raise MarkdownParseError(f"document is not a regular vault file: {path.as_posix()}")
 
     try:
-        source = resolved_source.read_text(encoding="utf-8")
+        source_bytes = resolved_source.read_bytes()
+        source = source_bytes.decode("utf-8")
     except (OSError, UnicodeError) as error:
         raise MarkdownParseError(f"could not read Markdown document: {path.as_posix()}") from error
 
@@ -123,6 +126,7 @@ def parse_markdown(vault_path: Path, relative_path: PurePath) -> KnowledgeDocume
         body=body,
         metadata=metadata,
         links=_document_links(tokens),
+        source_hash=sha256(source_bytes).hexdigest(),
     )
 
 
@@ -141,7 +145,13 @@ def load_markdown_report(vault_path: Path) -> MarkdownLoadReport:
         try:
             documents.append(parse_markdown(vault_path, path))
         except MarkdownParseError as error:
-            issues.append(IngestionIssue(path=path.as_posix(), error=str(error)))
+            issues.append(
+                IngestionIssue(
+                    path=path.as_posix(),
+                    error=str(error),
+                    source_hash=_source_hash(vault_path, path),
+                )
+            )
     return MarkdownLoadReport(documents=tuple(documents), issues=tuple(issues))
 
 
@@ -153,6 +163,14 @@ def _resolved_vault(vault_path: Path) -> Path:
     if not root.is_dir():
         raise MarkdownParseError(f"vault is not a directory: {vault_path}")
     return root
+
+
+def _source_hash(vault_path: Path, relative_path: Path) -> str | None:
+    try:
+        content = (vault_path.expanduser().resolve(strict=True) / relative_path).read_bytes()
+    except OSError:
+        return None
+    return sha256(content).hexdigest()
 
 
 def _raise_walk_error(error: OSError) -> None:

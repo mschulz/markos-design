@@ -15,7 +15,7 @@ from markos.domain import KnowledgeDocument
 from markos.links import resolve_internal_link
 from markos.markdown import IngestionIssue, load_markdown_report
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 class KnowledgeIndexError(ValueError):
@@ -72,6 +72,7 @@ def rebuild_index(
             document.title,
             document.body,
             json.dumps(document.metadata, default=_json_default, sort_keys=True),
+            document.source_hash,
         )
         for document in materialized
     ]
@@ -86,7 +87,7 @@ def rebuild_index(
         for document in materialized
         for ordinal, target in enumerate(document.links)
     ]
-    issue_rows = [(issue.path, issue.error) for issue in materialized_issues]
+    issue_rows = [(issue.path, issue.error, issue.source_hash) for issue in materialized_issues]
 
     try:
         connection = duckdb.connect(str(destination))
@@ -102,7 +103,10 @@ def rebuild_index(
         _create_schema(connection)
         if document_rows:
             connection.executemany(
-                "INSERT INTO documents (path, title, body, metadata) VALUES (?, ?, ?, ?)",
+                """
+                INSERT INTO documents (path, title, body, metadata, source_hash)
+                VALUES (?, ?, ?, ?, ?)
+                """,
                 document_rows,
             )
         if link_rows:
@@ -115,7 +119,7 @@ def rebuild_index(
             )
         if issue_rows:
             connection.executemany(
-                "INSERT INTO ingestion_issues (path, error) VALUES (?, ?)",
+                "INSERT INTO ingestion_issues (path, error, source_hash) VALUES (?, ?, ?)",
                 issue_rows,
             )
         connection.execute(
@@ -155,7 +159,8 @@ def _create_schema(connection: duckdb.DuckDBPyConnection) -> None:
             path VARCHAR PRIMARY KEY,
             title VARCHAR NOT NULL,
             body VARCHAR NOT NULL,
-            metadata JSON NOT NULL
+            metadata JSON NOT NULL,
+            source_hash VARCHAR
         )
         """
     )
@@ -177,7 +182,8 @@ def _create_schema(connection: duckdb.DuckDBPyConnection) -> None:
         """
         CREATE TABLE ingestion_issues (
             path VARCHAR PRIMARY KEY,
-            error VARCHAR NOT NULL
+            error VARCHAR NOT NULL,
+            source_hash VARCHAR
         )
         """
     )

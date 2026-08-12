@@ -13,6 +13,7 @@ from markos.query import (
     outgoing_links,
     read_document,
     search_index,
+    source_fingerprints,
 )
 
 
@@ -140,4 +141,24 @@ def test_ingestion_issues_are_returned_in_deterministic_order(tmp_path: Path) ->
     assert [(issue.path, issue.error) for issue in ingestion_issues(index_path)] == [
         ("A.md", "a error"),
         ("z.md", "z error"),
+    ]
+
+
+def test_source_fingerprints_include_indexed_and_rejected_files(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    rebuild_index(
+        index_path,
+        [
+            KnowledgeDocument(
+                path=PurePath("Valid.md"),
+                title="Valid",
+                source_hash="a" * 64,
+            )
+        ],
+        issues=[IngestionIssue(path="Broken.md", error="broken", source_hash="b" * 64)],
+    )
+
+    assert [(item.path, item.source_hash) for item in source_fingerprints(index_path)] == [
+        ("Broken.md", "b" * 64),
+        ("Valid.md", "a" * 64),
     ]

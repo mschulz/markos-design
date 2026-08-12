@@ -64,6 +64,14 @@ class IngestionIssueResult:
     error: str
 
 
+@dataclass(frozen=True)
+class SourceFingerprint:
+    """Stored SHA-256 fingerprint for one indexed or rejected source file."""
+
+    path: str
+    source_hash: str | None
+
+
 def index_status(index_path: Path) -> IndexStatus:
     """Read rebuild metadata from a compatible index."""
 
@@ -116,6 +124,35 @@ def ingestion_issues(index_path: Path) -> tuple[IngestionIssueResult, ...]:
     return tuple(IngestionIssueResult(path=str(path), error=str(error)) for path, error in rows)
 
 
+def source_fingerprints(index_path: Path) -> tuple[SourceFingerprint, ...]:
+    """Return source hashes for all files observed by the latest rebuild."""
+
+    connection = _open_index(index_path)
+    try:
+        rows = connection.execute(
+            """
+            SELECT path, source_hash
+            FROM (
+                SELECT path, source_hash FROM documents
+                UNION ALL
+                SELECT path, source_hash FROM ingestion_issues
+            ) AS sources
+            ORDER BY lower(path), path
+            """
+        ).fetchall()
+    except duckdb.Error as error:
+        raise KnowledgeQueryError(f"could not read source fingerprints: {index_path}") from error
+    finally:
+        connection.close()
+    return tuple(
+        SourceFingerprint(
+            path=str(path),
+            source_hash=None if source_hash is None else str(source_hash),
+        )
+        for path, source_hash in rows
+    )
+
+
 def search_index(index_path: Path, query: str, *, limit: int = 20) -> tuple[SearchResult, ...]:
     """Search paths, titles, and bodies in a compatible index."""
 
@@ -165,7 +202,7 @@ def read_document(index_path: Path, identifier: str) -> KnowledgeDocument | None
     connection = _open_index(index_path)
     try:
         row = connection.execute(
-            "SELECT path, title, body, metadata FROM documents WHERE path = ?",
+            "SELECT path, title, body, metadata, source_hash FROM documents WHERE path = ?",
             [identifier],
         ).fetchone()
         if row is None:
@@ -179,7 +216,7 @@ def read_document(index_path: Path, identifier: str) -> KnowledgeDocument | None
     finally:
         connection.close()
 
-    path, title, body, encoded_metadata = row
+    path, title, body, encoded_metadata, source_hash = row
     try:
         metadata = json.loads(str(encoded_metadata))
     except (json.JSONDecodeError, TypeError) as error:
@@ -193,6 +230,7 @@ def read_document(index_path: Path, identifier: str) -> KnowledgeDocument | None
         body=str(body),
         metadata=cast(dict[str, Any], metadata),
         links=tuple(str(target) for (target,) in links),
+        source_hash=None if source_hash is None else str(source_hash),
     )
 
 

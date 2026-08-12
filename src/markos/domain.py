@@ -20,6 +20,7 @@ class KnowledgeDocument(BaseModel):
     body: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
     links: tuple[str, ...] = ()
+    source_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
     @field_validator("path")
     @classmethod
