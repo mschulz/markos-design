@@ -50,3 +50,8 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.13"
 strict = true
 files = ["src/markos", "tests"]
+
+[markos]
+vault_path = "/Users/markschulz/Documents/my_obsidian"
+index_path = "/Users/markschulz/Library/Application Support/MarkOS/index.duckdb"
+log_level = "INFO"
