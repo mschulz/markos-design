@@ -42,6 +42,9 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Added deterministic heading-aware source mapping: the Qwen 3 control now
   passes with complete mapped provenance, while the genuine-note run remains
   rejected because Graphify omitted mandatory relationship confidence scores.
+- Added constrained Graphify confidence normalization; reprocessing now lets
+  both existing Qwen 3 artifacts pass structurally while preserving explicit
+  normalization provenance and rejecting missing non-extracted scores.
 
 ---
 

@@ -247,6 +247,31 @@ extraction specification making that field mandatory. MarkOS did not invent
 the missing scores. The temporary 8K alias was removed after the test; the
 underlying model remains installed. No larger corpus was processed.
 
+### Constrained Confidence Normalization
+
+Graphify's extraction specification fixes every explicitly `EXTRACTED`
+relationship at `confidence_score: 1.0`. MarkOS now restores that single
+deterministic value when the model supplies the `EXTRACTED` label but omits its
+score. Each restored field is marked
+`confidence_score_origin: markos_graphify_extracted_policy`. MarkOS still
+rejects missing `INFERRED` and `AMBIGUOUS` scores because their values require
+model judgement. Validation also enforces the score ranges associated with all
+three labels.
+
+The existing artifacts were reprocessed without another model call:
+
+- the controlled graph again passed with six nodes, five edges, one hyperedge
+  and 100-percent mapped location coverage;
+- the genuine-note graph passed structural validation with nine nodes, eight
+  edges, two hyperedges and 100-percent mapped location coverage; and
+- ten missing scores in the genuine-note graph were restored from ten explicit
+  `EXTRACTED` labels and carry the MarkOS policy-origin marker.
+
+This is a structural and provenance pass, not yet full model qualification. All
+19 genuine-note graph items cite the broad `L1-L74` chunk range, so location
+precision, repeatability and human semantic review remain gating criteria. The
+pilot was not scaled beyond this copied note.
+
 ## Revised Responsibility Split
 
 ```text
@@ -310,12 +335,11 @@ support for later generated claims.
 
 Before adopting Graphify as an M13/M14 dependency:
 
-1. Define a constrained provider-normalization rule: `EXTRACTED` may map to its
-   specified score of `1.0` with explicit MarkOS provenance, while missing
-   `INFERRED` or `AMBIGUOUS` scores remain rejection conditions.
-2. Repeat the controlled and genuine-note runs to measure reproducibility after
-   normalization; both must pass the same strict validator.
-3. Measure entity duplication, source-location coverage, runtime and graph
+1. Repeat the controlled and genuine-note model runs to measure reproducibility;
+   both must pass the same strict validator after deterministic normalization.
+2. Reduce and measure source-range breadth so accepted relationships cite a
+   useful heading or line window rather than an entire 74-line note.
+3. Perform human semantic review and measure entity duplication, runtime and graph
    reproducibility on the qualified model.
 4. Verify add, change, rename and deletion behaviour using Graphify's supported
    incremental commands rather than only its structural cache.
