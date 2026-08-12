@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import duckdb
@@ -6,6 +7,7 @@ from typer.testing import CliRunner
 
 from markos import __version__
 from markos.cli import app
+from markos.semantic_extraction import ExtractionSummary
 from markos.watch import WatchSummary
 
 runner = CliRunner()
@@ -215,6 +217,139 @@ def test_graph_caps_isolated_document_preview(tmp_path: Path) -> None:
     assert "and 5 more isolated documents" in result.stdout
 
 
+def test_validate_graph_reports_success_and_rejection(tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / "Note.md").write_text("# Note\n", encoding="utf-8")
+    graph = tmp_path / "graph.json"
+    graph.write_text(
+        '{"nodes":[{"id":"note","label":"Note","source_file":"Note.md",'
+        '"source_location":"L1"}],"edges":[]}',
+        encoding="utf-8",
+    )
+
+    passed = runner.invoke(app, ["validate-graph", str(graph), "--corpus", str(corpus)])
+    graph.write_text(
+        '{"nodes":[{"id":"fake","label":"Fake","source_file":"Fake.md",'
+        '"source_location":null}],"edges":[]}',
+        encoding="utf-8",
+    )
+    rejected = runner.invoke(app, ["validate-graph", str(graph), "--corpus", str(corpus)])
+
+    assert passed.exit_code == 0
+    assert "Graph passed validation" in passed.stdout
+    assert rejected.exit_code == 1
+    assert "Graph rejected" in rejected.stdout
+    assert "unknown_source_file" in rejected.stdout
+
+
+def test_prepare_remap_and_validate_graph_workflow(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "Note.md").write_text("# Note\n\nGrounded text.\n", encoding="utf-8")
+    prepared = tmp_path / "prepared"
+
+    preparation = runner.invoke(
+        app,
+        ["prepare-graph-corpus", str(source), "--output", str(prepared)],
+    )
+    manifest = json.loads((prepared / "source-map.json").read_text(encoding="utf-8"))
+    chunk_path = manifest["chunks"][0]["chunk_path"]
+    graph = tmp_path / "graph.json"
+    graph.write_text(
+        json.dumps(
+            {
+                "nodes": [
+                    {"id": "note", "label": "Note", "source_file": chunk_path}
+                ],
+                "edges": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    remapped = tmp_path / "remapped.json"
+    remapping = runner.invoke(
+        app,
+        [
+            "remap-graph-sources",
+            str(graph),
+            "--manifest",
+            str(prepared / "source-map.json"),
+            "--source-corpus",
+            str(source),
+            "--prepared-corpus",
+            str(prepared),
+            "--output",
+            str(remapped),
+        ],
+    )
+    validation = runner.invoke(
+        app,
+        ["validate-graph", str(remapped), "--corpus", str(source)],
+    )
+
+    assert preparation.exit_code == 0
+    assert "1 Markdown source as 1 chunk" in preparation.stdout
+    assert remapping.exit_code == 0
+    assert "Remapped provenance for 1 graph items" in remapping.stdout
+    assert "cited 1/1 prepared" in remapping.stdout
+    assert "chunks." in remapping.stdout
+    assert validation.exit_code == 0
+    assert "source-location coverage 100.0%" in validation.stdout
+
+
+def test_semantic_extraction_cli_requires_consent_and_reports_summary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_extract(*args: object, **kwargs: object) -> ExtractionSummary:
+        calls.append({"args": args, "kwargs": kwargs})
+        return ExtractionSummary(
+            path=tmp_path / "graph.json",
+            node_count=2,
+            edge_count=1,
+            rejected_relationship_count=0,
+            cited_chunk_count=1,
+            total_chunk_count=1,
+            citation_skipped_chunk_count=0,
+            input_tokens=100,
+            output_tokens=20,
+        )
+
+    common = [
+        "extract-semantic-graph",
+        str(tmp_path / "prepared"),
+        "--manifest",
+        str(tmp_path / "source-map.json"),
+        "--source-corpus",
+        str(tmp_path / "source"),
+        "--output",
+        str(tmp_path / "graph.json"),
+    ]
+
+    without_consent = runner.invoke(app, common)
+    monkeypatch.setattr("markos.cli.extract_semantic_graph", fake_extract)
+    with_consent = runner.invoke(app, [*common, "--allow-external-llm"])
+
+    assert without_consent.exit_code == 1
+    assert "explicit" in without_consent.stderr
+    assert "consent" in without_consent.stderr
+    assert with_consent.exit_code == 0
+    assert len(calls) == 1
+    assert calls[0]["kwargs"] == {
+        "allow_external_llm": True,
+        "model": "sonnet",
+        "effort": "low",
+        "timeout_seconds": 600,
+    }
+    stdout = " ".join(with_consent.stdout.split())
+    assert "Extracted 2 nodes and 1 edges" in stdout
+    assert "skipped 0 chunk(s) fully covered by deterministic citations" in stdout
+    assert "rejected 0 relationships" in stdout
+
+
 def test_freshness_exits_zero_when_current_and_one_when_stale(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
     vault = tmp_path / "vault"
@@ -298,3 +433,30 @@ def test_watch_passes_configuration_and_timing_options(
     assert calls == [(vault, index_path, 2.0, 0.75)]
     assert "2 synchronization attempts" in result.stdout
     assert "1 rebuild" in result.stdout
+
+
+def test_para_audit_prints_preview_without_modifying_vault(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    source = vault / "Synthetic Biology"
+    source.mkdir(parents=True)
+    paper = source / "study.pdf"
+    paper.write_bytes(b"%PDF study")
+    index_path = tmp_path / "index.duckdb"
+    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+
+    result = runner.invoke(
+        app,
+        [
+            "para-audit",
+            "Synthetic Biology",
+            "--vault",
+            str(vault),
+            "--index",
+            str(index_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Resources/Synthetic Biology" in result.stdout
+    assert "Read-only assessment" in result.stdout
+    assert paper.read_bytes() == b"%PDF study"

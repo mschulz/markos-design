@@ -13,9 +13,16 @@ from markos import __version__
 from markos.analysis import GraphAnalysisError, analyze_graph, shortest_path
 from markos.api import create_app
 from markos.freshness import FreshnessError, check_freshness
+from markos.graph_validation import GraphValidationError, validate_graph_file
 from markos.index import KnowledgeIndexError, rebuild_vault_index
 from markos.logging import configure_logging
 from markos.markdown import MarkdownDiscoveryError, MarkdownParseError
+from markos.para_audit import (
+    ParaAuditError,
+    audit_para_migration,
+    render_para_audit,
+    write_para_audit,
+)
 from markos.query import (
     KnowledgeQueryError,
     backlinks,
@@ -23,6 +30,12 @@ from markos.query import (
     outgoing_links,
     search_index,
 )
+from markos.semantic_corpus import (
+    SemanticCorpusError,
+    prepare_semantic_corpus,
+    remap_graph_sources,
+)
+from markos.semantic_extraction import ClaudeEffort, SemanticExtractionError, extract_semantic_graph
 from markos.settings import LogLevel, Settings, SettingsError
 from markos.sync import SyncError, sync_vault_index
 from markos.watch import WatchError, watch_vault_index
@@ -555,6 +568,252 @@ def graph(
         remaining = len(report.isolated_documents) - len(preview)
         if remaining:
             console.print(f"… and {remaining} more isolated documents")
+
+
+@app.command("validate-graph")
+def validate_graph(
+    graph_file: Annotated[
+        Path,
+        typer.Argument(help="Graphify graph.json file to validate."),
+    ],
+    corpus: Annotated[
+        Path,
+        typer.Option("--corpus", help="Exact corpus directory supplied to Graphify."),
+    ],
+    minimum_location_coverage: Annotated[
+        float,
+        typer.Option(
+            "--minimum-location-coverage",
+            min=0.0,
+            max=1.0,
+            help="Required fraction of graph items with source locations.",
+        ),
+    ] = 1.0,
+) -> None:
+    """Validate untrusted semantic graph output against its source corpus."""
+
+    try:
+        report = validate_graph_file(
+            graph_file,
+            corpus,
+            minimum_location_coverage=minimum_location_coverage,
+        )
+    except GraphValidationError as error:
+        error_console.print(f"[bold red]Graph validation failed:[/bold red] {error}")
+        raise typer.Exit(code=2) from error
+
+    console.print(
+        f"Checked {report.node_count} nodes, {report.edge_count} edges and "
+        f"{report.hyperedge_count} hyperedges; source-location coverage "
+        f"{report.location_coverage:.1%}."
+    )
+    if report.is_valid:
+        console.print("[bold green]Graph passed validation.[/bold green]")
+        return
+
+    table = Table(title="Graph rejected")
+    table.add_column("Code")
+    table.add_column("Location")
+    table.add_column("Problem")
+    for issue in report.issues:
+        table.add_row(issue.code, issue.location, issue.message)
+    console.print(table)
+    raise typer.Exit(code=1)
+
+
+@app.command("prepare-graph-corpus")
+def prepare_graph_corpus(
+    source: Annotated[
+        Path,
+        typer.Argument(help="Read-only Markdown source corpus."),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="New external directory for generated chunks."),
+    ],
+    maximum_chunk_characters: Annotated[
+        int,
+        typer.Option(
+            "--maximum-chunk-characters",
+            min=256,
+            help="Target maximum chunk size; headings remain intact when possible.",
+        ),
+    ] = 6000,
+) -> None:
+    """Prepare an external heading-aware corpus with deterministic source mapping."""
+
+    try:
+        prepared = prepare_semantic_corpus(
+            source,
+            output,
+            maximum_chunk_characters=maximum_chunk_characters,
+        )
+    except SemanticCorpusError as error:
+        error_console.print(f"[bold red]Corpus preparation failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+    source_label = "source" if prepared.source_count == 1 else "sources"
+    chunk_label = "chunk" if prepared.chunk_count == 1 else "chunks"
+    console.print(
+        f"Prepared {prepared.source_count} Markdown {source_label} as "
+        f"{prepared.chunk_count} {chunk_label} in {prepared.path}; "
+        f"source map: {prepared.manifest_path}"
+    )
+
+
+@app.command("remap-graph-sources")
+def remap_graph_source_locations(
+    graph_file: Annotated[
+        Path,
+        typer.Argument(help="Graphify graph.json produced from the prepared corpus."),
+    ],
+    manifest: Annotated[
+        Path,
+        typer.Option("--manifest", help="source-map.json from corpus preparation."),
+    ],
+    source_corpus: Annotated[
+        Path,
+        typer.Option("--source-corpus", help="Original read-only Markdown corpus."),
+    ],
+    prepared_corpus: Annotated[
+        Path,
+        typer.Option("--prepared-corpus", help="Generated corpus supplied to Graphify."),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="New external path for the remapped graph JSON."),
+    ],
+) -> None:
+    """Remap verified chunk provenance to original Markdown paths and line ranges."""
+
+    try:
+        remapped = remap_graph_sources(
+            graph_file,
+            manifest,
+            source_corpus,
+            prepared_corpus,
+            output,
+        )
+    except SemanticCorpusError as error:
+        error_console.print(f"[bold red]Graph source remapping failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+    console.print(
+        f"Remapped provenance for {remapped.item_count} graph items into {remapped.path}; "
+        f"cited {remapped.cited_chunk_count}/{remapped.total_chunk_count} prepared chunks."
+    )
+    if remapped.uncited_chunks:
+        console.print("Uncited prepared chunks: " + ", ".join(remapped.uncited_chunks))
+
+
+@app.command("extract-semantic-graph")
+def extract_semantic_graph_command(
+    prepared_corpus: Annotated[
+        Path,
+        typer.Argument(help="Verified prepared corpus to transmit."),
+    ],
+    manifest: Annotated[
+        Path,
+        typer.Option("--manifest", help="source-map.json from corpus preparation."),
+    ],
+    source_corpus: Annotated[
+        Path,
+        typer.Option("--source-corpus", help="Original read-only Markdown corpus."),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="New external path for extracted graph JSON."),
+    ],
+    model: Annotated[
+        str,
+        typer.Option("--model", help="Claude model alias or complete model identifier."),
+    ] = "sonnet",
+    effort: Annotated[
+        ClaudeEffort,
+        typer.Option("--effort", help="Claude reasoning effort for stable extraction."),
+    ] = "low",
+    timeout_seconds: Annotated[
+        int,
+        typer.Option("--timeout-seconds", min=1, help="Claude request timeout."),
+    ] = 600,
+    allow_external_llm: Annotated[
+        bool,
+        typer.Option(
+            "--allow-external-llm",
+            help="Consent to transmit the verified prepared chunks to Claude.",
+        ),
+    ] = False,
+) -> None:
+    """Extract an evidence-grounded graph using the MarkOS Claude contract."""
+
+    try:
+        summary = extract_semantic_graph(
+            prepared_corpus,
+            manifest,
+            source_corpus,
+            output,
+            allow_external_llm=allow_external_llm,
+            model=model,
+            effort=effort,
+            timeout_seconds=timeout_seconds,
+        )
+    except SemanticExtractionError as error:
+        error_console.print(f"[bold red]Semantic extraction failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+    console.print(
+        f"Extracted {summary.node_count} nodes and {summary.edge_count} edges into "
+        f"{summary.path}; cited {summary.cited_chunk_count}/{summary.total_chunk_count} "
+        f"prepared chunks; skipped {summary.citation_skipped_chunk_count} chunk(s) fully "
+        f"covered by deterministic citations; rejected "
+        f"{summary.rejected_relationship_count} relationships; "
+        f"tokens {summary.input_tokens} in / {summary.output_tokens} out."
+    )
+
+
+@app.command("para-audit")
+def para_audit(
+    sources: Annotated[
+        list[str],
+        typer.Argument(help="One or more vault-relative folders to assess."),
+    ],
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    vault: Annotated[
+        Path | None,
+        typer.Option("--vault", help="Vault path; overrides configuration."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Optional Markdown report path outside the vault."),
+    ] = None,
+) -> None:
+    """Assess existing folders for a safe, preview-only PARA migration."""
+
+    settings = _load_settings(config, vault, index, None)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+    try:
+        report = audit_para_migration(
+            _required_vault_path(settings),
+            settings.index_path,
+            tuple(sources),
+        )
+        if output is not None:
+            destination = write_para_audit(report, output)
+            console.print(f"Wrote read-only PARA audit to {destination}")
+            return
+    except (KnowledgeQueryError, ParaAuditError) as error:
+        error_console.print(f"[bold red]PARA audit failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+    console.print(render_para_audit(report), markup=False)
 
 
 def _required_vault_path(settings: Settings) -> Path:
