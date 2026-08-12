@@ -27,6 +27,13 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 - Recorded M10 implementation in `markos` commit `c60400d`.
 
+### Evaluated
+
+- Evaluated Graphify 0.9.40 against a read-only temporary copy of the initial
+  concept folders and the existing Localization Research semantic graph.
+- Conditionally selected Graphify as a replaceable semantic-discovery provider
+  while retaining MarkOS for exact Obsidian links, provenance and safe writes.
+
 ---
 
 ## Design Milestone D0 – Foundation

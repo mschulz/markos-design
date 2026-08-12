@@ -53,8 +53,9 @@ Progress: **2 / 6**
 | M16 — Background and Distribution | Scheduling, notifications and notarized delivery | Accepted |
 
 See [[Milestones]] for scope and acceptance criteria and
-[[Markdown Memory Architecture]], [[PARA Migration Strategy]] and
-[[Mac App Architecture]] for the governing designs.
+[[Markdown Memory Architecture]], [[PARA Migration Strategy]],
+[[Graphify Evaluation]] and [[Mac App Architecture]] for the governing designs
+and current integration evaluation.
 
 ---
 
