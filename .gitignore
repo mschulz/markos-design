@@ -12,3 +12,6 @@ wheels/
 # Virtual environments
 .venv
 venv/
+
+# Personal Claude Code instructions
+CLAUDE.local.md
