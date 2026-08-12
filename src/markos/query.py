@@ -45,6 +45,7 @@ class IndexStatus:
     rebuilt_at: datetime
     document_count: int
     link_count: int
+    rejected_count: int
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,14 @@ class GraphSnapshot:
     links: tuple[LinkResult, ...]
 
 
+@dataclass(frozen=True)
+class IngestionIssueResult:
+    """One rejected vault-relative document and its parse diagnostic."""
+
+    path: str
+    error: str
+
+
 def index_status(index_path: Path) -> IndexStatus:
     """Read rebuild metadata from a compatible index."""
 
@@ -62,7 +71,12 @@ def index_status(index_path: Path) -> IndexStatus:
     try:
         row = connection.execute(
             """
-            SELECT schema_version, CAST(rebuilt_at AS VARCHAR), document_count, link_count
+            SELECT
+                schema_version,
+                CAST(rebuilt_at AS VARCHAR),
+                document_count,
+                link_count,
+                rejected_count
             FROM index_state
             """
         ).fetchone()
@@ -73,7 +87,7 @@ def index_status(index_path: Path) -> IndexStatus:
 
     if row is None:  # guarded by _open_index, retained for type safety
         raise KnowledgeQueryError(f"index state is missing: {index_path}")
-    schema_version, encoded_rebuilt_at, document_count, link_count = row
+    schema_version, encoded_rebuilt_at, document_count, link_count, rejected_count = row
     try:
         rebuilt_at = datetime.fromisoformat(str(encoded_rebuilt_at))
     except ValueError as error:
@@ -83,7 +97,23 @@ def index_status(index_path: Path) -> IndexStatus:
         rebuilt_at=rebuilt_at,
         document_count=int(document_count),
         link_count=int(link_count),
+        rejected_count=int(rejected_count),
     )
+
+
+def ingestion_issues(index_path: Path) -> tuple[IngestionIssueResult, ...]:
+    """Return all rejected documents in deterministic path order."""
+
+    connection = _open_index(index_path)
+    try:
+        rows = connection.execute(
+            "SELECT path, error FROM ingestion_issues ORDER BY lower(path), path"
+        ).fetchall()
+    except duckdb.Error as error:
+        raise KnowledgeQueryError(f"could not read ingestion issues: {index_path}") from error
+    finally:
+        connection.close()
+    return tuple(IngestionIssueResult(path=str(path), error=str(error)) for path, error in rows)
 
 
 def search_index(index_path: Path, query: str, *, limit: int = 20) -> tuple[SearchResult, ...]:

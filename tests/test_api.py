@@ -9,6 +9,7 @@ from starlette.types import Message, Scope
 from markos.api import create_app
 from markos.domain import KnowledgeDocument
 from markos.index import rebuild_index
+from markos.markdown import IngestionIssue
 
 
 def _build_api_index(path: Path) -> None:
@@ -72,9 +73,10 @@ def test_health_reports_rebuild_state(tmp_path: Path) -> None:
 
     assert status == 200
     assert body["status"] == "ok"
-    assert body["schema_version"] == 2
+    assert body["schema_version"] == 3
     assert body["document_count"] == 2
     assert body["link_count"] == 2
+    assert body["rejected_count"] == 0
 
 
 def test_search_and_document_routes(tmp_path: Path) -> None:
@@ -174,3 +176,17 @@ def test_graph_summary_and_path_routes(tmp_path: Path) -> None:
     assert path["path"] == ["Projects/MarkOS.md", "Vision.md"]
     assert missing_status == 404
     assert "no directed path" in missing["detail"]
+
+
+def test_issues_route_lists_rejected_documents(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    rebuild_index(
+        index_path,
+        [KnowledgeDocument(path=PurePath("Valid.md"), title="Valid")],
+        issues=[IngestionIssue(path="Broken.md", error="invalid frontmatter")],
+    )
+
+    status, issues = _request(create_app(index_path), "/issues")
+
+    assert status == 200
+    assert issues == [{"path": "Broken.md", "error": "invalid frontmatter"}]

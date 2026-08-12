@@ -6,7 +6,7 @@ import pytest
 
 from markos.domain import KnowledgeDocument
 from markos.index import KnowledgeIndexError, rebuild_index, rebuild_vault_index
-from markos.markdown import MarkdownParseError
+from markos.markdown import IngestionIssue
 
 
 def test_rebuild_stores_documents_links_metadata_and_state(tmp_path: Path) -> None:
@@ -36,7 +36,7 @@ def test_rebuild_stores_documents_links_metadata_and_state(tmp_path: Path) -> No
             """
         ).fetchall()
         state = connection.execute(
-            "SELECT schema_version, document_count, link_count FROM index_state"
+            "SELECT schema_version, document_count, link_count, rejected_count FROM index_state"
         ).fetchone()
 
     assert rows == [
@@ -47,9 +47,10 @@ def test_rebuild_stores_documents_links_metadata_and_state(tmp_path: Path) -> No
         ("One.md", 0, "Two", "Two.md"),
         ("One.md", 1, "https://example.com", None),
     ]
-    assert state == (2, 2, 2)
+    assert state == (3, 2, 2, 0)
     assert summary.document_count == 2
     assert summary.link_count == 2
+    assert summary.rejected_count == 0
 
 
 def test_rebuild_replaces_stale_rows(tmp_path: Path) -> None:
@@ -107,22 +108,36 @@ def test_vault_rebuild_rejects_index_inside_vault(tmp_path: Path) -> None:
     assert list(vault.iterdir()) == []
 
 
-def test_parse_failure_preserves_existing_index(tmp_path: Path) -> None:
+def test_parse_failure_is_recorded_while_valid_documents_are_indexed(tmp_path: Path) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()
     index_path = tmp_path / "index.duckdb"
-    rebuild_index(
-        index_path,
-        [KnowledgeDocument(path=PurePath("Existing.md"), title="Existing")],
-    )
+    (vault / "valid.md").write_text("# Valid", encoding="utf-8")
     (vault / "broken.md").write_bytes(b"\xff")
 
-    with pytest.raises(MarkdownParseError):
-        rebuild_vault_index(vault, index_path)
+    summary = rebuild_vault_index(vault, index_path)
 
     with duckdb.connect(str(index_path), read_only=True) as connection:
         paths = connection.execute("SELECT path FROM documents").fetchall()
-    assert paths == [("Existing.md",)]
+        issues = connection.execute("SELECT path, error FROM ingestion_issues").fetchall()
+    assert paths == [("valid.md",)]
+    assert issues[0][0] == "broken.md"
+    assert "could not read" in issues[0][1]
+    assert summary.rejected_count == 1
+
+
+def test_rebuild_validates_issue_paths_before_writing(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    document = KnowledgeDocument(path=PurePath("Same.md"), title="Same")
+
+    with pytest.raises(KnowledgeIndexError, match="both indexed and rejected"):
+        rebuild_index(
+            index_path,
+            [document],
+            issues=[IngestionIssue(path="Same.md", error="broken")],
+        )
+
+    assert not index_path.exists()
 
 
 def test_rebuild_migrates_an_older_rebuildable_schema(tmp_path: Path) -> None:
@@ -137,7 +152,7 @@ def test_rebuild_migrates_an_older_rebuildable_schema(tmp_path: Path) -> None:
     )
 
     with duckdb.connect(str(index_path), read_only=True) as connection:
-        assert connection.execute("SELECT schema_version FROM index_state").fetchone() == (2,)
+        assert connection.execute("SELECT schema_version FROM index_state").fetchone() == (3,)
         columns = connection.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name = 'document_links'"
         ).fetchall()

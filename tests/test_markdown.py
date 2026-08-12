@@ -7,6 +7,7 @@ from markos.markdown import (
     MarkdownParseError,
     discover_markdown,
     load_markdown,
+    load_markdown_report,
     parse_markdown,
 )
 
@@ -130,3 +131,17 @@ def test_load_discovers_and_parses_without_modifying_files(tmp_path: Path) -> No
 
     assert [document.title for document in documents] == ["One", "Two"]
     assert {path: path.read_bytes() for path in (first, second)} == before
+
+
+def test_load_report_records_parse_failures_and_continues(tmp_path: Path) -> None:
+    (tmp_path / "valid.md").write_text("# Valid", encoding="utf-8")
+    (tmp_path / "broken.md").write_text(
+        "---\npublication: Make:\n---\n# Broken",
+        encoding="utf-8",
+    )
+
+    report = load_markdown_report(tmp_path)
+
+    assert [document.identifier for document in report.documents] == ["valid.md"]
+    assert [issue.path for issue in report.issues] == ["broken.md"]
+    assert "invalid frontmatter" in report.issues[0].error

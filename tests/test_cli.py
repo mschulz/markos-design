@@ -172,3 +172,42 @@ def test_graph_shows_health_and_shortest_path(tmp_path: Path) -> None:
     assert "Resolved links" in health.stdout
     assert path.exit_code == 0
     assert "One.md → Two.md" in path.stdout
+
+
+def test_rebuild_reports_and_lists_ingestion_issues(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "Valid.md").write_text("# Valid", encoding="utf-8")
+    (vault / "Broken.md").write_text(
+        "---\npublication: Make:\n---\n# Broken",
+        encoding="utf-8",
+    )
+
+    rebuilt = runner.invoke(
+        app,
+        ["rebuild", "--vault", str(vault), "--index", str(index_path)],
+    )
+    listed = runner.invoke(app, ["issues", "--index", str(index_path)])
+
+    assert rebuilt.exit_code == 0
+    assert "rejected 1 documents" in rebuilt.stdout
+    assert listed.exit_code == 0
+    assert "Broken.md" in listed.stdout
+    assert "invalid frontmatter" in listed.stdout
+
+
+def test_graph_caps_isolated_document_preview(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    for number in range(25):
+        (vault / f"Note-{number:02}.md").write_text(f"# Note {number}", encoding="utf-8")
+    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+
+    result = runner.invoke(app, ["graph", "--index", str(index_path)])
+
+    assert result.exit_code == 0
+    assert "Note-19.md" in result.stdout
+    assert "Note-20.md" not in result.stdout
+    assert "and 5 more isolated documents" in result.stdout

@@ -5,9 +5,11 @@ import pytest
 
 from markos.domain import KnowledgeDocument
 from markos.index import SCHEMA_VERSION, rebuild_index
+from markos.markdown import IngestionIssue
 from markos.query import (
     KnowledgeQueryError,
     backlinks,
+    ingestion_issues,
     outgoing_links,
     read_document,
     search_index,
@@ -121,4 +123,21 @@ def test_outgoing_links_and_backlinks_use_resolved_paths(tmp_path: Path) -> None
     ]
     assert [(link.source_path, link.target) for link in incoming] == [
         ("Projects/MarkOS.md", "Vision")
+    ]
+
+
+def test_ingestion_issues_are_returned_in_deterministic_order(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.duckdb"
+    rebuild_index(
+        index_path,
+        [],
+        issues=[
+            IngestionIssue(path="z.md", error="z error"),
+            IngestionIssue(path="A.md", error="a error"),
+        ],
+    )
+
+    assert [(issue.path, issue.error) for issue in ingestion_issues(index_path)] == [
+        ("A.md", "a error"),
+        ("z.md", "z error"),
     ]

@@ -3,7 +3,7 @@
 MarkOS is a local-first personal knowledge engine. Markdown remains the
 canonical source of truth; applications and rebuildable indexes sit around it.
 
-## M6 Graph analysis
+## M7 Ingestion diagnostics
 
 This repository currently provides:
 
@@ -18,6 +18,7 @@ This repository currently provides:
 - conservative internal-link resolution with outgoing-link and backlink queries;
 - a read-only HTTP API for health, search, documents, and graph navigation;
 - graph health metrics and shortest directed paths over resolved links;
+- resilient indexing of valid documents with explicit rejection diagnostics;
 - automated tests across the foundation, ingestion, indexing, query, API, and analysis boundaries.
 
 MarkOS does not modify a configured vault. Discovery and parsing are read-only;
@@ -48,6 +49,7 @@ Run the CLI:
 uv run markos version
 uv run markos doctor --vault /path/to/vault
 uv run markos rebuild --vault /path/to/vault --index /path/to/index.duckdb
+uv run markos issues --index /path/to/index.duckdb
 uv run markos search "knowledge engine" --index /path/to/index.duckdb
 uv run markos links Vision.md --index /path/to/index.duckdb
 uv run markos links Vision.md --incoming --index /path/to/index.duckdb

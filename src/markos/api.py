@@ -15,6 +15,7 @@ from markos.query import (
     KnowledgeQueryError,
     backlinks,
     index_status,
+    ingestion_issues,
     outgoing_links,
     read_document,
     search_index,
@@ -33,6 +34,7 @@ class HealthResponse(ApiModel):
     rebuilt_at: datetime
     document_count: int
     link_count: int
+    rejected_count: int
 
 
 class SearchItem(ApiModel):
@@ -71,6 +73,11 @@ class PathResponse(ApiModel):
     path: tuple[str, ...]
 
 
+class IngestionIssueResponse(ApiModel):
+    path: str
+    error: str
+
+
 def create_app(index_path: Path) -> FastAPI:
     """Create an API that opens ``index_path`` read-only for every request."""
 
@@ -100,6 +107,14 @@ def create_app(index_path: Path) -> FastAPI:
         except KnowledgeQueryError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
         return [SearchItem(**result.__dict__) for result in results]
+
+    @app.get("/issues", response_model=list[IngestionIssueResponse])
+    def issues() -> list[IngestionIssueResponse]:
+        try:
+            results = ingestion_issues(index_path)
+        except KnowledgeQueryError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        return [IngestionIssueResponse(**result.__dict__) for result in results]
 
     @app.get("/documents/{identifier:path}", response_model=DocumentResponse)
     def document(identifier: str) -> DocumentResponse:

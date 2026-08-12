@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path, PurePath
 
 import frontmatter
@@ -23,6 +24,22 @@ class MarkdownDiscoveryError(ValueError):
 
 class MarkdownParseError(ValueError):
     """Raised when a Markdown document cannot be safely read or parsed."""
+
+
+@dataclass(frozen=True)
+class IngestionIssue:
+    """One document rejected during a resilient vault load."""
+
+    path: str
+    error: str
+
+
+@dataclass(frozen=True)
+class MarkdownLoadReport:
+    """Successfully parsed documents and explicit rejection diagnostics."""
+
+    documents: tuple[KnowledgeDocument, ...]
+    issues: tuple[IngestionIssue, ...]
 
 
 def discover_markdown(vault_path: Path) -> tuple[Path, ...]:
@@ -93,7 +110,8 @@ def parse_markdown(vault_path: Path, relative_path: PurePath) -> KnowledgeDocume
     try:
         post = frontmatter.loads(source)
     except Exception as error:
-        raise MarkdownParseError(f"invalid frontmatter in: {path.as_posix()}") from error
+        message = f"invalid frontmatter in {path.as_posix()}: {error}"
+        raise MarkdownParseError(message) from error
 
     body = post.content
     tokens = MarkdownIt("commonmark").parse(body)
@@ -112,6 +130,19 @@ def load_markdown(vault_path: Path) -> tuple[KnowledgeDocument, ...]:
     """Discover and parse every Markdown document in a vault."""
 
     return tuple(parse_markdown(vault_path, path) for path in discover_markdown(vault_path))
+
+
+def load_markdown_report(vault_path: Path) -> MarkdownLoadReport:
+    """Parse all discoverable documents while recording per-file failures."""
+
+    documents: list[KnowledgeDocument] = []
+    issues: list[IngestionIssue] = []
+    for path in discover_markdown(vault_path):
+        try:
+            documents.append(parse_markdown(vault_path, path))
+        except MarkdownParseError as error:
+            issues.append(IngestionIssue(path=path.as_posix(), error=str(error)))
+    return MarkdownLoadReport(documents=tuple(documents), issues=tuple(issues))
 
 
 def _resolved_vault(vault_path: Path) -> Path:

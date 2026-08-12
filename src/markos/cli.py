@@ -15,7 +15,13 @@ from markos.api import create_app
 from markos.index import KnowledgeIndexError, rebuild_vault_index
 from markos.logging import configure_logging
 from markos.markdown import MarkdownDiscoveryError, MarkdownParseError
-from markos.query import KnowledgeQueryError, backlinks, outgoing_links, search_index
+from markos.query import (
+    KnowledgeQueryError,
+    backlinks,
+    ingestion_issues,
+    outgoing_links,
+    search_index,
+)
 from markos.settings import LogLevel, Settings, SettingsError
 
 app = typer.Typer(
@@ -147,7 +153,8 @@ def rebuild(
 
     console.print(
         f"Indexed [bold]{summary.document_count}[/bold] documents and "
-        f"[bold]{summary.link_count}[/bold] links into {summary.path}"
+        f"[bold]{summary.link_count}[/bold] links; rejected "
+        f"[bold]{summary.rejected_count}[/bold] documents into {summary.path}"
     )
 
 
@@ -193,6 +200,45 @@ def search(
     table.add_column("Snippet")
     for result in results:
         table.add_row(result.path, result.title, result.snippet)
+    console.print(table)
+
+
+@app.command()
+def issues(
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to a TOML configuration file."),
+    ] = None,
+    index: Annotated[
+        Path | None,
+        typer.Option("--index", help="DuckDB index path; overrides configuration."),
+    ] = None,
+) -> None:
+    """Show documents rejected during the latest index rebuild."""
+
+    settings = _load_settings(config, None, index, None, require_vault=False)
+    if settings.index_path is None:
+        error_console.print(
+            "[bold red]Configuration error:[/bold red] index path is required; "
+            "set MARKOS_INDEX_PATH or use --index"
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        results = ingestion_issues(settings.index_path)
+    except KnowledgeQueryError as error:
+        error_console.print(f"[bold red]Issue query failed:[/bold red] {error}")
+        raise typer.Exit(code=1) from error
+
+    if not results:
+        console.print("No ingestion issues.")
+        return
+
+    table = Table(title="Ingestion issues")
+    table.add_column("Path")
+    table.add_column("Error")
+    for result in results:
+        table.add_row(result.path, result.error)
     console.print(table)
 
 
@@ -331,7 +377,12 @@ def graph(
     table.add_row("Weak components", str(report.weak_component_count))
     console.print(table)
     if report.isolated_documents:
-        console.print("Isolated: " + ", ".join(report.isolated_documents))
+        preview_limit = 20
+        preview = report.isolated_documents[:preview_limit]
+        console.print("Isolated: " + ", ".join(preview))
+        remaining = len(report.isolated_documents) - len(preview)
+        if remaining:
+            console.print(f"… and {remaining} more isolated documents")
 
 
 def _required_vault_path(settings: Settings) -> Path:
