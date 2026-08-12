@@ -94,6 +94,10 @@ agents. Keep it concise, current, and free of secrets.
   policy. Never infer missing `INFERRED` or `AMBIGUOUS` scores.
 - Two identical Qwen 3 14B runs over four narrower Active Badge chunks were not reproducible:
   node-label overlap was 6/13 by union and edge-signature overlap 3/13. Do not scale this provider.
+- Two Claude Sonnet runs through Graphify cited all four Active Badge chunks with complete mapped
+  provenance, but both violated confidence-score rules and were also not reproducible: node-label
+  overlap was 6/18 by union and edge-signature overlap 4/20. Do not scale this backend. Test a
+  MarkOS-owned extraction contract before another provider comparison.
 
 ## Python Environment
 
