@@ -210,5 +210,4 @@ or merged only with explicit approval.
 ## Related
 
 - [[Vision]]
-- [[Milestones]]
-- [[ADR-0001 Markdown is the Source of Truth]]
+- [[MarkOS Specification]]

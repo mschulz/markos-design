@@ -438,6 +438,4 @@ Before adopting Graphify as an M13/M14 dependency:
 ## Related
 
 - [[Markdown Memory Architecture]]
-- [[Milestones]]
-- [[PARA Migration Strategy]]
-- [[Mac App Architecture]]
+- [[MarkOS Specification]]

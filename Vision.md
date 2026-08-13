@@ -73,7 +73,5 @@ It should change very rarely. Architectural decisions, engineering practices and
 
 ## Related
 
-- [[ADR-0000 Why MarkOS Exists]]
-- [[ADR-0001 Markdown is the Source of Truth]]
-- [[Engineering Charter]]
-- [[Milestones]]
+- [[MarkOS Specification]] — supersedes the never-written ADR-0000, ADR-0001,
+  and Engineering Charter documents this section used to point to.

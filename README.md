@@ -13,13 +13,18 @@ The implementation of MarkOS lives in the separate `markos` repository.
 | Document | Status |
 |-----------|:------:|
 | Vision | ✅ |
-| ADR-0000 Why MarkOS Exists | ⬜ |
-| ADR-0001 Markdown is the Source of Truth | ⬜ |
-| Engineering Charter | ⬜ |
-| Milestones | ✅ |
+| ADR-0000 Why MarkOS Exists | Superseded |
+| ADR-0001 Markdown is the Source of Truth | Superseded |
+| Engineering Charter | Superseded |
+| MarkOS Specification | ✅ |
 | Home | ⬜ |
 
-Progress: **2 / 6**
+ADR-0000, ADR-0001, and Engineering Charter were never written separately;
+their content is now covered by [[MarkOS Specification]] instead — the "why"
+in Section 1, Markdown-as-source-of-truth across Sections 1 and 2, and
+engineering practice in Section 7 — rather than as standalone documents.
+
+Progress: **2 complete, 3 superseded, 1 remaining (Home)**
 
 ---
 
@@ -49,13 +54,13 @@ Progress: **2 / 6**
 | M12 — Raw Document Ingestion | Immutable raw artifacts and grounded source notes | Accepted |
 | M13 — Markdown Concept Memory | Filesystem-native LLM research without vector search | Accepted |
 | M14 — Knowledge Maintenance | Periodic health, repair and research proposals | Accepted |
-| M15 — Native Mac App | SwiftUI interface over shared Python services | Accepted |
+| M15 — Desktop App | PySide6 interface over shared Python services | Accepted |
 | M16 — Background and Distribution | Scheduling, notifications and notarized delivery | Accepted |
 
-See [[Milestones]] for scope and acceptance criteria and
-[[Markdown Memory Architecture]], [[PARA Migration Strategy]],
-[[Graphify Evaluation]] and [[Mac App Architecture]] for the governing designs
-and current integration evaluation.
+See [[MarkOS Specification]] for scope, acceptance criteria and the
+migration plan, and [[Markdown Memory Architecture]] and
+[[Graphify Evaluation]] for the governing designs and current integration
+evaluation.
 
 ---
 
