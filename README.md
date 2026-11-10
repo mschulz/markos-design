@@ -1,91 +1,39 @@
-# MarkOS Design
+# MarkOS
 
-This repository contains the architectural design, engineering decisions and long-term roadmap for the MarkOS project.
+MarkOS augments human thinking through source-grounded knowledge and human-controlled assistance. This repository is the canonical GitHub home for its project artifacts: code, tests, infrastructure and documentation. ChatGPT Space is for collaborative drafting; approved changes are incorporated through pull requests.
 
-The implementation of MarkOS lives in the separate `markos` repository.
+The current tree contains design documents and documented boundaries for future implementation. Existing software is recorded in the separate `markos` repository; it has not been migrated or reverified here.
 
----
+## Start here
 
-# Current Design Milestone
+- [Vision](Vision.md): the existing governing principles.
+- [MarkOS v0.3 Specification](MarkOS%20v0.3%20Specification.md): complete Gmail-first event-system **review draft**, not approved for runtime implementation.
+- [MarkOS v0.3 Roadmap](MarkOS%20v0.3%20Roadmap.md): prior-architecture reconciliation, repository transition, approval gates and new milestones.
+- [ADR-0002 GitHub as Canonical Project Record](ADR-0002%20GitHub%20as%20Canonical%20Project%20Record.md): accepted project governance and PR workflow.
+- [MarkOS Specification](MarkOS%20Specification.md): preserved earlier architecture and M0–M16 history.
+- [Markdown Memory Architecture](Markdown%20Memory%20Architecture.md), [Semantic Graph Extraction](Semantic%20Graph%20Extraction.md), [Semantic Graph Extraction Roadmap](Semantic%20Graph%20Extraction%20Roadmap.md) and [Graphify Evaluation](Graphify%20Evaluation.md): existing knowledge design, experiments and subsystem plan.
+- [Changelog](CHANGELOG.md): design progress.
 
-## D0 — Foundation
+v0.3's PostgreSQL-backed knowledge, semantic retrieval and web/PWA direction differ from the existing Markdown, DuckDB and desktop design. Review those differences in the roadmap before implementation; Vision remains unchanged.
 
-| Document | Status |
-|-----------|:------:|
-| Vision | ✅ |
-| ADR-0000 Why MarkOS Exists | Superseded |
-| ADR-0001 Markdown is the Source of Truth | Superseded |
-| Engineering Charter | Superseded |
-| MarkOS Specification | ✅ |
-| Home | ⬜ |
+## Repository organization
 
-ADR-0000, ADR-0001, and Engineering Charter were never written separately;
-their content is now covered by [[MarkOS Specification]] instead — the "why"
-in Section 1, Markdown-as-source-of-truth across Sections 1 and 2, and
-engineering practice in Section 7 — rather than as standalone documents.
+Existing documents remain flat at the root to preserve established paths. The [architecture document template](Templates/Architecture%20Document%20Template.md) remains in `Templates/`.
 
-Progress: **2 complete, 3 superseded, 1 remaining (Home)**
+| Path | Purpose |
+|---|---|
+| [src/markos/](src/markos/README.md) | Future application, worker and agent code |
+| [tests/](tests/README.md) | Future tests and synthetic fixtures |
+| [config/](config/README.md) | Configuration schemas and sanitized examples |
+| [infrastructure/](infrastructure/README.md) | Infrastructure definitions and operational documentation |
+| [.github/](.github/PULL_REQUEST_TEMPLATE.md) | Review template; executable CI deferred until toolchain selection |
 
----
+## Milestone status
 
-# Software Milestones
+The earlier specification records **M0–M10 delivered** in the separate implementation repository and **M11–M16 accepted**. Those records are preserved and do not establish completion of the proposed **v0.3 M0–M8**, all of which remain unstarted.
 
-## Completed
+## Contributing
 
-| Milestone | Outcome | Status |
-|-----------|---------|:------:|
-| M0 — Foundation | Project, CLI, configuration, logging, domain model and tests | ✅ |
-| M1 — Markdown Discovery | Read-only Markdown discovery and parsing | ✅ |
-| M2 — DuckDB Index | Rebuildable external knowledge index | ✅ |
-| M3 — Index Search | Read-only indexed search and document queries | ✅ |
-| M4 — Link Graph | Link resolution and graph queries | ✅ |
-| M5 — Read-Only API | FastAPI interface over the index | ✅ |
-| M6 — Graph Analysis | Graph health metrics and path analysis | ✅ |
-| M7 — Ingestion Diagnostics | Resilient ingestion with rejection reporting | ✅ |
-| M8 — Index Freshness | Source fingerprints and change detection | ✅ |
-| M9 — Conditional Synchronization | No-op sync when current and transactional rebuild when stale | ✅ |
-| M10 — Automated Read-Only Synchronization | Foreground monitoring and serialized rebuilds | ✅ |
+Read [AGENTS.md](AGENTS.md), the applicable specification and the roadmap. Use a focused `codex/` branch and pull request; include scope, validation and unresolved decisions. Implementation milestones include automated tests and documentation. Keep proposal and acceptance status explicit.
 
-## Accepted — Not Yet Implemented
-
-| Milestone | Outcome | Status |
-|-----------|---------|:------:|
-| M11 — Controlled PARA Filing | Human-approved filing from an in-vault inbox | Accepted |
-| M12 — Raw Document Ingestion | Immutable raw artifacts and grounded source notes | Accepted |
-| M13 — Markdown Concept Memory | Filesystem-native LLM research without vector search | Accepted |
-| M14 — Knowledge Maintenance | Periodic health, repair and research proposals | Accepted |
-| M15 — Desktop App | PySide6 interface over shared Python services | Accepted |
-| M16 — Background and Distribution | Scheduling, notifications and notarized delivery | Accepted |
-
-See [[MarkOS Specification]] for scope, acceptance criteria and the
-migration plan, and [[Markdown Memory Architecture]] and
-[[Graphify Evaluation]] for the governing designs and current integration
-evaluation.
-
----
-
-# Repositories
-
-| Repository | Purpose |
-|------------|---------|
-| `markos` | Production software |
-| `markos-design` | Architecture, engineering decisions and roadmap |
-
----
-
-# Principles
-
-- Markdown is the source of truth.
-- DuckDB is a rebuildable index.
-- Markdown is the durable semantic-memory layer; vector storage is not required.
-- Generated conclusions remain linked to inspectable source evidence.
-- CLI and UI use the same application services and safety rules.
-- Health and knowledge suggestions are periodic and reviewable, not silently applied.
-- Architecture before implementation.
-- Fixed milestone scope.
-- Small, releasable increments.
-- AI proposes; humans decide.
-
----
-
-For project documentation begin with [[Home]].
+Do not commit credentials, private notes, emails, bills or runtime data. This increment does not deploy code or modify an Obsidian vault.

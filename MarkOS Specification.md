@@ -2,11 +2,11 @@
 title: MarkOS Specification
 type: specification
 status: draft
-version: 2.1
+version: 2.2
 owner: Mark Schulz
 created: 2026-08-13
-updated: 2026-08-13
-reviewed: 2026-08-13
+updated: 2026-11-10
+reviewed: 2026-11-10
 tags:
   - specification
   - architecture
@@ -14,6 +14,15 @@ tags:
 ---
 
 # MarkOS Specification
+
+> Repository transition note, 10 November 2026: this earlier architecture and
+> its M0–M16 history are preserved. [[MarkOS v0.3 Specification]] is a separate
+> proposed system revision, with a new milestone sequence and unresolved conflicts
+> documented in [[MarkOS v0.3 Roadmap]]. [[ADR-0002 GitHub as Canonical Project Record]]
+> supersedes this document's direct-to-main design workflow and establishes the
+> target of code and docs together in markos-design. The separate implementation
+> has not been migrated. This update reviews the transition note and governance
+> overlay only; it does not reapprove the older runtime design or approve v0.3.
 
 This is the document meant to be read before the first line of code is
 written: what the system is, where knowledge lives, how it gets built up over
