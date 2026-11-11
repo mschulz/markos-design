@@ -8,6 +8,39 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### Accepted on 11 November 2026
+
+- Recorded ADR-002 Cloud-first Deployment: DigitalOcean VM with Docker Compose,
+  Supabase PostgreSQL durable operational state and MacBook development/admin only.
+  The accepted hosting baseline is distinct from remaining runtime proposals.
+
+### Completed on 11 November 2026
+
+- Added the cloud deployment architecture and updated v0.3 specification/roadmap
+  with persistent scheduling, missed-job recovery, restart/health policies,
+  backups, independent monitoring and recovery/readiness acceptance criteria.
+- Proposed recovery/retention targets for review; no runtime milestone completed.
+- Continued existing PR #1 and preserved ADR-0002 governance, prior documents and
+  implementation history. No provisioning, deployment, merge or vault changes.
+
+### Accepted on 10 November 2026
+
+- Recorded the owner's decision that GitHub is canonical for all project code,
+  tests, infrastructure and documentation, with Space for collaborative drafting.
+- Recorded markos-design as the target home for code and docs, with PR review
+  superseding direct-to-main changes; existing implementation migration is pending.
+
+### Completed on 10 November 2026
+
+- Imported the complete v0.3 review draft without approving runtime milestones.
+- Added the v0.3 roadmap, architecture reconciliation, migration gates and explicit
+  separation of earlier M0–M16 from v0.3 M0–M8.
+- Added documented code, test, configuration and infrastructure boundaries and a
+  PR template while preserving the flat document layout and prior design records.
+- Updated README, project memory and the earlier specification's governance note.
+  Vision and prior evaluation artifacts remain unchanged; no deployment or vault
+  changes were made.
+
 ### Accepted
 
 - Added the M10 Automated Read-Only Synchronization milestone proposal.
