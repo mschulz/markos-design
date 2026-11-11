@@ -8,6 +8,21 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### Accepted on 11 November 2026
+
+- Recorded ADR-002 Cloud-first Deployment: DigitalOcean VM with Docker Compose,
+  Supabase PostgreSQL durable operational state and MacBook development/admin only.
+  The accepted hosting baseline is distinct from remaining runtime proposals.
+
+### Completed on 11 November 2026
+
+- Added the cloud deployment architecture and updated v0.3 specification/roadmap
+  with persistent scheduling, missed-job recovery, restart/health policies,
+  backups, independent monitoring and recovery/readiness acceptance criteria.
+- Proposed recovery/retention targets for review; no runtime milestone completed.
+- Continued existing PR #1 and preserved ADR-0002 governance, prior documents and
+  implementation history. No provisioning, deployment, merge or vault changes.
+
 ### Accepted on 10 November 2026
 
 - Recorded the owner's decision that GitHub is canonical for all project code,

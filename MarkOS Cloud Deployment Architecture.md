@@ -1,0 +1,129 @@
+---
+title: MarkOS Cloud Deployment Architecture
+type: architecture
+status: draft
+version: 1.0
+owner: Mark Schulz
+created: 2026-11-11
+updated: 2026-11-11
+reviewed: 2026-11-11
+tags:
+  - architecture
+  - deployment
+  - operations
+---
+
+# MarkOS Cloud Deployment Architecture
+
+## Decision
+
+Apply accepted [[ADR-002 Cloud-first Deployment]]: a DigitalOcean VM runs the always-on Docker Compose services; Supabase PostgreSQL holds durable state. The placement is accepted. The operational details and targets below are implementation requirements/proposals for review, not evidence of deployed infrastructure.
+
+## Motivation
+
+Jobs must continue without a MacBook, logged-in operator, local tunnel, local OAuth callback server or mounted personal filesystem. Production credentials and configuration must be available securely in the cloud.
+
+## Service placement and network boundaries
+
+| Location | Components and responsibilities |
+|---|---|
+| DigitalOcean VM / Compose | MQTT broker; Gmail ingestion and watch renewal; outbox publisher/reconciler; bounded agent workers; persistent scheduler; notification gateway; authenticated web API/control plane and HTTPS entry point |
+| Supabase PostgreSQL | Operational events, outbox/inbox deduplication, tasks, schedules and run history, leases, Gmail history cursor, agent/configuration metadata, approvals, conversations, notification attempts, audit and approved knowledge schemas |
+| Cloud source-object storage (provider open) | Immutable email/attachment originals, checksums and access policy; database stores references. No MacBook-only originals |
+| MacBook / iPhone | Authenticated browser/CLI clients; MacBook development and administration. Local development uses isolated synthetic data and credentials |
+| External providers | Gmail / Google Cloud Pub/Sub mailbox-change notifications, model APIs and selected push adapter. Google Pub/Sub is distinct from the MarkOS MQTT broker |
+
+Clients reach the HTTPS API; the API and workers use TLS to Supabase and provider APIs. Compose service traffic stays on a private network; do not expose unauthenticated MQTT or database ports to the public internet. Broker identities use per-service credentials and topic ACLs. Administrative access is restricted and authenticated. Validate Pub/Sub push identity at a cloud HTTPS endpoint if push is selected; a cloud pull subscriber is an alternative implementation choice. Neither path depends on a personal-device tunnel.
+
+Keep secrets outside Git and images, with least-privilege runtime roles and protected cloud-side injection. Store recoverable credential material encrypted, with recovery access independent of the VM and MacBook. Rotate credentials after suspected compromise. Supabase administrative credentials never reach browser clients. Select a production plan/capacity that avoids intentional inactivity suspension; verify connectivity, connection limits and backup entitlements before launch.
+
+## Persistent scheduling and missed-job recovery
+
+The scheduler runs in the VM, while PostgreSQL owns scheduling truth. Persist a stable schedule ID/version, owner/domain, job type, payload reference, enabled flag, interval/cron expression, IANA timezone, next due time, missed-run policy, catch-up limit, retry/backoff limit and execution timeout. Store UTC instants and define daylight-saving behavior explicitly for wall-clock schedules.
+
+Each occurrence has a durable run record: schedule/version, original due time, unique occurrence key, status, attempts, availability time, lease owner/expiry, result or error and timestamps. A transaction locks due schedule rows, inserts uniquely keyed occurrences and their task/outbox records, and advances next-due state together. Concurrent scheduler processes must not create duplicate occurrences. Use database time for claiming and leases; workers renew leases and only the current valid lease/fencing token may finalize a run.
+
+On startup and periodically, reconcile overdue schedules, expired leases, unfinished runs and unpublished outbox entries. Choose and persist per-job policy before enabling a schedule:
+
+- **Catch up:** replay each missed occurrence within a bounded count/age window, in due-time order when ordering matters.
+- **Coalesce:** create one current run representing the missed interval, suitable for watch renewal and latest-state maintenance.
+- **Skip:** record missed occurrences as skipped with reason and audit; never silently drop overdue jobs.
+
+Record catch-up truncation and alert an operator; do not create an unlimited recovery storm. Weekly consolidation, reconciliation, watch renewal and backup jobs each need explicit policies. Validate current Gmail watch expiry/cursor after downtime; use history reconciliation/full resync when necessary. An old watch-renewal occurrence must not schedule from a stale expiry.
+
+Execution is at-least-once. Deduplicate schedule occurrences and business operations, preserve idempotency keys through retries and enforce approval expiry at execution time. External delivery can have an ambiguous result after a crash: reconcile provider status where available or surface uncertainty for review; do not promise exactly-once notifications or repeat consequential actions blindly. Poison jobs enter dead-letter/operator review after bounded retries.
+
+If PostgreSQL is unavailable, stop claiming jobs and performing unrecorded side effects. Retry connections with backoff/jitter and report degradation. Acknowledge external ingress only after its recovery state is durable; reconcile Gmail changes after reconnection.
+
+## Container and host lifecycle
+
+Set `restart: unless-stopped` for every long-running Compose service, including scheduler and ingestion. Enable Docker at host boot and verify recovery after a VM reboot. An intentionally stopped container remains stopped with this policy; maintenance recovery must explicitly start it. One-shot migrations and restore tasks need deliberate invocation and failure handling rather than an unlimited restart loop.
+
+Define readiness/liveness checks, startup grace periods, resource bounds and graceful termination. Workers finish safely or release/expire leases on shutdown. Persist Mosquitto session data in a named volume and enable broker persistence; keep configuration/ACLs recoverable. Never store authoritative tasks only in container files.
+
+Use healthy dependency conditions for local Compose startup where appropriate; services still need runtime reconnect/backoff for broker and remote Supabase failures. A health check alone does not restart an unhealthy process: exit on unrecoverable failure or alert for operator remediation. Rotate logs, monitor disk and prevent crash loops from exhausting the VM.
+
+Pin reviewed image versions/digests, record the deployed Git commit, review migrations before rollout and retain the last working images/configuration. Application rollback is permitted only against a compatible schema; take a verified backup before a destructive migration and define a separate data-restore plan.
+
+## Backups and recovery objectives
+
+Proposed initial targets for owner approval before launch: **RPO at most 24 hours** for durable state/source objects, **RTO at most 4 hours** after an operator begins recovery. These are targets to validate in drills, not an availability guarantee. Any tighter requirement must change backup frequency/capability and budget.
+
+Require daily encrypted off-VM database backups or verified managed backups with equivalent coverage, plus an independently recoverable export. Verify the selected Supabase plan's retention and restore procedure; do not assume point-in-time recovery is included. Proposed retention is 7 daily and 4 weekly independent copies, subject to privacy/deletion review. Alert on failed or stale backups and periodically verify checksums and restore access.
+
+Back up source-object bytes/versions separately from database metadata, plus broker persistence, reviewed configuration, deployment manifest and encrypted secrets recovery material. Database backups alone do not restore attachment bytes, including when Supabase Storage is eventually selected. VM snapshots supplement these backups; they do not replace a consistent database/object recovery set. Record backup IDs, timestamps, source checksums and schema/image versions together.
+
+Rehearse restore in an isolated environment before launch and periodically thereafter. Check domain permissions, source references/checksums, schedule/run state, outbox/inbox consistency and notification audit. Restoring an older database can forget operations already sent to providers; fence the former scheduler/workers and reconcile external delivery before releasing side effects.
+
+## Monitoring and response
+
+Collect structured logs with trace/correlation IDs and redacted sensitive content. Track API readiness, scheduler heartbeat/last scan, overdue-job age, failed/expired leases, dead letters, outbox age, worker progress, Gmail cursor lag/watch expiry, notification failures, Supabase connectivity/latency/connection usage, VM CPU/memory/disk and backup freshness.
+
+Use an external uptime/heartbeat monitor outside this VM and a direct alert route independent of the MarkOS notification gateway. Otherwise a failed VM cannot report its own failure. Before launch, assign an operator, alert destination, thresholds and escalation path. Proposed starting thresholds: missing scheduler heartbeat for 5 minutes, overdue critical job beyond its job-specific grace, and backup age above 26 hours. Tune during acceptance drills; Gmail watch-renewal alerts must allow time to act before expiry.
+
+## Failure and recovery procedures
+
+| Failure | Response and completion evidence |
+|---|---|
+| Worker/container exit | Restart policy recovers process; reconcile expired lease and idempotency state; confirm run completes once in business state |
+| Hung/unhealthy service | External health/heartbeat alert; inspect logs and dependency health, restart deliberately; prove backlog drains |
+| VM reboot | Docker boots, non-stopped services recover, broker volume survives, scheduler catches up; no operator login required |
+| Lost VM/disk | Fence old instance to prevent two writers; prepare replacement only under deployment authorization, restore reviewed images/config/secrets/broker data, connect Supabase, verify health before releasing jobs |
+| Supabase/network outage | Degrade readiness, stop unsafe claims/acks/side effects, back off; reconcile ingress, leases and outbox after connection returns |
+| Database corruption/restore | Pause writers and delivery, restore verified database/object recovery set into isolation, validate consistency, reconcile side effects, then re-enable with bounded catch-up |
+| Gmail/push provider outage | Persist retry state, back off within limits, alert on expiry/backlog; reconcile before duplicate sends |
+| Credential compromise | Disable affected access, rotate secrets, audit events, restore trusted configuration before resuming |
+
+A normal VM replacement reconnects to intact Supabase state; it must not restore an older database unnecessarily. A restored MQTT broker may redeliver or lose transient transport state: rebuild work from the durable outbox/run records. Keep a recovery checklist and access path usable from another authorized computer.
+
+## Production acceptance evidence
+
+These are future milestone tests, not completed checks in this documentation PR:
+
+1. Shut down the MacBook; synthetic Gmail ingestion, scheduled work, agent processing, API and notification delivery continue.
+2. Kill a worker and reboot the VM; service recovery and lease retry preserve durable results.
+3. Pause the scheduler across multiple due times; verify catch-up, coalesce, skip, limits and concurrent claims.
+4. Disconnect MQTT and Supabase independently; verify durable recovery and no unrecorded side effects.
+5. Restore database and attachment backups into isolation and replace the VM; measure RPO/RTO, validate provenance and prevent duplicate provider actions.
+6. Disable the VM/notification gateway; verify the independent monitor alerts the operator.
+
+## Consequences
+
+### Benefits
+
+The cloud can process jobs while clients are off. Durable scheduling, bounded replay and independently verified recovery make failure behavior reviewable.
+
+### Costs
+
+Single-VM downtime remains unavoidable without a later availability design. Operators need budget, independent alert delivery, backup access and rehearsed recovery. Detailed product contracts and knowledge-authority questions remain open.
+
+## Related
+
+- [[ADR-002 Cloud-first Deployment]]
+- [[MarkOS v0.3 Specification]]
+- [[MarkOS v0.3 Roadmap]]
+- [Docker restart policies](https://docs.docker.com/engine/containers/start-containers-automatically/)
+- [Compose startup/readiness](https://docs.docker.com/compose/how-tos/startup-order/)
+- [Supabase database backups and storage boundaries](https://supabase.com/docs/guides/platform/backups)
+
+Provider behavior was checked against these official references on 11 November 2026. Proposed MarkOS policies and targets are design choices, not provider guarantees.

@@ -2,11 +2,11 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-10
-updated: 2026-11-10
-reviewed: 2026-11-10
+updated: 2026-11-11
+reviewed: 2026-11-11
 tags:
   - architecture
   - governance
@@ -29,12 +29,13 @@ Inspection of `main` at `f68edf216551fc43e4f24e492294e7a288c32530` found one bra
 | Knowledge authority | Human-readable Markdown is canonical; indexes rebuild from it | Structured facts and immutable sources; generated Markdown is a view | Decide the authoritative knowledge representation, export and recovery guarantees; amend Vision and memory ADR deliberately if needed |
 | Retrieval | Lexical and graph tools; no embeddings or vector database | Keyword and semantic retrieval | Define whether semantic retrieval means graph traversal or embeddings; do not assume a vector-store decision |
 | Product and interfaces | Vault/PARA workflow, CLI, read-only API, planned PySide6 Mac app | Gmail-first services, web/PWA, shared gateway, CLI, optional messaging | Define which existing services can be reused; decide whether desktop plans continue, pause or change |
+| Deployment | Prior Mac-oriented background operation | Accepted DigitalOcean VM / Docker Compose; Supabase durable state; MacBook development/admin only | Specify secure networking, sizing, cost and recovery; follow [[MarkOS Cloud Deployment Architecture]] before provisioning |
 | Storage and delivery | Filesystem originals and disposable DuckDB | PostgreSQL, object storage, MQTT outbox/inbox | Specify data ownership, migrations, event contracts, operational recovery and privacy before implementation |
 | Evidence and safety | Exact quotes, hashes, disclosure consent, preview and confirm | Provenance, domain isolation, scoped tools and approvals | Carry forward deterministic grounding and separate external-disclosure permission; define review state for structured facts |
 | Milestones | Earlier M0–M16, including delivered work | New M0–M8 sequence | Always label new work “v0.3 M0”, etc.; no prior completion transfers automatically |
 | Project workflow | Separate repos; design commits directly to main | GitHub canonical, code and docs together, PR review | Apply [[ADR-0002 GitHub as Canonical Project Record]]; inventory separate implementation before importing |
 
-The governance decision is accepted; the runtime architecture differences remain proposals. This overlay takes precedence over historical direct-to-main and separate-repository workflow descriptions for new work. It does not erase prior knowledge decisions. Leave [[Vision]] unchanged until its substantive conflict is explicitly resolved.
+Governance and [[ADR-002 Cloud-first Deployment]]'s DigitalOcean/Docker Compose/Supabase operational baseline are accepted. Other runtime architecture differences remain proposals. Production is independent of the MacBook; this does not settle the prior knowledge-authority or desktop-product questions. This overlay takes precedence over historical direct-to-main and separate-repository workflow descriptions for new work. It does not erase prior knowledge decisions. Leave [[Vision]] unchanged until its substantive conflict is explicitly resolved.
 
 ## Incremental repository layout
 
@@ -62,21 +63,34 @@ All milestones below are proposed and not started. Acceptance criteria are carri
 
 | Milestone | Scope | Acceptance evidence required |
 |---|---|---|
-| v0.3 M0 Foundation | Broker, PostgreSQL, schemas, outbox/inbox, worker runtime, ACLs | Duplicate delivery and broker outage produce no lost or double-applied work |
+| v0.3 M0 Foundation | Cloud service contracts, Supabase schemas, broker/outbox/inbox, workers, persistent schedules/leases, ACLs, restart/health policies and baseline backups/alerts | Duplicates, broker outage, worker restart, concurrent claims and bounded missed-job recovery preserve durable results |
 | v0.3 M1 Control plane | Authenticated minimal web chat, agent registry, configuration, activity | Inspect agent health and converse with a test agent |
 | v0.3 M2 Gmail bridge | Watch renewal, history cursor, ingestion, reconciliation | Test mail appears once in durable source store and event history |
 | v0.3 M3 Classification | Confidence-aware routing and manual review | Tests distinguish bills, ordinary mail and ambiguous cases |
 | v0.3 M4 Electricity | Extraction, validation, history, reporting | Synthetic sample bills yield traceable figures and anomaly explanations |
 | v0.3 M5 Knowledge | Source-linked facts, retrieval, weekly consolidation | Facts trace to sources and contradictions are surfaced |
 | v0.3 M6 Notifications | Push adapter and authenticated deep links | Approved test alert reaches iPhone with appropriate privacy settings |
-| v0.3 M7 Operations | CLI, replay, metrics, backup/restore, failure drills | Operator can recover interrupted workflow |
+| v0.3 M7 Operations | CLI/replay, metrics, verified restore, replacement-VM runbook and failure drills | Operator recovers workflow, measures approved RPO/RTO, verifies independent alerts and MacBook-off continuity |
 | v0.3 M8 Expansion | Additional agents, integrations, optional messaging | Add a new agent without modifying existing producers |
 
 Before coding each milestone, approve its bounded scope, API/event contracts, schema compatibility and executable acceptance plan. Include automated tests and updated documentation in the same GitHub review. Use synthetic email and bills; replay must suppress external side effects. A real account, device or deployment requires separate authorization.
 
+## Cloud implementation plan and readiness gates
+
+The accepted topology is defined in [[MarkOS Cloud Deployment Architecture]]. All steps below are future, unstarted work under bounded milestone approval; this PR adds documentation only.
+
+1. **Before v0.3 M0:** inventory existing implementation and preserve history; approve schedule/event/schema contracts and synthetic acceptance fixtures. Review VM region/size, Supabase production plan/connectivity, source-object provider, monitoring destination, recovery targets, recurring cost and operator ownership. Prepare a cost estimate before requesting provisioning authorization.
+2. **v0.3 M0:** add reviewed Compose definitions for each long-running service, restart/health checks, broker persistence/ACLs and secret references. Implement Supabase migrations for schedules/runs/leases and atomic task/outbox creation, idempotency, missed-run policies and bounded recovery. Add baseline backup and independent monitor design/configuration before any real production data. Test process restarts, duplicate claims and database/broker disconnections with synthetic fixtures.
+3. **v0.3 M1–M2:** use authenticated remote API access and cloud Gmail ingress; persist cursors/watch expiry and schedule renewal/reconciliation. Verify no MacBook tunnel, local token store or filesystem is a runtime dependency. Demonstrate mailbox recovery after downtime.
+4. **v0.3 M3–M6:** carry retry/idempotency/domain constraints into agents, weekly consolidation and notifications. Persist provider attempts; surface uncertain deliveries and enforce approval validity when delayed jobs resume.
+5. **v0.3 M7:** execute isolated restore and replacement-VM drills; validate source checksums and schedule/outbox state, fence old workers, reconcile external effects and measure recovery targets. Verify independent alert delivery during total VM failure and end-to-end jobs with MacBook off.
+6. **Before production:** owner reviews acceptance evidence, cost and operational runbook, then separately authorizes provisioning/deployment. No deployment or merge is included in this continuation.
+
+M7 hardens and proves controls first introduced in M0; backups and monitoring cannot wait until after production starts. Selecting a persistent scheduler library, source-object provider and backup tooling remains implementation work; the required behavior is specified now.
+
 ## Decisions still open
 
-- Hosting: local, cloud or hybrid, including network security and uptime.
+- Deployment details within accepted cloud baseline: region, sizing, plan/cost, secure networking, recovery targets and operational ownership. Hosting is no longer a local/cloud/hybrid question.
 - Shared knowledge service versus agent-private stores and domain isolation.
 - First push provider: Pushover or Home Assistant Companion.
 - Messaging priority: Slack, Matrix, Telegram or native-only.
@@ -88,6 +102,9 @@ Before coding each milestone, approve its bounded scope, API/event contracts, sc
 - Confirm intended repository visibility: GitHub reported `public` on inspection, while the prior conversation called it private. Do not store sensitive runtime data or change visibility in this PR.
 
 ## Related
+
+- [[ADR-002 Cloud-first Deployment]]
+- [[MarkOS Cloud Deployment Architecture]]
 
 - [[ADR-0002 GitHub as Canonical Project Record]]
 - [[MarkOS v0.3 Specification]]

@@ -2,24 +2,24 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3
+version: 0.3.1
 owner: Mark Schulz
 created: 2026-11-10
-updated: 2026-11-10
-reviewed: 2026-11-10
+updated: 2026-11-11
+reviewed: 2026-11-11
 tags:
   - architecture
   - governance
 ---
 
-> Imported from the [MarkOS v0.3 review draft](https://chatgpt.com/space/page_826f242af13c8191a92a0e9a1a96dd3f) on 10 November 2026. The complete draft follows unchanged. v0.3 is the proposed event-driven system revision; it is not a downgrade of the existing specification's document version 2.1. Its M0–M8 labels are a new sequence, separate from the earlier M0–M16.
+> Imported from the [MarkOS v0.3 review draft](https://chatgpt.com/space/page_826f242af13c8191a92a0e9a1a96dd3f) on 10 November 2026. The original 16-section draft is retained and amended on 11 November 2026 for accepted ADR-002 cloud-first deployment; the source Space page has not been edited. v0.3 is the proposed event-driven system revision; it is not a downgrade of the existing specification's document version 2.1. Its M0–M8 labels are a new sequence, separate from the earlier M0–M16.
 >
-> Project governance is recorded in [[ADR-0002 GitHub as Canonical Project Record]]. Reconciliation with [[Vision]], [[MarkOS Specification]] and [[Markdown Memory Architecture]], repository layout and approval gates are in [[MarkOS v0.3 Roadmap]]. Inclusion in GitHub records this proposal; it does not approve the provisional technology choices or authorize runtime implementation.
+> Project governance is recorded in [[ADR-0002 GitHub as Canonical Project Record]]. Reconciliation with [[Vision]], [[MarkOS Specification]] and [[Markdown Memory Architecture]], repository layout and approval gates are in [[MarkOS v0.3 Roadmap]]. Inclusion in GitHub records this proposal. Hosting and durable operational storage are now accepted through [[ADR-002 Cloud-first Deployment]]; other technology choices remain provisional, and runtime implementation is not authorized.
 
 # MarkOS v0.3 — System Specification (Review Draft)
 
-**Status:** Proposed, not approved for implementation  
-**Date:** 10 November 2026  
+**Status:** Proposed runtime design with accepted ADR-002 hosting baseline; not approved for implementation  
+**Date:** 11 November 2026  
 **Design intent:** Gmail-first, MQTT-based, no Obsidian dependency.
 
 ## 1. Vision and scope
@@ -42,13 +42,19 @@ Three planes:
 
 MQTT is for event distribution and agent coordination, **not** the sole record of truth. Transactional outbox and durable processing state are required. A task is not completed simply because an MQTT delivery was acknowledged.
 
-## 3. Technology baseline (provisional)
+### Production placement (accepted ADR-002)
+
+A DigitalOcean VM runs Docker Compose for the MQTT broker, Gmail ingestion bridge, outbox/reconciliation services, agent workers, persistent scheduler, notification gateway and web API/control plane. Supabase PostgreSQL holds durable operational state. Cloud source-object storage remains a provider decision. The MacBook is only a development/admin client; shutdown, sleep or disconnection must not affect jobs. No production component may depend on a local tunnel, terminal or filesystem.
+
+See [[ADR-002 Cloud-first Deployment]] and [[MarkOS Cloud Deployment Architecture]]. A single VM is not highly available; recovery is part of production readiness.
+
+## 3. Technology baseline (hosting accepted; other selections provisional)
 
 - Python for service and agent workers; typed schemas and tests.
 
 - Eclipse Mosquitto with MQTT 5, TLS, per-service credentials and topic ACLs.
 
-- PostgreSQL for users, domains, messages, events, outbox, inbox deduplication, tasks, agents, approvals, knowledge metadata and audit.
+- Supabase PostgreSQL (accepted durable operational storage) for users, domains, messages, events, outbox, inbox deduplication, tasks, schedules, run history, leases, Gmail cursors, agents, approvals, conversations, notification attempts, knowledge metadata and audit.
 
 - Versioned JSON event payloads; object storage for original attachments.
 
@@ -127,6 +133,18 @@ Configuration is centrally stored, validated, versioned and auditable. Admin UI 
 
 TLS and broker authentication, secrets management, encrypted backups, database migrations, access-control tests, audit logs, trace IDs, structured logs, metrics, alerts, rate limits, LLM prompt-injection defenses, untrusted document handling, data retention and deletion policies. Backups and restore drills cover PostgreSQL, source files and configuration. Provide replay tooling with side-effect suppression and sandbox test mode. Document threat model for email attachments, external links, malicious event payloads and agent tool permissions.
 
+### Persistent scheduling
+
+Persist schedule definitions, timezone, next due time, missed-run policy and run history in Supabase. Atomically create uniquely keyed occurrences with tasks/outbox entries and advance schedule state. Claim runs with expiring leases and fencing; recover expired claims and overdue work on startup and periodic scans. Execution is at-least-once with business idempotency, bounded retries and dead-letter review. Select catch-up, coalesce or audited skip per job, with catch-up limits and alerts; never silently lose missed jobs or rely solely on local cron. See [[MarkOS Cloud Deployment Architecture]] for transaction, timezone, outage and external-side-effect recovery requirements.
+
+### Cloud operations and recovery
+
+All long-running Compose services use `restart: unless-stopped`; Docker starts at VM boot. Intentionally stopped services require explicit restart. Add health checks, graceful shutdown, dependency reconnect/backoff, pinned images and persistent broker volumes. Health checks alone do not restart unhealthy containers. Supabase outages suspend unsafe claims and unrecorded side effects.
+
+Require encrypted off-VM database backups, independent recoverable exports, separate source-object backups, configuration/secrets recovery and isolated restore drills. Verify Supabase plan retention/PITR capability before launch; database backups do not include object bytes. Monitor scheduler heartbeat, overdue runs, outbox age, ingestion lag/watch expiry, notification failures, resource usage and backup freshness. External monitoring and alert delivery must survive loss of this VM and the notification gateway.
+
+[[MarkOS Cloud Deployment Architecture]] defines recovery procedures and proposed RPO/RTO/retention targets pending owner review. Test VM loss, database restore, broker/network outages and MacBook shutdown before production. Reconcile previously sent external effects after restore before releasing work.
+
 ## 13. First end-to-end workflow
 
 1. Gmail receives an Amber bill.
@@ -150,19 +168,19 @@ All stages must survive duplicate notifications and service restarts.
 
 ## 14. Milestones and acceptance criteria
 
-**M0 Foundation:** broker, PostgreSQL, schemas, outbox/inbox, worker runtime, ACLs, tests. Acceptance: duplicate delivery and broker outage produce no lost or double-applied work.  
+**M0 Foundation:** cloud Compose service contracts, Supabase schemas, broker, outbox/inbox, worker runtime, persistent scheduling/leases, ACLs, restart/health policies, baseline backups/alerts and tests. Acceptance: duplicates, broker outage, worker restart and overdue schedule recovery preserve durable business results; concurrent claims and bounded catch-up are verified.  
 **M1 Control plane:** authenticated minimal web chat, agent registry, configuration and event activity. Acceptance: inspect agent health and converse with test agent.  
 **M2 Gmail bridge:** watch, renewal, history cursor, ingestion and reconciliation. Acceptance: test mail appears once in durable source store and event history.  
 **M3 Classification:** confidence-aware routing and manual review. Acceptance: test suite distinguishes bills, ordinary mail and ambiguous cases.  
 **M4 Electricity:** extraction, validation, history and reporting. Acceptance: sample bills yield traceable figures and anomaly explanations.  
 **M5 Knowledge:** source-linked facts, retrieval, weekly consolidation. Acceptance: facts trace to sources and contradictions are surfaced.  
 **M6 Notifications:** push adapter and authenticated deep links. Acceptance: test alert reaches iPhone with appropriate privacy settings.  
-**M7 Operations:** CLI, replay, metrics, backup/restore, failure drills. Acceptance: operator can recover interrupted workflow.  
+**M7 Operations:** CLI, replay, metrics, verified backup/restore, replacement-VM runbook and failure drills. Acceptance: operator recovers an interrupted workflow, measures approved RPO/RTO, verifies independent outage alerts and proves jobs continue with MacBook off. M7 validates and hardens the operational controls introduced in M0; baseline backups/monitoring must precede any production data.  
 **M8 Expansion:** additional agents, integrations and optional messaging. Acceptance: new agent added without modifying existing producers.
 
 ## 15. Decisions awaiting review
 
-1. Hosting topology: local, cloud, or hybrid; network security and uptime.
+1. Hosting topology and durable operational database are resolved by [[ADR-002 Cloud-first Deployment]]: DigitalOcean VM, Docker Compose and Supabase PostgreSQL. Still review region, sizing, production plan/cost, network controls and recovery targets before provisioning.
 
 2. Shared knowledge service versus agent-private stores (recommend shared service with domain isolation).
 
@@ -178,4 +196,4 @@ All stages must survive duplicate notifications and service restarts.
 
 ## 16. Implementation handoff rules
 
-Do not begin implementation until review and milestone approval. Treat this specification as a proposal. Generate ADRs for unresolved architecture choices, executable acceptance tests for each milestone, API/event contracts before coding, and a migration plan that preserves prior MarkOS design artifacts. Do not touch the Obsidian vault. Keep implementation-ready specifications version-controlled in markos-design.
+Do not begin implementation until review and milestone approval. Treat the runtime specification as a proposal except for the accepted ADR-002 hosting baseline. This documentation update authorizes no provisioning, spending, deployment or merge. Generate ADRs for unresolved architecture choices, executable acceptance tests for each milestone, API/event contracts before coding, and a migration plan that preserves prior MarkOS design artifacts. Do not touch the Obsidian vault. Keep implementation-ready specifications version-controlled in markos-design.

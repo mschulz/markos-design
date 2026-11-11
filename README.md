@@ -9,10 +9,14 @@ The current tree contains design documents and documented boundaries for future 
 - [Vision](Vision.md): the existing governing principles.
 - [MarkOS v0.3 Specification](MarkOS%20v0.3%20Specification.md): complete Gmail-first event-system **review draft**, not approved for runtime implementation.
 - [MarkOS v0.3 Roadmap](MarkOS%20v0.3%20Roadmap.md): prior-architecture reconciliation, repository transition, approval gates and new milestones.
+- [ADR-002 Cloud-first Deployment](ADR-002%20Cloud-first%20Deployment.md): accepted DigitalOcean VM, Docker Compose and Supabase PostgreSQL baseline.
+- [MarkOS Cloud Deployment Architecture](MarkOS%20Cloud%20Deployment%20Architecture.md): scheduling, restart policies, backups, monitoring and recovery requirements.
 - [ADR-0002 GitHub as Canonical Project Record](ADR-0002%20GitHub%20as%20Canonical%20Project%20Record.md): accepted project governance and PR workflow.
 - [MarkOS Specification](MarkOS%20Specification.md): preserved earlier architecture and M0–M16 history.
 - [Markdown Memory Architecture](Markdown%20Memory%20Architecture.md), [Semantic Graph Extraction](Semantic%20Graph%20Extraction.md), [Semantic Graph Extraction Roadmap](Semantic%20Graph%20Extraction%20Roadmap.md) and [Graphify Evaluation](Graphify%20Evaluation.md): existing knowledge design, experiments and subsystem plan.
 - [Changelog](CHANGELOG.md): design progress.
+
+Production hosting is accepted: always-on services run on DigitalOcean with Docker Compose and durable operational state in Supabase PostgreSQL. The MacBook is development/admin only; shutting it down must not affect jobs. Runtime milestones, provisioning and deployment remain subject to separate approval.
 
 v0.3's PostgreSQL-backed knowledge, semantic retrieval and web/PWA direction differ from the existing Markdown, DuckDB and desktop design. Review those differences in the roadmap before implementation; Vision remains unchanged.
 

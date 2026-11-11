@@ -36,6 +36,13 @@ secrets.
 
 ## Current State
 
+- [[ADR-002 Cloud-first Deployment]] accepts DigitalOcean VM / Docker Compose
+  for always-on production services and Supabase PostgreSQL for durable state.
+  MacBook is development/admin only. Follow [[MarkOS Cloud Deployment Architecture]]
+  for persistent scheduling, restart policies, backups, monitoring and recovery.
+  Preserve the distinct existing ADR-0002 governance record; use full ADR titles.
+  This decision does not authorize provisioning, deployment or runtime milestones.
+
 - [[MarkOS v0.3 Specification]] contains the complete proposed Gmail-first
   event-system draft. [[MarkOS v0.3 Roadmap]] reconciles it with the prior
   architecture and defines the migration and approval gates. Runtime v0.3
