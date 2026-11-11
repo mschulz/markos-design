@@ -14,6 +14,15 @@ bounded poison-message review and loss of previously confirmed broker data.
 Verify replay from retained events/dispatch state with original IDs, side effects
 suppressed and expired approvals rejected.
 
+The proposed single-VM profile is RabbitMQ 4.4.0 / aio-pika 10.2.3 / durable classic
+queues. Before launch, run the ADR-003 workload and pressure scenarios against the
+pinned image/dependency lock: both queue bounds with reject-publish (including
+partial fan-out), message oversize, bounded in-flight publishes, prefetch,
+connection/channel quotas, memory/disk blocking and backlog recovery. Test
+30-day replay and 90-day deduplication boundaries, holds for unfinished work,
+payload deletion and backup-RPO limits with a controlled clock. These are future
+acceptance requirements, not tests run by this documentation PR.
+
 Later milestones add the acceptance evidence in [[MarkOS v0.3 Roadmap]].
 
 There is no executable test suite in this repository yet. Choose the toolchain

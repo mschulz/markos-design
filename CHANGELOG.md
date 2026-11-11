@@ -10,6 +10,13 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ### Completed on 12 November 2026
 
+- Prepared a follow-up to merged PR #2 with proposed RabbitMQ 4.4.0, aio-pika 10.2.3 and durable classic
+  queues, concrete single-VM resource/flow guardrails, 30-day routine replay and
+  90-day deduplication floors with unfinished-work holds and deletion gates.
+- Updated ADR-003 (1.1), specification (0.3.3), roadmap (1.3), cloud architecture
+  (1.2) and future test requirements. Sizing remains unmeasured and subject to
+  approval; no limits/retention applied, dependencies installed or deployment run.
+
 - Proposed ADR-003 RabbitMQ Internal Event Bus and updated v0.3 specification
   (0.3.2), roadmap (1.2) and cloud architecture (1.1) for AMQP routing, durable
   handoff, confirms/acks, bounded retries and broker-storage-loss replay.
