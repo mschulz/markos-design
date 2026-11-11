@@ -2,25 +2,25 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.1
+version: 0.3.2
 owner: Mark Schulz
 created: 2026-11-10
-updated: 2026-11-11
-reviewed: 2026-11-11
+updated: 2026-11-12
+reviewed: 2026-11-12
 tags:
   - architecture
   - governance
 ---
 
-> Imported from the [MarkOS v0.3 review draft](https://chatgpt.com/space/page_826f242af13c8191a92a0e9a1a96dd3f) on 10 November 2026. The original 16-section draft is retained and amended on 11 November 2026 for accepted ADR-002 cloud-first deployment; the source Space page has not been edited. v0.3 is the proposed event-driven system revision; it is not a downgrade of the existing specification's document version 2.1. Its M0–M8 labels are a new sequence, separate from the earlier M0–M16.
+> Imported from the [MarkOS v0.3 review draft](https://chatgpt.com/space/page_826f242af13c8191a92a0e9a1a96dd3f) on 10 November 2026. The original 16-section draft is retained and amended on 11 November 2026 for accepted ADR-002 cloud-first deployment and on 12 November 2026 for proposed [[ADR-003 RabbitMQ Internal Event Bus]]; the source Space page has not been edited. v0.3 is the proposed event-driven system revision; it is not a downgrade of the existing specification's document version 2.1. Its M0–M8 labels are a new sequence, separate from the earlier M0–M16.
 >
 > Project governance is recorded in [[ADR-0002 GitHub as Canonical Project Record]]. Reconciliation with [[Vision]], [[MarkOS Specification]] and [[Markdown Memory Architecture]], repository layout and approval gates are in [[MarkOS v0.3 Roadmap]]. Inclusion in GitHub records this proposal. Hosting and durable operational storage are now accepted through [[ADR-002 Cloud-first Deployment]]; other technology choices remain provisional, and runtime implementation is not authorized.
 
 # MarkOS v0.3 — System Specification (Review Draft)
 
 **Status:** Proposed runtime design with accepted ADR-002 hosting baseline; not approved for implementation  
-**Date:** 11 November 2026  
-**Design intent:** Gmail-first, MQTT-based, no Obsidian dependency.
+**Date:** 12 November 2026  
+**Design intent:** Gmail-first, proposed RabbitMQ internal event bus over AMQP, no Obsidian dependency.
 
 ## 1. Vision and scope
 
@@ -36,15 +36,15 @@ Three planes:
 
 - **Control plane:** authenticated API, conversation gateway, agent registry/configuration, approval inbox, notification preferences, web UI and CLI.
 
-- **Execution plane:** Gmail ingestion bridge, MQTT 5 broker, durable event outbox, task workers, specialist agents, schedulers and notification gateway.
+- **Execution plane:** Gmail ingestion bridge, RabbitMQ broker (proposed), durable event outbox, task workers, specialist agents, schedulers and notification gateway.
 
 - **Data plane:** PostgreSQL operational records, source document/object store, structured knowledge, full-text/semantic retrieval, provenance and audit.
 
-MQTT is for event distribution and agent coordination, **not** the sole record of truth. Transactional outbox and durable processing state are required. A task is not completed simply because an MQTT delivery was acknowledged.
+RabbitMQ is proposed for internal event distribution and agent work handoff through AMQP 0-9-1, **not** as the authoritative event archive. Transactional outbox and durable processing state remain required. Publisher confirmation, consumer handoff acknowledgement and business-task completion are separate states. MQTT may be introduced later through an explicitly scoped device adapter; it is not the internal bus. See [[ADR-003 RabbitMQ Internal Event Bus]].
 
 ### Production placement (accepted ADR-002)
 
-A DigitalOcean VM runs Docker Compose for the MQTT broker, Gmail ingestion bridge, outbox/reconciliation services, agent workers, persistent scheduler, notification gateway and web API/control plane. Supabase PostgreSQL holds durable operational state. Cloud source-object storage remains a provider decision. The MacBook is only a development/admin client; shutdown, sleep or disconnection must not affect jobs. No production component may depend on a local tunnel, terminal or filesystem.
+A DigitalOcean VM runs Docker Compose for the internal broker (proposed RabbitMQ), Gmail ingestion bridge, outbox/reconciliation services, agent workers, persistent scheduler, notification gateway and web API/control plane. Supabase PostgreSQL holds durable operational state. Cloud source-object storage remains a provider decision. The MacBook is only a development/admin client; shutdown, sleep or disconnection must not affect jobs. No production component may depend on a local tunnel, terminal or filesystem.
 
 See [[ADR-002 Cloud-first Deployment]] and [[MarkOS Cloud Deployment Architecture]]. A single VM is not highly available; recovery is part of production readiness.
 
@@ -52,7 +52,7 @@ See [[ADR-002 Cloud-first Deployment]] and [[MarkOS Cloud Deployment Architectur
 
 - Python for service and agent workers; typed schemas and tests.
 
-- Eclipse Mosquitto with MQTT 5, TLS, per-service credentials and topic ACLs.
+- RabbitMQ over AMQP 0-9-1 (proposed), durable exchanges/queues, persistent messages, publisher confirms, manual consumer acknowledgements, TLS and per-service permissions. Version, Python client and queue type require M0 review; a single VM provides no broker high availability.
 
 - Supabase PostgreSQL (accepted durable operational storage) for users, domains, messages, events, outbox, inbox deduplication, tasks, schedules, run history, leases, Gmail cursors, agents, approvals, conversations, notification attempts, knowledge metadata and audit.
 
@@ -67,15 +67,19 @@ All infrastructure choices should be replaceable through clear interfaces.
 
 ## 4. Domain isolation and identity
 
-Domains: personal, research, work. Every message, document, event, task, fact and conversation is scoped to a domain and owner. Cross-domain transfers require explicit policy and audit. Agents have least-privilege identities, capabilities, topic ACLs, storage permissions and bounded tool access. Work data must not silently mix with personal data.
+Domains: personal, research, work. Every message, document, event, task, fact and conversation is scoped to a domain and owner. Cross-domain transfers require explicit policy and audit. Agents have least-privilege identities, capabilities, broker exchange/queue permissions, storage permissions and bounded tool access. Work data must not silently mix with personal data.
 
 ## 5. Event contract
 
-Every event includes: event_id (UUID), schema_version, event_type, domain, source, occurred_at (UTC), correlation_id, causation_id, trace_id, payload_ref or bounded payload, sensitivity, and optional expiry. Topic convention: `markos/v1/{domain}/{category}/{event}`. Versioned schema registry, strict validation, backward compatibility rules and dead-letter handling are required. Events may be delivered more than once; consumers deduplicate by event_id and operation key. No credentials or full sensitive email bodies in MQTT messages.
+Every event includes: event_id (UUID), schema_version, event_type, domain, source, occurred_at (UTC), correlation_id, causation_id, trace_id, payload_ref or bounded payload, sensitivity, and optional expiry. Proposed RabbitMQ topology: one topic exchange `markos.{domain}.events` per domain, routing keys `v1.{category}.{event}` (for example `v1.email.ingested`), and a durable queue per logical subscribing service/domain. Queue names include domain and consumer identity; environments are isolated. Names and permissions must be frozen in the M0 contract. The earlier MQTT topic path is retired for internal traffic; an optional device adapter must explicitly map topics to this event envelope. Versioned schema registry, strict validation, backward compatibility rules and dead-letter handling are required. Events may be delivered more than once; consumers deduplicate by (logical consumer, domain, event_id) and business operation key so independent services each process their copy. No credentials or full sensitive email bodies in broker messages. Validate owner/domain and payload permissions at consumption as well as broker authorization.
 
 ### Delivery semantics
 
-PostgreSQL transaction persists domain changes and an outbox entry. Publisher forwards outbox to MQTT with QoS 1; consumer writes inbox/dedup and durable task state before acknowledgement. Retries use exponential backoff; poison events go to dead-letter review. A reconciliation worker detects gaps and stalled processing. Retained MQTT messages are not used as an event archive.
+PostgreSQL transaction persists domain changes and an outbox entry. Publisher sends persistent messages to RabbitMQ with publisher confirms and mandatory routing; a return, negative confirmation or unknown outcome leaves the entry pending for retry with the same event ID. Mark dispatched only after positive confirmation and no return. Declare required queues/bindings before enabling publishers and audit topology: mandatory routing detects zero matching queues, not a missing member of an expected subscriber set.
+
+Each subscribing service has its own durable queue; workers for the same service compete on that queue. After validation, a consumer transaction commits inbox/dedup and a durable task (or short business result) before manual acknowledgement. A crash before acknowledgement can redeliver; duplicate handling acknowledges only after checking durable state. Long agent work runs from the database task under leases and fencing, with completion recorded separately; broker acknowledgement means durable handoff, not successful LLM execution.
+
+Database-backed retries use bounded exponential backoff/jitter and preserve operation keys; avoid immediate requeue loops. Persist poison-message diagnostics in a bounded, access-controlled quarantine and route a reference to a review queue/dead-letter exchange. Verify the selected RabbitMQ version/queue type's dead-letter safety; the database record is authoritative if transport fails. A reconciliation worker detects pending outbox, missing per-consumer work and stalled tasks. Retain source events, intended-consumer dispatch records and processing history under an approved retention policy so lost broker storage can be reconstructed, including previously confirmed events. Replay preserves original IDs and suppresses external side effects by default. No exactly-once or global-order guarantee is claimed.
 
 ## 6. Gmail integration
 
@@ -127,7 +131,7 @@ Notification Gateway consumes notification-request events and checks domain, sev
 
 ## 11. Configuration and approvals
 
-Configuration is centrally stored, validated, versioned and auditable. Admin UI covers agent manifests, topics, integrations, model selection, budgets, notification rules, credentials references and domain permissions. Secrets never appear in MQTT or logs. Consequential actions (send email, purchase, modify devices, alter financial accounts, external publication) require explicit scoped human approval, with expiry, one-time tokens and complete audit. Default permissions are read-only.
+Configuration is centrally stored, validated, versioned and auditable. Admin UI covers agent manifests, exchanges/queues and routing policies, integrations, model selection, budgets, notification rules, credentials references and domain permissions. Secrets never appear in broker messages or logs. Consequential actions (send email, purchase, modify devices, alter financial accounts, external publication) require explicit scoped human approval, with expiry, one-time tokens and complete audit. Default permissions are read-only.
 
 ## 12. Reliability, security and observability
 
@@ -151,7 +155,7 @@ Require encrypted off-VM database backups, independent recoverable exports, sepa
 
 2. Pub/Sub triggers Gmail bridge; bridge fetches and stores the source message/attachment.
 
-3. Durable event is published to MQTT.
+3. Durable outbox event is published to RabbitMQ and routed to the classifier's durable queue; publisher confirmation is recorded separately from consumer processing.
 
 4. Classifier identifies electricity bill; uncertain cases go to review.
 
@@ -168,7 +172,7 @@ All stages must survive duplicate notifications and service restarts.
 
 ## 14. Milestones and acceptance criteria
 
-**M0 Foundation:** cloud Compose service contracts, Supabase schemas, broker, outbox/inbox, worker runtime, persistent scheduling/leases, ACLs, restart/health policies, baseline backups/alerts and tests. Acceptance: duplicates, broker outage, worker restart and overdue schedule recovery preserve durable business results; concurrent claims and bounded catch-up are verified.  
+**M0 Foundation:** cloud Compose service contracts, Supabase schemas, RabbitMQ contracts, outbox/inbox, worker runtime, persistent scheduling/leases, ACLs, restart/health policies, baseline backups/alerts and tests. Acceptance: duplicates, broker outage, worker restart and overdue schedule recovery preserve durable business results; concurrent claims and bounded catch-up are verified. Test publisher confirm/return handling, lost-confirm retries, independent subscriber delivery, competing workers, crash-before-ack deduplication, poison-message review and recovery after broker storage loss from retained events/dispatch state.  
 **M1 Control plane:** authenticated minimal web chat, agent registry, configuration and event activity. Acceptance: inspect agent health and converse with test agent.  
 **M2 Gmail bridge:** watch, renewal, history cursor, ingestion and reconciliation. Acceptance: test mail appears once in durable source store and event history.  
 **M3 Classification:** confidence-aware routing and manual review. Acceptance: test suite distinguishes bills, ordinary mail and ambiguous cases.  
@@ -179,6 +183,8 @@ All stages must survive duplicate notifications and service restarts.
 **M8 Expansion:** additional agents, integrations and optional messaging. Acceptance: new agent added without modifying existing producers.
 
 ## 15. Decisions awaiting review
+
+RabbitMQ is the proposed internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]. Before M0, review the pinned broker/client versions, exact topology/permissions, durable queue type, prefetch/resource limits, dead-letter safety and replay retention. Keep the accepted single-VM hosting baseline; managed service or multi-node quorum availability requires a separate topology/cost decision.
 
 1. Hosting topology and durable operational database are resolved by [[ADR-002 Cloud-first Deployment]]: DigitalOcean VM, Docker Compose and Supabase PostgreSQL. Still review region, sizing, production plan/cost, network controls and recovery targets before provisioning.
 

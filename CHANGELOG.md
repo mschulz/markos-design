@@ -8,6 +8,17 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### Completed on 12 November 2026
+
+- Proposed ADR-003 RabbitMQ Internal Event Bus and updated v0.3 specification
+  (0.3.2), roadmap (1.2) and cloud architecture (1.1) for AMQP routing, durable
+  handoff, confirms/acks, bounded retries and broker-storage-loss replay.
+- Preserved accepted DigitalOcean/Compose/Supabase placement; MQTT is optional
+  for device adapters and Google Cloud Pub/Sub remains Gmail ingress.
+- Added future M0 broker acceptance scenarios and navigation/project-memory
+  references. Runtime tests and milestones remain unstarted; no provisioning,
+  deployment, Space or vault changes, or merge are included.
+
 ### Accepted on 11 November 2026
 
 - Recorded ADR-002 Cloud-first Deployment: DigitalOcean VM with Docker Compose,

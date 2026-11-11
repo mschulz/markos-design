@@ -2,11 +2,11 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 1.1
+version: 1.2
 owner: Mark Schulz
 created: 2026-11-10
-updated: 2026-11-11
-reviewed: 2026-11-11
+updated: 2026-11-12
+reviewed: 2026-11-12
 tags:
   - architecture
   - governance
@@ -30,7 +30,7 @@ Inspection of `main` at `f68edf216551fc43e4f24e492294e7a288c32530` found one bra
 | Retrieval | Lexical and graph tools; no embeddings or vector database | Keyword and semantic retrieval | Define whether semantic retrieval means graph traversal or embeddings; do not assume a vector-store decision |
 | Product and interfaces | Vault/PARA workflow, CLI, read-only API, planned PySide6 Mac app | Gmail-first services, web/PWA, shared gateway, CLI, optional messaging | Define which existing services can be reused; decide whether desktop plans continue, pause or change |
 | Deployment | Prior Mac-oriented background operation | Accepted DigitalOcean VM / Docker Compose; Supabase durable state; MacBook development/admin only | Specify secure networking, sizing, cost and recovery; follow [[MarkOS Cloud Deployment Architecture]] before provisioning |
-| Storage and delivery | Filesystem originals and disposable DuckDB | PostgreSQL, object storage, MQTT outbox/inbox | Specify data ownership, migrations, event contracts, operational recovery and privacy before implementation |
+| Storage and delivery | Filesystem originals and disposable DuckDB | PostgreSQL, object storage, proposed RabbitMQ/AMQP outbox/inbox | Specify data ownership, migrations, event contracts, operational recovery and privacy before implementation |
 | Evidence and safety | Exact quotes, hashes, disclosure consent, preview and confirm | Provenance, domain isolation, scoped tools and approvals | Carry forward deterministic grounding and separate external-disclosure permission; define review state for structured facts |
 | Milestones | Earlier M0–M16, including delivered work | New M0–M8 sequence | Always label new work “v0.3 M0”, etc.; no prior completion transfers automatically |
 | Project workflow | Separate repos; design commits directly to main | GitHub canonical, code and docs together, PR review | Apply [[ADR-0002 GitHub as Canonical Project Record]]; inventory separate implementation before importing |
@@ -57,13 +57,21 @@ Governance and [[ADR-002 Cloud-first Deployment]]'s DigitalOcean/Docker Compose/
 4. Import only reviewed work, update links and project instructions, and verify the existing read-only behavior with synthetic fixtures. Do not copy a real vault or runtime data.
 5. Introduce v0.3 contracts and runtime slices behind explicit milestone approval. Do not remove the separate repository or retire its branches as part of this handoff.
 
+## Internal event bus proposal
+
+[[ADR-003 RabbitMQ Internal Event Bus]] proposes RabbitMQ over AMQP 0-9-1 in place of the provisional Mosquitto/MQTT internal bus. MQTT remains optional at a device boundary; Google Cloud Pub/Sub remains the Gmail ingress mechanism. The accepted DigitalOcean VM / Docker Compose / Supabase placement is unchanged. This proposal adds no managed broker or high-availability cluster.
+
+Before v0.3 M0 coding, review broker/client versions, exchange/queue/binding and authorization contracts, queue type, limits/prefetch, retry/quarantine behavior, retention and broker-loss replay. Durable exchanges/queues, persistent messages, confirms with mandatory-return handling and manual acknowledgement after database handoff are required. Separate queues serve independent logical subscribers; replicas of one service share a queue. PostgreSQL retains outbox, per-consumer dispatch/inbox and business-task truth.
+
+Add synthetic acceptance scenarios to M0: missing routing; lost publisher confirmation and duplicate retry; one subscriber offline; independent fan-out and competing workers; crash after database commit before acknowledgement; bounded poison-message quarantine; restart with persisted broker data; and complete broker-storage loss followed by replay of previously confirmed but unfinished work. Check domain/owner isolation, approval expiry and side-effect suppression throughout. M7 repeats the recovery drill on the approved topology and measures backlog recovery and operational targets. These are required future tests, not completed runtime evidence.
+
 ## v0.3 delivery sequence
 
 All milestones below are proposed and not started. Acceptance criteria are carried from [[MarkOS v0.3 Specification]] section 14. Existing M0–M16 statuses describe a different sequence.
 
 | Milestone | Scope | Acceptance evidence required |
 |---|---|---|
-| v0.3 M0 Foundation | Cloud service contracts, Supabase schemas, broker/outbox/inbox, workers, persistent schedules/leases, ACLs, restart/health policies and baseline backups/alerts | Duplicates, broker outage, worker restart, concurrent claims and bounded missed-job recovery preserve durable results |
+| v0.3 M0 Foundation | Cloud service contracts, Supabase schemas, RabbitMQ/AMQP topology and outbox/inbox, workers, persistent schedules/leases, ACLs, restart/health policies and baseline backups/alerts | Confirm/return handling, subscriber isolation, duplicates, poison review, broker outage/storage-loss replay, worker restart, concurrent claims and bounded missed-job recovery preserve durable results |
 | v0.3 M1 Control plane | Authenticated minimal web chat, agent registry, configuration, activity | Inspect agent health and converse with a test agent |
 | v0.3 M2 Gmail bridge | Watch renewal, history cursor, ingestion, reconciliation | Test mail appears once in durable source store and event history |
 | v0.3 M3 Classification | Confidence-aware routing and manual review | Tests distinguish bills, ordinary mail and ambiguous cases |
@@ -80,7 +88,7 @@ Before coding each milestone, approve its bounded scope, API/event contracts, sc
 The accepted topology is defined in [[MarkOS Cloud Deployment Architecture]]. All steps below are future, unstarted work under bounded milestone approval; this PR adds documentation only.
 
 1. **Before v0.3 M0:** inventory existing implementation and preserve history; approve schedule/event/schema contracts and synthetic acceptance fixtures. Review VM region/size, Supabase production plan/connectivity, source-object provider, monitoring destination, recovery targets, recurring cost and operator ownership. Prepare a cost estimate before requesting provisioning authorization.
-2. **v0.3 M0:** add reviewed Compose definitions for each long-running service, restart/health checks, broker persistence/ACLs and secret references. Implement Supabase migrations for schedules/runs/leases and atomic task/outbox creation, idempotency, missed-run policies and bounded recovery. Add baseline backup and independent monitor design/configuration before any real production data. Test process restarts, duplicate claims and database/broker disconnections with synthetic fixtures.
+2. **v0.3 M0:** add reviewed Compose definitions for each long-running service, restart/health checks, RabbitMQ persistence, exchange/queue permissions and secret references. Implement Supabase migrations for schedules/runs/leases and atomic task/outbox creation, idempotency, missed-run policies and bounded recovery. Add baseline backup and independent monitor design/configuration before any real production data. Test process restarts, duplicate claims, database/broker disconnections and the internal-bus scenarios above with synthetic fixtures.
 3. **v0.3 M1–M2:** use authenticated remote API access and cloud Gmail ingress; persist cursors/watch expiry and schedule renewal/reconciliation. Verify no MacBook tunnel, local token store or filesystem is a runtime dependency. Demonstrate mailbox recovery after downtime.
 4. **v0.3 M3–M6:** carry retry/idempotency/domain constraints into agents, weekly consolidation and notifications. Persist provider attempts; surface uncertain deliveries and enforce approval validity when delayed jobs resume.
 5. **v0.3 M7:** execute isolated restore and replacement-VM drills; validate source checksums and schedule/outbox state, fence old workers, reconcile external effects and measure recovery targets. Verify independent alert delivery during total VM failure and end-to-end jobs with MacBook off.
@@ -89,6 +97,8 @@ The accepted topology is defined in [[MarkOS Cloud Deployment Architecture]]. Al
 M7 hardens and proves controls first introduced in M0; backups and monitoring cannot wait until after production starts. Selecting a persistent scheduler library, source-object provider and backup tooling remains implementation work; the required behavior is specified now.
 
 ## Decisions still open
+
+- Review the RabbitMQ internal-bus proposal and freeze its M0 transport contract, queue type, versions, resource limits and retention/replay policy. Multi-node quorum or managed hosting is a separate availability/cost decision; one VM is not highly available.
 
 - Deployment details within accepted cloud baseline: region, sizing, plan/cost, secure networking, recovery targets and operational ownership. Hosting is no longer a local/cloud/hybrid question.
 - Shared knowledge service versus agent-private stores and domain isolation.
@@ -102,6 +112,8 @@ M7 hardens and proves controls first introduced in M0; backups and monitoring ca
 - Confirm intended repository visibility: GitHub reported `public` on inspection, while the prior conversation called it private. Do not store sensitive runtime data or change visibility in this PR.
 
 ## Related
+
+- [[ADR-003 RabbitMQ Internal Event Bus]]
 
 - [[ADR-002 Cloud-first Deployment]]
 - [[MarkOS Cloud Deployment Architecture]]

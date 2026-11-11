@@ -2,11 +2,11 @@
 title: MarkOS Cloud Deployment Architecture
 type: architecture
 status: draft
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-11
-updated: 2026-11-11
-reviewed: 2026-11-11
+updated: 2026-11-12
+reviewed: 2026-11-12
 tags:
   - architecture
   - deployment
@@ -19,6 +19,8 @@ tags:
 
 Apply accepted [[ADR-002 Cloud-first Deployment]]: a DigitalOcean VM runs the always-on Docker Compose services; Supabase PostgreSQL holds durable state. The placement is accepted. The operational details and targets below are implementation requirements/proposals for review, not evidence of deployed infrastructure.
 
+[[ADR-003 RabbitMQ Internal Event Bus]] proposes replacing the earlier MQTT broker with RabbitMQ over AMQP. The broker-specific details below reflect that proposal; accepted ADR-002 hosting and database placement remain unchanged.
+
 ## Motivation
 
 Jobs must continue without a MacBook, logged-in operator, local tunnel, local OAuth callback server or mounted personal filesystem. Production credentials and configuration must be available securely in the cloud.
@@ -27,13 +29,13 @@ Jobs must continue without a MacBook, logged-in operator, local tunnel, local OA
 
 | Location | Components and responsibilities |
 |---|---|
-| DigitalOcean VM / Compose | MQTT broker; Gmail ingestion and watch renewal; outbox publisher/reconciler; bounded agent workers; persistent scheduler; notification gateway; authenticated web API/control plane and HTTPS entry point |
+| DigitalOcean VM / Compose | RabbitMQ internal broker (proposed); Gmail ingestion and watch renewal; outbox publisher/reconciler; bounded agent workers; persistent scheduler; notification gateway; authenticated web API/control plane and HTTPS entry point |
 | Supabase PostgreSQL | Operational events, outbox/inbox deduplication, tasks, schedules and run history, leases, Gmail history cursor, agent/configuration metadata, approvals, conversations, notification attempts, audit and approved knowledge schemas |
 | Cloud source-object storage (provider open) | Immutable email/attachment originals, checksums and access policy; database stores references. No MacBook-only originals |
 | MacBook / iPhone | Authenticated browser/CLI clients; MacBook development and administration. Local development uses isolated synthetic data and credentials |
-| External providers | Gmail / Google Cloud Pub/Sub mailbox-change notifications, model APIs and selected push adapter. Google Pub/Sub is distinct from the MarkOS MQTT broker |
+| External providers | Gmail / Google Cloud Pub/Sub mailbox-change notifications, model APIs and selected push adapter. Google Pub/Sub is distinct from the proposed MarkOS RabbitMQ broker |
 
-Clients reach the HTTPS API; the API and workers use TLS to Supabase and provider APIs. Compose service traffic stays on a private network; do not expose unauthenticated MQTT or database ports to the public internet. Broker identities use per-service credentials and topic ACLs. Administrative access is restricted and authenticated. Validate Pub/Sub push identity at a cloud HTTPS endpoint if push is selected; a cloud pull subscriber is an alternative implementation choice. Neither path depends on a personal-device tunnel.
+Clients reach the HTTPS API; the API and workers use TLS to Supabase and provider APIs. Compose service traffic stays on a private network; restrict AMQP and broker management endpoints to authorized private/admin access, and do not expose unauthenticated broker or database ports to the public internet. Broker identities use TLS, per-service credentials and least-privilege exchange/queue permissions; workers cannot bind arbitrary domains or provision unrestricted queues. Application checks still enforce owner/domain access. Administrative access is restricted and authenticated. Validate Pub/Sub push identity at a cloud HTTPS endpoint if push is selected; a cloud pull subscriber is an alternative implementation choice. Neither path depends on a personal-device tunnel.
 
 Keep secrets outside Git and images, with least-privilege runtime roles and protected cloud-side injection. Store recoverable credential material encrypted, with recovery access independent of the VM and MacBook. Rotate credentials after suspected compromise. Supabase administrative credentials never reach browser clients. Select a production plan/capacity that avoids intentional inactivity suspension; verify connectivity, connection limits and backup entitlements before launch.
 
@@ -59,7 +61,7 @@ If PostgreSQL is unavailable, stop claiming jobs and performing unrecorded side 
 
 Set `restart: unless-stopped` for every long-running Compose service, including scheduler and ingestion. Enable Docker at host boot and verify recovery after a VM reboot. An intentionally stopped container remains stopped with this policy; maintenance recovery must explicitly start it. One-shot migrations and restore tasks need deliberate invocation and failure handling rather than an unlimited restart loop.
 
-Define readiness/liveness checks, startup grace periods, resource bounds and graceful termination. Workers finish safely or release/expire leases on shutdown. Persist Mosquitto session data in a named volume and enable broker persistence; keep configuration/ACLs recoverable. Never store authoritative tasks only in container files.
+Define readiness/liveness checks, startup grace periods, resource bounds and graceful termination. Workers finish safely or release/expire leases on shutdown. Persist RabbitMQ data in a named volume; use durable exchanges/queues and persistent messages, with confirms and manual acknowledgements as specified in [[ADR-003 RabbitMQ Internal Event Bus]]. Keep reviewed topology definitions, policies and permissions recoverable separately from secrets. Select queue type against the pinned broker version before M0; durable classic queues may suit a single-node pilot, while quorum replication requires a separately reviewed multi-node failure-domain design to provide availability. A single node on this VM is not highly available. Never store authoritative tasks only in container files.
 
 Use healthy dependency conditions for local Compose startup where appropriate; services still need runtime reconnect/backoff for broker and remote Supabase failures. A health check alone does not restart an unhealthy process: exit on unrecoverable failure or alert for operator remediation. Rotate logs, monitor disk and prevent crash loops from exhausting the VM.
 
@@ -77,7 +79,7 @@ Rehearse restore in an isolated environment before launch and periodically there
 
 ## Monitoring and response
 
-Collect structured logs with trace/correlation IDs and redacted sensitive content. Track API readiness, scheduler heartbeat/last scan, overdue-job age, failed/expired leases, dead letters, outbox age, worker progress, Gmail cursor lag/watch expiry, notification failures, Supabase connectivity/latency/connection usage, VM CPU/memory/disk and backup freshness.
+Collect structured logs with trace/correlation IDs and redacted sensitive content. Track API readiness, scheduler heartbeat/last scan, overdue-job age, failed/expired leases, dead letters, outbox age, worker progress, RabbitMQ ready/unacknowledged depth and oldest pending-work age, confirm failures/returns, broker disk/memory alarms, Gmail cursor lag/watch expiry, notification failures, Supabase connectivity/latency/connection usage, VM CPU/memory/disk and backup freshness.
 
 Use an external uptime/heartbeat monitor outside this VM and a direct alert route independent of the MarkOS notification gateway. Otherwise a failed VM cannot report its own failure. Before launch, assign an operator, alert destination, thresholds and escalation path. Proposed starting thresholds: missing scheduler heartbeat for 5 minutes, overdue critical job beyond its job-specific grace, and backup age above 26 hours. Tune during acceptance drills; Gmail watch-renewal alerts must allow time to act before expiry.
 
@@ -94,7 +96,7 @@ Use an external uptime/heartbeat monitor outside this VM and a direct alert rout
 | Gmail/push provider outage | Persist retry state, back off within limits, alert on expiry/backlog; reconcile before duplicate sends |
 | Credential compromise | Disable affected access, rotate secrets, audit events, restore trusted configuration before resuming |
 
-A normal VM replacement reconnects to intact Supabase state; it must not restore an older database unnecessarily. A restored MQTT broker may redeliver or lose transient transport state: rebuild work from the durable outbox/run records. Keep a recovery checklist and access path usable from another authorized computer.
+A normal VM replacement reconnects to intact Supabase state; it must not restore an older database unnecessarily. A restored RabbitMQ broker may redeliver; lost broker data can also remove previously confirmed messages. Rebuild missing work from retained source events, intended-consumer dispatch records, outbox/inbox and run state, not only unpublished outbox entries. Preserve original event/operation keys, verify topology before replay and suppress external side effects until reconciliation finishes. Do not delete the only replay source merely because publishing was confirmed. Keep a recovery checklist and access path usable from another authorized computer.
 
 ## Production acceptance evidence
 
@@ -103,7 +105,7 @@ These are future milestone tests, not completed checks in this documentation PR:
 1. Shut down the MacBook; synthetic Gmail ingestion, scheduled work, agent processing, API and notification delivery continue.
 2. Kill a worker and reboot the VM; service recovery and lease retry preserve durable results.
 3. Pause the scheduler across multiple due times; verify catch-up, coalesce, skip, limits and concurrent claims.
-4. Disconnect MQTT and Supabase independently; verify durable recovery and no unrecorded side effects.
+4. Disconnect RabbitMQ and Supabase independently; verify confirm/return handling, durable handoff, bounded retries/quarantine and no unrecorded side effects. Delete isolated test broker storage and recover previously confirmed unfinished work from database history; verify independent subscriber delivery and crash-before-ack deduplication.
 5. Restore database and attachment backups into isolation and replace the VM; measure RPO/RTO, validate provenance and prevent duplicate provider actions.
 6. Disable the VM/notification gateway; verify the independent monitor alerts the operator.
 
@@ -118,6 +120,8 @@ The cloud can process jobs while clients are off. Durable scheduling, bounded re
 Single-VM downtime remains unavoidable without a later availability design. Operators need budget, independent alert delivery, backup access and rehearsed recovery. Detailed product contracts and knowledge-authority questions remain open.
 
 ## Related
+
+- [[ADR-003 RabbitMQ Internal Event Bus]]
 
 - [[ADR-002 Cloud-first Deployment]]
 - [[MarkOS v0.3 Specification]]
