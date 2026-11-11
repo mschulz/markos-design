@@ -36,6 +36,11 @@ secrets.
 
 ## Current State
 
+- [[ADR-003 RabbitMQ Internal Event Bus]] proposes RabbitMQ over AMQP 0-9-1
+  for internal events, replacing provisional MQTT/Mosquitto. Keep PostgreSQL
+  outbox/inbox and task truth; MQTT is an optional device adapter only. Preserve
+  accepted cloud placement. This is a proposal, not runtime/deployment approval.
+
 - [[ADR-002 Cloud-first Deployment]] accepts DigitalOcean VM / Docker Compose
   for always-on production services and Supabase PostgreSQL for durable state.
   MacBook is development/admin only. Follow [[MarkOS Cloud Deployment Architecture]]

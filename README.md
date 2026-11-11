@@ -9,6 +9,7 @@ The current tree contains design documents and documented boundaries for future 
 - [Vision](Vision.md): the existing governing principles.
 - [MarkOS v0.3 Specification](MarkOS%20v0.3%20Specification.md): complete Gmail-first event-system **review draft**, not approved for runtime implementation.
 - [MarkOS v0.3 Roadmap](MarkOS%20v0.3%20Roadmap.md): prior-architecture reconciliation, repository transition, approval gates and new milestones.
+- [ADR-003 RabbitMQ Internal Event Bus](ADR-003%20RabbitMQ%20Internal%20Event%20Bus.md): proposed AMQP transport, durable handoff, retry and recovery contract.
 - [ADR-002 Cloud-first Deployment](ADR-002%20Cloud-first%20Deployment.md): accepted DigitalOcean VM, Docker Compose and Supabase PostgreSQL baseline.
 - [MarkOS Cloud Deployment Architecture](MarkOS%20Cloud%20Deployment%20Architecture.md): scheduling, restart policies, backups, monitoring and recovery requirements.
 - [ADR-0002 GitHub as Canonical Project Record](ADR-0002%20GitHub%20as%20Canonical%20Project%20Record.md): accepted project governance and PR workflow.
