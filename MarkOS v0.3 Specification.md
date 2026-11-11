@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.2
+version: 0.3.3
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -52,7 +52,7 @@ See [[ADR-002 Cloud-first Deployment]] and [[MarkOS Cloud Deployment Architectur
 
 - Python for service and agent workers; typed schemas and tests.
 
-- RabbitMQ over AMQP 0-9-1 (proposed), durable exchanges/queues, persistent messages, publisher confirms, manual consumer acknowledgements, TLS and per-service permissions. Version, Python client and queue type require M0 review; a single VM provides no broker high availability.
+- RabbitMQ over AMQP 0-9-1 (proposed), durable exchanges/queues, persistent messages, publisher confirms, manual consumer acknowledgements, TLS and per-service permissions. Proposed profile: RabbitMQ 4.4.0, aio-pika 10.2.3 (Python 3.11+), durable classic queues. [[ADR-003 RabbitMQ Internal Event Bus]] defines limits and retention; validate pins/digest and resource sizing in M0. A single VM provides no broker high availability.
 
 - Supabase PostgreSQL (accepted durable operational storage) for users, domains, messages, events, outbox, inbox deduplication, tasks, schedules, run history, leases, Gmail cursors, agents, approvals, conversations, notification attempts, knowledge metadata and audit.
 
@@ -184,7 +184,7 @@ All stages must survive duplicate notifications and service restarts.
 
 ## 15. Decisions awaiting review
 
-RabbitMQ is the proposed internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]. Before M0, review the pinned broker/client versions, exact topology/permissions, durable queue type, prefetch/resource limits, dead-letter safety and replay retention. Keep the accepted single-VM hosting baseline; managed service or multi-node quorum availability requires a separate topology/cost decision.
+RabbitMQ is the proposed internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]. The proposed starting choices are RabbitMQ 4.4.0, aio-pika 10.2.3 and durable classic queues; a 4-vCPU/8-GiB/80-GiB SSD VM planning envelope; a 4-GiB broker memory cap with 2-GiB alarm; 10-GiB disk-free alarm; 64-KiB messages; per-queue 10,000 ready messages/32 MiB with reject-publish; prefetch 10; and 30-day routine replay with a 90-day deduplication floor and holds for unfinished work. See ADR-003 for exact semantics and additional bounds. Before M0, approve these choices, exact topology/permissions, image digest/dependency lock, dead-letter safety and workload validation. Routine replay retention does not change backup RPO or authorize privacy retention. Keep the accepted single-VM hosting baseline; managed service or multi-node quorum availability requires a separate topology/cost decision.
 
 1. Hosting topology and durable operational database are resolved by [[ADR-002 Cloud-first Deployment]]: DigitalOcean VM, Docker Compose and Supabase PostgreSQL. Still review region, sizing, production plan/cost, network controls and recovery targets before provisioning.
 
