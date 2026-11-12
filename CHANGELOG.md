@@ -14,6 +14,13 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Updated Vision, specification, roadmap, M0 plan, active contributor/boundary docs and authority labels. Proposed an independent runtime project and acceptance matrix; marked old designs/evaluations/imports as historical. Exact v0.2 snapshots, source code, dependency lock and import manifest remain unchanged.
 - PR #7's naming cleanup and PR #6's contracts are prior work, not the replacement foundation. No runtime, source migration, merge or deployment is performed by this documentation correction.
 
+### M3 rules-first routing specified for review — 12 November 2026
+
+- Updated [[MarkOS v0.3 Specification]] and [[MarkOS v0.3 Roadmap]] to apply reviewed email-routing rules before an interchangeable Jev or LLM classifier. Application code retains owner/domain permissions, agent selection, thresholds and approval control; uncertain/no-match/conflicting cases retain durable review state.
+- Added M3-A–M3-D gates for shared labelled fixtures, adapter contracts, held-out comparison against rules alone, measured accuracy/coverage/cost/latency, and atomic audited dispatch/corrections. No winning provider or numerical threshold is assumed; privacy, budgets and fallback policy require review.
+- Reviewed the M0-A–M0-D branches for integration: isolate the M3 amendment revision/insertion points to preserve M0 versions and review-status text. Explicitly require versioned email contracts/consumer intent, task fencing and provider calls outside broker handoff/database transactions. Freeze thresholds before held-out acceptance; retuning requires fresh acceptance data.
+- Documentation only: no classifier calls, runtime changes, merge, deployment or personal-data access. M0 implementation remains separate.
+
 Earlier entries below describe work at the time; they do not reinstate superseded plans.
 
 
