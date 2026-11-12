@@ -1,0 +1,32 @@
+name: Documentation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  documentation:
+    name: Documentation checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out review contents
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Check documentation gate failure cases
+        run: python3 -B -m unittest discover -s scripts/tests -v
+      - name: Check inventory, metadata and local links
+        run: python3 -B scripts/check_docs.py
+      - name: Check whitespace in changes
+        run: git diff --check HEAD^ HEAD

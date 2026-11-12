@@ -8,6 +8,13 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### PR #15 documentation reconciliation — 12 November 2026
+
+- Reconciled AGENTS, authority-index, roadmap and README with main at `4d06339`, preserving the merged MCP safeguards, rules-first routing and ADR-002 correction alongside M0-D's synthetic execution/scheduling boundary.
+- Incorporated main into the review branch while preserving all original PR #15 commits. Runtime source/tests, locks and migrations are unchanged; M0-E remains a separate PR.
+- Retained the documentation workflow/checker and all 35 inventoried Markdown documents. The pull request remains unmerged; no deployment or real-provider access.
+
+
 ### M0-D synthetic execution and scheduling — 2026-11-12
 
 - Reviewed PR #12 at `22fbf25`: no blocking correctness/architecture findings; 194-case CI green.
@@ -29,12 +36,30 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 - Prepared independent M0-A contracts/configuration for review in services/runtime, with a fresh minimal lock, validation-only CLI, synthetic schemas/examples and scoped CI. 104 independent tests and clean-wheel isolation checks pass. Source/manifest trust and unimplemented database/broker guarantees are explicit; see [[MarkOS v0.3 M0-A Contracts and Configuration]]. Archived source, root package/lock and personal data remain unchanged. No merge or deployment.
 
+### Agent MCP access proposed on 12 November 2026
+
+- Added ADR-005 and specification/roadmap gates for governed agent MCP tools: explicit grants, owner/domain isolation, scoped disclosure/effect approvals, durable audit and unknown-outcome reconciliation. RabbitMQ remains the internal bus.
+- Added future MCP-01–MCP-10 acceptance cases and phased synthetic-first delivery from M1; existing M0 scope is unchanged. SDK/server selection, measured limits and audit retention remain review decisions.
+- Updated navigation, contributor guidance and the documentation inventory. No runtime feature, dependency, credential, server, merge or deployment is enabled.
+- Kept proposed ADR-005 profile: official `mcp==2.3.0`, HTTPS/protocol 2026-07-28, bounded shared-VM resources/attempts/payloads/deadlines and 365/7/14-day audit/copy/log retention. Documented SDK hidden-retry/OAuth/streaming controls, holds and deletion-safe restore requirements.
+- Reconciled latest main, preserving merged M0-A–M0-C and M3 routing. Specified task-fenced gateway dispatch outside broker callbacks/transactions, nested execution/tool capacity, durable approval waits and unchanged native classifier independence; no runtime code or dependency changes.
+- Clarified that MCP-01–MCP-10 precede real MCP enablement; native adapters are independent and M7 repeats operational drills. Added a read-only documentation CI workflow, dependency-free inventory/metadata/local-link checker and synthetic failure tests. The workflow makes no runtime acceptance claim and changes no branch protection.
+
 ### Completed on 12 November 2026
+
+- Corrected ADR-002’s active decision/durability text to RabbitMQ and the settled PostgreSQL/source-object/derived-Markdown authority. Removed the stale open Markdown-authority conflict; hosting placement is unchanged. Updated against merged M0-A–M0-C without altering their code or evidence. Documentation only; no PR merge or deployment.
 
 
 - Corrected the architecture baseline after the owner's explicit abandonment of the original design. ADR-004 supersedes PARA/Markdown-canonical/DuckDB/desktop assumptions and legacy-code reuse; RabbitMQ is selected internally and PostgreSQL/source objects own durable state.
 - Updated Vision, specification, roadmap, M0 plan, active contributor/boundary docs and authority labels. Proposed an independent runtime project and acceptance matrix; marked old designs/evaluations/imports as historical. Exact v0.2 snapshots, source code, dependency lock and import manifest remain unchanged.
 - PR #7's naming cleanup and PR #6's contracts are prior work, not the replacement foundation. No runtime, source migration, merge or deployment is performed by this documentation correction.
+
+### M3 rules-first routing specified for review — 12 November 2026
+
+- Updated [[MarkOS v0.3 Specification]] and [[MarkOS v0.3 Roadmap]] to apply reviewed email-routing rules before an interchangeable Jev or LLM classifier. Application code retains owner/domain permissions, agent selection, thresholds and approval control; uncertain/no-match/conflicting cases retain durable review state.
+- Added M3-A–M3-D gates for shared labelled fixtures, adapter contracts, held-out comparison against rules alone, measured accuracy/coverage/cost/latency, and atomic audited dispatch/corrections. No winning provider or numerical threshold is assumed; privacy, budgets and fallback policy require review.
+- Reviewed the M0-A–M0-D branches for integration: isolate the M3 amendment revision/insertion points to preserve M0 versions and review-status text. Explicitly require versioned email contracts/consumer intent, task fencing and provider calls outside broker handoff/database transactions. Freeze thresholds before held-out acceptance; retuning requires fresh acceptance data.
+- Documentation only: no classifier calls, runtime changes, merge, deployment or personal-data access. M0 implementation remains separate.
 
 Earlier entries below describe work at the time; they do not reinstate superseded plans.
 

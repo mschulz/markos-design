@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M0-D Execution and Scheduling
 type: implementation-record
 status: implemented-for-review
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -19,7 +19,11 @@ tags:
 
 M0-D adds explicit synthetic execution and scheduling libraries to the independent `markos_runtime` package. PostgreSQL owns tasks, attempts/results, leases, global execution slots, schedule definitions/versions, occurrences and scan/control history. Scheduled events use the existing transactional outbox and RabbitMQ handoff; business execution never retains a broker delivery. No archived application, PARA, Obsidian, DuckDB or personal folder is used.
 
-PR #12 at `22fbf25` was reviewed for confirms/returns, subscriber audit, producer authentication, commit-before-ack, cancellation-independent watchdogs, bounded recovery and additive migrations. No blocking correctness or architecture finding was identified. Its [CI passes all 194 tests](https://github.com/mschulz/markos-design/actions/runs/43151866637). Capacity, topology-change races and full broker-loss replay remain explicitly limited, rather than treated as completed acceptance. M0-D preserves migrations 0001/0002 exactly and adds 0003. The review branch targets main and preserves the #10/#11/#12 foundation history; the M0-D-only comparison starts at `22fbf25`. GitHub records those prerequisites merged by the owner during this work; no merge was performed by this implementation task. Parallel proposal branches #13/#14 are preserved and are not runtime prerequisites.
+PR #12 at `22fbf25` was reviewed for confirms/returns, subscriber audit, producer authentication, commit-before-ack, cancellation-independent watchdogs, bounded recovery and additive migrations. No blocking correctness or architecture finding was identified. Its [CI passes all 194 tests](https://github.com/mschulz/markos-design/actions/runs/43151866637). Capacity, topology-change races and full broker-loss replay remain explicitly limited, rather than treated as completed acceptance. M0-D preserves migrations 0001/0002 exactly and adds 0003. The review branch targets main and preserves the #10/#11/#12 foundation history; the M0-D-only comparison starts at `22fbf25`. GitHub records those prerequisites merged by the owner during this work; no merge was performed by this implementation task. The MCP and rules-first routing decisions from #13/#14 are now merged in main and preserved. They enable no runtime tools, providers or classification in M0-D.
+
+## Documentation reconciliation with main
+
+PR #15's review branch incorporates main at `4d06339` without rewriting its original implementation commits. The AGENTS, authority-index, roadmap and README conflicts are reconciled alongside main's ADR-002 correction, governed MCP proposal, rules-first routing decisions and documentation CI. The specification retains those decisions with the M0-D implementation boundary. All runtime source/tests, locks and migrations are unchanged from the original PR #15 head `8286870`; no M0-E implementation is included. The combined inventory has 35 Markdown documents. This updates the review branch only; the pull request is not merged and nothing is deployed.
 
 ## Synthetic execution boundary
 
