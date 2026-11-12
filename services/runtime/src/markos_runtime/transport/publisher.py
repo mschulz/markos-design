@@ -1,20 +1,16 @@
 """One bounded publishing pass; PostgreSQL owns durable retries and original IDs."""
 
 import asyncio
-import random
 from datetime import UTC, datetime
 
 from aio_pika.abc import AbstractRobustChannel
 
+from markos_runtime.backoff import backoff as backoff
 from markos_runtime.config import ProposedLimits
 from markos_runtime.contracts.base import ContractError
 from markos_runtime.store.database import DurableStore, OutboxClaim
 from markos_runtime.transport.broker import BrokerSession, TransportError
 from markos_runtime.transport.management import TopologyAudit
-
-
-def backoff(attempts: int) -> int:
-    return random.randint(1, min(300, 2 ** min(max(attempts, 0) + 1, 9)))
 
 
 class Publisher:

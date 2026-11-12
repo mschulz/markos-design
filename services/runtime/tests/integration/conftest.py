@@ -91,6 +91,11 @@ def database(admin_dsn: str) -> Iterator[dict[str, str]]:
                     "VALUES(%s,%s,%s,%s,%s,%s)",
                     role,
                 )
+                await connection.execute(
+                    "UPDATE markos_runtime.service_identities SET can_execute=can_consume, "
+                    "can_schedule=can_publish WHERE login_role=%s",
+                    (role[0],),
+                )
 
     try:
         asyncio.run(setup())

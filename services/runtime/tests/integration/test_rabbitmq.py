@@ -652,3 +652,46 @@ def test_stalled_handoff_requeues_and_recovers(database: dict[str, str], rabbit:
         assert count(database, "tasks") == 1
 
     asyncio.run(scenario())
+
+
+def test_schedule_transport_handoff_and_noop_execution(
+    database: dict[str, str], rabbit: Harness
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from markos_runtime.execution.scheduler import Scheduler
+    from markos_runtime.execution.worker import Worker
+    from tests.test_scheduling import definition
+
+    async def scenario() -> None:
+        async with (
+            DurableStore.connect(database["publisher"]) as store,
+            BrokerSession.connect(rabbit.dsn("publisher")) as session,
+        ):
+            scheduler = Scheduler(store)
+            await scheduler.register(
+                definition(
+                    start_at=(datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
+                    missed_policy="coalesce",
+                )
+            )
+            assert await scheduler.scan_once() == 1
+            publisher = Publisher(
+                session, await session.channel(publisher=True), store, rabbit.auditor()
+            )
+            assert await publisher.publish_once() == 1
+        async with (
+            DurableStore.connect(database["consumer"]) as store,
+            BrokerSession.connect(rabbit.dsn("consumer")) as session,
+        ):
+            consumer = Consumer(session, store, {"foundation-generator": rabbit.users["publisher"]})
+            await consumer.start()
+            try:
+                await until(lambda: count(database, "inbox") == 1)
+                assert await Worker(store).run_once()
+                assert not await Worker(store).run_once()
+            finally:
+                await consumer.stop()
+        assert count(database, "task_results") == count(database, "schedule_occurrences") == 1
+
+    asyncio.run(scenario())
