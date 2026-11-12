@@ -1,0 +1,19 @@
+# Validation-only synthetic example. Nothing connects to a broker or database.
+# Only MARKOS_RUNTIME_CONFIG can select this file through the environment.
+[runtime]
+environment = "test"
+role = "publisher"
+topology_file = "runtime.subscriptions.json"
+broker_dsn_env = "MARKOS_RUNTIME_BROKER_DSN"
+database_dsn_env = "MARKOS_RUNTIME_DATABASE_DSN"
+replay_window_days = 30
+terminal_retention_days = 30
+dedup_retention_days = 90
+
+[runtime.scope]
+owner_id = "11111111-1111-4111-8111-111111111111"
+domain = "personal"
+service_id = "foundation.publisher"
+
+# Omitted limits use the reviewed profile in runtime.settings.ResourceLimits.
+# Actual secret values belong in runtime-injected environment variables, not TOML.

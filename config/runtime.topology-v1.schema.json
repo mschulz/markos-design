@@ -1,0 +1,166 @@
+{
+  "$defs": {
+    "PublisherDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "channels_per_connection": {
+          "default": 1,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Channels Per Connection",
+          "type": "integer"
+        },
+        "connection_budget": {
+          "default": 1,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Connection Budget",
+          "type": "integer"
+        },
+        "event_types": {
+          "items": {
+            "const": "foundation.noop.requested",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Event Types",
+          "type": "array"
+        },
+        "scope": {
+          "$ref": "#/$defs/ServiceScope"
+        }
+      },
+      "required": [
+        "scope",
+        "event_types"
+      ],
+      "title": "PublisherDefinition",
+      "type": "object"
+    },
+    "ServiceScope": {
+      "additionalProperties": false,
+      "description": "A trusted deployment identity, not authority supplied by an event.",
+      "properties": {
+        "domain": {
+          "enum": [
+            "personal",
+            "research",
+            "work"
+          ],
+          "title": "Domain",
+          "type": "string"
+        },
+        "owner_id": {
+          "format": "uuid",
+          "title": "Owner Id",
+          "type": "string"
+        },
+        "service_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+          "title": "Service Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner_id",
+        "domain",
+        "service_id"
+      ],
+      "title": "ServiceScope",
+      "type": "object"
+    },
+    "Subscription": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_sources": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Sources",
+          "type": "array"
+        },
+        "channels_per_connection": {
+          "default": 1,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Channels Per Connection",
+          "type": "integer"
+        },
+        "connection_budget": {
+          "default": 1,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Connection Budget",
+          "type": "integer"
+        },
+        "event_types": {
+          "items": {
+            "const": "foundation.noop.requested",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Event Types",
+          "type": "array"
+        },
+        "scope": {
+          "$ref": "#/$defs/ServiceScope"
+        }
+      },
+      "required": [
+        "scope",
+        "event_types",
+        "allowed_sources"
+      ],
+      "title": "Subscription",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "environment": {
+      "enum": [
+        "test",
+        "development",
+        "production"
+      ],
+      "title": "Environment",
+      "type": "string"
+    },
+    "publishers": {
+      "items": {
+        "$ref": "#/$defs/PublisherDefinition"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Publishers",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "subscriptions": {
+      "items": {
+        "$ref": "#/$defs/Subscription"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Subscriptions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "environment",
+    "publishers",
+    "subscriptions"
+  ],
+  "title": "TopologyManifest",
+  "type": "object"
+}

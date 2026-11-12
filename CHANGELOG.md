@@ -10,6 +10,15 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ### Completed on 12 November 2026
 
+- Re-reviewed PR #4: all history/file mappings intact and 145 regression tests
+  pass. Prepared an import-promotion PR because its feature-branch merge did not
+  put the application on main; no merge performed.
+- Prepared M0.1 in a separate branch: strict owner-scoped synthetic event models,
+  publisher/subscriber manifest and budgets, independent runtime configuration,
+  masked-credential preflight, typed ports, schemas/examples and isolation tests.
+  Full suite: 224 tests; lock, Ruff, mypy and schema checks pass. No new dependency,
+  adapter, database/broker connection, real-vault access or deployment.
+
 - Prepared M0.0 as a two-parent history-preserving import from markos d5d46cb,
   stacked on PR #3. Source application/tests and uv.lock remain byte-identical;
   source README/AGENTS are preserved as historical documents, active machine

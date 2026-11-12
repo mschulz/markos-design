@@ -36,3 +36,9 @@ This M0.0 branch contains the imported v0.2 pytest suite and two import/config
 guards. See [[MarkOS v0.3 M0.0 Import Record]] for actual regression evidence.
 The future event-bus acceptance matrix above remains unimplemented. Passing
 legacy/import tests does not complete v0.3 M0 or validate RabbitMQ behavior.
+
+M0.1 adds tests/runtime for pure contracts, scope/budget checks and explicit
+preflight isolation. The full suite has 224 passing tests; generated schemas
+are checked with `uv run python -m markos.runtime.schemas --check`.
+Real broker/database ACL, quarantine and durable handoff tests remain future
+integration work. See [[MarkOS v0.3 M0.1 Contracts and Configuration]].
