@@ -173,6 +173,8 @@ def test_lifecycle_restart_pressure_restore_and_clean_runtime() -> None:
         '   if b"serve-synthetic" in a:ids.append(int(x))\n'
         "  except OSError:pass\n"
         "assert len(ids)==1\nos.kill(ids[0],signal.SIGKILL)",
+        # Tini may kill this exec helper before it can return after its worker exits.
+        codes=(0, 137),
     )
     h.wait(lambda: h.ready("worker") and h.health("worker")["instance"] != before)
     h.wait(lambda: h.results(item.event_id) == 2)

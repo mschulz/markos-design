@@ -63,18 +63,25 @@ def project() -> str:
     return value
 
 
-def command(args: list[str], *, body: bytes | None = None, timeout: int = 120) -> bytes:
+def command(
+    args: list[str], *, body: bytes | None = None, timeout: int = 120, codes: tuple[int, ...] = (0,)
+) -> bytes:
     result = subprocess.run(args, input=body, capture_output=True, timeout=timeout)
-    if result.returncode:
+    if result.returncode not in codes:
         # These are synthetic test-only diagnostics, not runtime logging.
         raise RuntimeError(
-            f"harness command failed: {args[:3]}: " + result.stderr.decode(errors="replace")[-2000:]
+            f"harness command failed ({result.returncode}): {args[:3]}: "
+            + result.stderr.decode(errors="replace")[-2000:]
         )
     return result.stdout
 
 
 def compose(
-    *args: str, override: Path | None = None, body: bytes | None = None, timeout: int = 120
+    *args: str,
+    override: Path | None = None,
+    body: bytes | None = None,
+    timeout: int = 120,
+    codes: tuple[int, ...] = (0,),
 ) -> bytes:
     prefix = [
         "docker",
@@ -86,7 +93,7 @@ def compose(
     ]
     if override is not None:
         prefix += ["-f", str(override)]
-    return command(prefix + list(args), body=body, timeout=timeout)
+    return command(prefix + list(args), body=body, timeout=timeout, codes=codes)
 
 
 def container(service: str) -> str:
