@@ -24,6 +24,8 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ### Completed on 12 November 2026
 
+- Corrected ADR-002’s active decision/durability text to RabbitMQ and the settled PostgreSQL/source-object/derived-Markdown authority. Removed the stale open Markdown-authority conflict; hosting placement is unchanged. Updated against merged M0-A–M0-C without altering their code or evidence. Documentation only; no PR merge or deployment.
+
 
 - Corrected the architecture baseline after the owner's explicit abandonment of the original design. ADR-004 supersedes PARA/Markdown-canonical/DuckDB/desktop assumptions and legacy-code reuse; RabbitMQ is selected internally and PostgreSQL/source objects own durable state.
 - Updated Vision, specification, roadmap, M0 plan, active contributor/boundary docs and authority labels. Proposed an independent runtime project and acceptance matrix; marked old designs/evaluations/imports as historical. Exact v0.2 snapshots, source code, dependency lock and import manifest remain unchanged.

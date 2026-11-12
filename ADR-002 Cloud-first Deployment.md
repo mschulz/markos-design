@@ -2,11 +2,11 @@
 title: ADR-002 Cloud-first Deployment
 type: architecture-decision
 status: accepted
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-11
-updated: 2026-11-11
-reviewed: 2026-11-11
+updated: 2026-11-12
+reviewed: 2026-11-12
 tags:
   - architecture
   - deployment
@@ -18,7 +18,7 @@ tags:
 
 ## Decision
 
-Run MarkOS production on a DigitalOcean VM using Docker Compose, with Supabase PostgreSQL for durable state. The VM hosts the MQTT broker, Gmail ingestion bridge, agent workers, persistent scheduler, notification gateway and web API/control plane. The MacBook is a development and administration client only. Shutting it down, losing its network connection or closing its terminal must not interrupt production processing or scheduled jobs.
+Run MarkOS production on a DigitalOcean VM using Docker Compose, with Supabase PostgreSQL for durable state. The VM hosts the RabbitMQ broker, Gmail ingestion bridge, agent workers, persistent scheduler, notification gateway and web API/control plane. The MacBook is a development and administration client only. Shutting it down, losing its network connection or closing its terminal must not interrupt production processing or scheduled jobs.
 
 The owner approved this baseline in the [Agent PubSub Architecture conversation](chatgpt-conversation://6aefc392-d95c-83ec-b848-4a884bfa3e7c), reaffirmed in the 11 November 2026 continuation. This records an accepted hosting decision; it does not approve implementation milestones, spending, provisioning, deployment or merging this PR.
 
@@ -30,11 +30,11 @@ Gmail ingestion, agent execution, watch renewal, periodic maintenance and notifi
 
 ## Runtime and durability
 
-[[MarkOS Cloud Deployment Architecture]] defines placement, recovery procedures and proposed operational targets. PostgreSQL holds events, outbox/inbox, task state, schedules, run history, leases, Gmail cursors, approvals, conversations, notification attempts and knowledge records as their schemas are approved. MQTT distributes events; persistent broker data improves restart recovery but is not the authoritative event archive.
+[[MarkOS Cloud Deployment Architecture]] defines placement, recovery procedures and proposed operational targets. PostgreSQL holds events, outbox/inbox, task state, schedules, run history, leases, Gmail cursors, approvals, conversations, notification attempts and knowledge records as their schemas are approved. RabbitMQ distributes internal events; persistent broker data improves restart recovery but is not the authoritative event archive.
 
 Schedules and missed-job recovery must be database-backed. Container-local cron, an in-memory timer or MacBook jobs cannot be the sole production scheduler. Every long-running Compose service requires a restart policy, health checks, dependency retry and graceful shutdown. Backups, independent monitoring and tested recovery are production readiness requirements.
 
-This hosting decision does not settle the outstanding Markdown knowledge-authority conflict, retrieval implementation or source-object provider. Production operational state is durable in Supabase; broader knowledge contracts still require the reconciliation in [[MarkOS v0.3 Roadmap]].
+[[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] settles knowledge authority: PostgreSQL holds durable operational state and structured knowledge, immutable originals live in source-object storage, and generated Markdown is a derived view/export without PARA or Obsidian requirements. Retrieval implementation, source-object provider and detailed knowledge contracts remain implementation decisions in [[MarkOS v0.3 Roadmap]].
 
 ## Alternatives considered
 
