@@ -592,16 +592,18 @@ def test_connection_abort_recovers_one_subscription(
                         == 1
                     )
                 await until(lambda: count(database, "inbox") == 1)
-                records = rabbit.request("GET", "consumers", rabbit.vhost)
-                assert (
-                    len(
-                        [
-                            r
-                            for r in records
-                            if r["queue"]["name"] == "markos.personal.foundation-worker"
-                        ]
+                # Management consumer statistics are eventually refreshed after reconnect.
+                await until(
+                    lambda: (
+                        len(
+                            [
+                                r
+                                for r in rabbit.request("GET", "consumers", rabbit.vhost)
+                                if r["queue"]["name"] == "markos.personal.foundation-worker"
+                            ]
+                        )
+                        == 1
                     )
-                    == 1
                 )
             finally:
                 await consumer.stop()

@@ -30,7 +30,8 @@ class Publisher:
         if session.vhost != audit.vhost:
             raise TransportError("broker/audit namespace mismatch")
         self.session, self.channel, self.store, self.audit = session, channel, store, audit
-        self.limits: ProposedLimits = limits or getattr(session, "limits", ProposedLimits())
+        profile = limits if limits is not None else getattr(session, "limits", None)
+        self.limits = profile if isinstance(profile, ProposedLimits) else ProposedLimits()
         self._inflight = asyncio.Semaphore(self.limits.max_inflight_confirms)
 
     async def _one(self, claim: OutboxClaim) -> bool:

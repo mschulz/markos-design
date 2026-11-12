@@ -23,7 +23,8 @@ class Consumer:
         total_seconds: float | None = None,
         limits: ProposedLimits | None = None,
     ) -> None:
-        self.limits: ProposedLimits = limits or getattr(session, "limits", ProposedLimits())
+        profile = limits if limits is not None else getattr(session, "limits", None)
+        self.limits = profile if isinstance(profile, ProposedLimits) else ProposedLimits()
         active_seconds = (
             self.limits.active_handoff_seconds if active_seconds is None else active_seconds
         )
