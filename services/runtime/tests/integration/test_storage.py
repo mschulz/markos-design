@@ -345,7 +345,7 @@ def test_migrations_idempotent_and_changed_bytes_rejected(
     with psycopg.connect(database["admin"]) as admin:
         assert admin.execute(
             "SELECT count(*) FROM markos_runtime.schema_migrations"
-        ).fetchone() == (6,)
+        ).fetchone() == (7,)
 
 
 def test_no_intended_consumers_rolls_back_event(database: dict[str, str]) -> None:
@@ -440,7 +440,7 @@ def test_failed_migration_transaction_rolls_back_ddl_and_ledger(
     directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
     for existing in directory.glob("*.sql"):
         (tmp_path / existing.name).write_bytes(existing.read_bytes())
-    (tmp_path / "0007_fault.sql").write_text(
+    (tmp_path / "0008_fault.sql").write_text(
         "CREATE TABLE markos_runtime.must_rollback(id integer); SELECT missing_function();"
     )
 
@@ -458,7 +458,7 @@ def test_failed_migration_transaction_rolls_back_ddl_and_ledger(
         )
         assert admin.execute(
             "SELECT count(*) FROM markos_runtime.schema_migrations"
-        ).fetchone() == (6,)
+        ).fetchone() == (7,)
 
 
 @pytest.mark.parametrize(

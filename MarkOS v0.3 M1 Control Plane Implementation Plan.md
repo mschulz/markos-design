@@ -163,3 +163,8 @@ The owner subsequently authorized M1-A. [[MarkOS v0.3 M1-A Contracts and Identit
 ## M1-B implementation review status
 
 PRs #18/#19 are merged and the owner authorized M1-B separately. [[MarkOS v0.3 M1-B Control Plane Persistence]] records additive migration 0006, narrow gateway-role functions, current session/membership authority, versioned registry/configuration, scoped conversations/messages/activity and idempotency. M1-05 coverage is the atomic persistence portion: held proposals do not publish, and M1-D still owes atomic promotion into the active event/consumer/outbox contract. M1-20 coverage is upgrade plus generation invalidation; populated control-plane backup/restore remains M1-G. M1-C authentication/API is the next slice, not implemented here. All real provider/production gates remain open.
+
+
+## Merged M1-B and M1-C review status
+
+PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.

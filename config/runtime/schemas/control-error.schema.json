@@ -4,6 +4,7 @@
   "properties": {
     "code": {
       "enum": [
+        "invalid",
         "unauthenticated",
         "forbidden",
         "not-found",

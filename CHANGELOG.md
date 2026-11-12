@@ -8,6 +8,14 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M1-C authenticated shared API prepared for review — 12 November 2026
+
+- Reviewed merged main at `6a87fb0` after PR #20; exact reviewed tree/history preserved and all five post-merge checks pass (533 runtime cases plus optional compatibility and docs). No blocking issue within M1-B persistence scope.
+- Added explicit optional fixture-only ASGI API with signed ES256/PKCE verification, current upstream/local authority, encrypted provider credentials, opaque browser/CLI sessions, CSRF/Origin/Host protections, scoped registry/configuration/status/activity and private schema-aware health.
+- Added migration 0007, shared write/auth/key/flow bounds, an inert separate loopback-HTTPS profile/schema, additive `invalid` error, packaged migration fingerprints and required optional-profile CI with actual localhost HTTPS tests. Existing migrations, root archive, base pins, active M0 events/topology and no-op execution are preserved.
+- Added [[MarkOS v0.3 M1-C Authenticated Shared API]] and updated current documentation/authority inventory. Real IdP integration, interactive clients/SSE, chat promotion, governance/tools, scheduled cleanup and API process/restore/production acceptance remain later gates. No merge or deployment.
+
+
 ### M1-B control-plane persistence prepared for review — 12 November 2026
 
 - Reviewed merged main at `ea076ff` after PRs #18/#19; tree/history preserved and all five post-merge checks green (471 runtime cases plus optional compatibility and documentation). No blocking finding within M1-A contract scope.

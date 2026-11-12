@@ -141,3 +141,8 @@ Open M3 decisions: agent/category taxonomy and multi-assignment policy; verified
 ## M1-B persistence review
 
 M1-A planning/contracts are merged through PRs #18/#19. [[MarkOS v0.3 M1-B Control Plane Persistence]] adds explicit scoped session/registry/configuration/conversation storage and an additive migration for review. Database functions validate current scope/version, with bounded held work and idempotent atomic staging. This completes neither publishable chat nor human authentication; M1-C supplies the verified API boundary and M1-D the reviewed transport/executor promotion. No merge or deployment is performed by this slice.
+
+
+## Merged M1-B and M1-C review status
+
+PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.

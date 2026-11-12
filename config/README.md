@@ -19,3 +19,8 @@ M0-E adds the strict replay request/schema/example with effects suppression fixe
 M0-F adds strict `service.schema.json` and explicit test-only role examples under `runtime/lifecycle/`, plus `runtime/m0-closeout.json` as a review ledger with production readiness false. Only `serve-synthetic --confirm-synthetic --config` resolves its named test secrets and starts loops. Preflight remains connection-free. See [[MarkOS v0.3 M0-F Lifecycle and Closeout]].
 
 M1-A adds 18 control schemas/examples (26 schemas total), `runtime/control/config.example.json` with every execution/real-account switch false and an intentionally empty/unusable JWKS placeholder. Explicit `preflight-control` does not read keys, authenticate or resolve secrets. Limits/identity descriptors are frozen test contracts, not applied middleware or database policy. See [[MarkOS v0.3 M1-A Contracts and Identity]].
+
+
+## Merged M1-B and M1-C review status
+
+PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.

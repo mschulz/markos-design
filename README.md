@@ -17,7 +17,7 @@ MCP access for agents is proposed through a governed tool gateway with explicit 
 - [Architecture reset decision](ADR-004%20Event-driven%20Architecture%20Supersedes%20Legacy%20MarkOS.md): accepted replacement of the legacy baseline, evidence and limits.
 - [Vision](Vision.md), [v0.3 specification](MarkOS%20v0.3%20Specification.md) and [roadmap](MarkOS%20v0.3%20Roadmap.md): current product and architecture.
 - [M0 implementation plan](MarkOS%20v0.3%20M0%20Implementation%20Plan.md): independent runtime, ordered changes and acceptance tests.
-- [M1 control-plane implementation plan](MarkOS%20v0.3%20M1%20Control%20Plane%20Implementation%20Plan.md): merged-main review, proposed API/identity and seven implementation slices with 22 acceptance cases. No M1 implementation is included.
+- [M1 control-plane implementation plan](MarkOS%20v0.3%20M1%20Control%20Plane%20Implementation%20Plan.md): merged-main review, proposed API/identity and seven implementation slices with 22 acceptance cases. M1-A/B are merged; the M1-C review record below distinguishes implemented fixture behavior from later gates.
 - [Documentation authority index](Documentation%20Authority%20Index.md): current requirements versus archived designs and evidence.
 - [Agent MCP access ADR](ADR-005%20Governed%20MCP%20Access%20for%20Agents.md): proposed permissions, domain isolation, approvals, audit and acceptance gates.
 - [RabbitMQ ADR](ADR-003%20RabbitMQ%20Internal%20Event%20Bus.md): selected transport and proposed operating profile.
@@ -69,4 +69,9 @@ Use focused `codex/` branches and reviewable PRs to main. Keep implementation, a
 
 ## M1-B persistence prepared for review
 
-[M1-B Control Plane Persistence](MarkOS%20v0.3%20M1-B%20Control%20Plane%20Persistence.md) adds explicit scoped PostgreSQL storage for sessions/memberships, versioned registry/configuration, conversations/messages/activity and idempotency, with a dedicated gateway role and additive migration 0006. Messages are staged as held proposals; the current RabbitMQ/no-op path is unchanged. Human authentication/API, publishable chat, approvals/tools and production deployment remain later work.
+[M1-B Control Plane Persistence](MarkOS%20v0.3%20M1-B%20Control%20Plane%20Persistence.md) adds explicit scoped PostgreSQL storage for sessions/memberships, versioned registry/configuration, conversations/messages/activity and idempotency, with a dedicated gateway role and additive migration 0006. Messages are staged as held proposals; the current RabbitMQ/no-op path is unchanged. M1-C supplies the fixture authentication/API in the separate review described below; publishable chat, approvals/tools and production deployment remain later work.
+
+
+## Merged M1-B and M1-C review status
+
+PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.
