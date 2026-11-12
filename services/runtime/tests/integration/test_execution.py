@@ -446,9 +446,12 @@ def test_cancellation_resistant_handler_cannot_finalize_late(database: dict[str,
 
             worker._execute = resistant  # type: ignore[method-assign]
             running = asyncio.create_task(worker.run_once())
-            await asyncio.sleep(2.1)
-            assert worker.failed
-            release.set()
+            try:
+                async with asyncio.timeout(10):
+                    while not worker.failed:
+                        await asyncio.sleep(0.01)
+            finally:
+                release.set()
             assert not await running
             with pytest.raises(StorageError):
                 await worker.run_once()
