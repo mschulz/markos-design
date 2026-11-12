@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M0 Implementation Plan
 type: implementation-plan
 status: proposed
-version: 2.1
+version: 2.2
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -22,6 +22,10 @@ This plan defines reviewable implementation slices. M0-A now supplies contracts/
 ## M0-A implementation status
 
 The owner authorized M0-A on 12 November 2026. [[MarkOS v0.3 M0-A Contracts and Configuration]] records its independent implementation and A01–A03 evidence, prepared for review. The acceptance table below remains the full M0 target: M0-A cases have unit/isolation evidence, while A04–A20 remain future work. No database/broker behavior or deployment is implemented by M0-A.
+
+## M0-B implementation status
+
+The owner authorized M0-B after review of PRs #9/#10. [[MarkOS v0.3 M0-B Durable Storage]] records the independent storage/migration/role API and 34 real PostgreSQL integration cases. A04–A05 have database evidence; A06–A20 remain future transport/execution/recovery requirements. M0-B’s publication fence is a storage primitive, not broker confirmation. The runtime preflight remains validation-only.
 
 ## Existing repositories and disposition
 
@@ -76,7 +80,7 @@ ADR-003 owns the proposed broker/client pins, resource/queue limits, retention a
 
 ## Acceptance matrix
 
-A01–A03 now have the M0-A evidence recorded above; A04–A20 remain unexecuted requirements. Unit fakes help prove decisions; real isolated PostgreSQL/RabbitMQ and process fault points must prove persistence, roles, locks and delivery behavior.
+A01–A03 have M0-A evidence; A04–A05 have M0-B real PostgreSQL evidence. A06–A20 remain future requirements. Unit fakes help prove decisions; real isolated PostgreSQL/RabbitMQ and process fault points must prove persistence, roles, locks and delivery behavior.
 
 | ID | Concrete test/fault | Acceptance |
 |---|---|---|

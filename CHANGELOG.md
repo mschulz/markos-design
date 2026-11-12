@@ -8,6 +8,11 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M0-B durable storage prepared for review — 12 November 2026
+
+- Reviewed PRs #9/#10 for the independent architecture; corrected PR #10’s invalid CI runner context, and its corrected hosted workflow passes.
+- Added explicit PostgreSQL storage, ordered checksummed migration, login-bound roles/RLS, atomic event/outbox and inbox/task writes, dedup/conflict quarantine and fenced claims. 145 independent tests include 34 real PostgreSQL cases. See [[MarkOS v0.3 M0-B Durable Storage]]. No RabbitMQ adapter, worker execution, merge, cloud SQL or deployment.
+
 ### M0-A implementation prepared for review — 12 November 2026
 
 - Prepared independent M0-A contracts/configuration for review in services/runtime, with a fresh minimal lock, validation-only CLI, synthetic schemas/examples and scoped CI. 104 independent tests and clean-wheel isolation checks pass. Source/manifest trust and unimplemented database/broker guarantees are explicit; see [[MarkOS v0.3 M0-A Contracts and Configuration]]. Archived source, root package/lock and personal data remain unchanged. No merge or deployment.

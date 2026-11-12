@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.1
+version: 2.2
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -48,10 +48,19 @@ with 104 tests, its own lock/CLI, schemas/examples and a clean-wheel isolation
 check. See [[MarkOS v0.3 M0-A Contracts and Configuration]]. This does not deliver
 M0-B–M0-F or any runtime service. PR #7 is closed unmerged; its branch is retained.
 
+## M0-B review status
+
+M0-B adds explicit PostgreSQL events/outbox/consumer intent, atomic inbox/task
+handoff, bounded conflict quarantine, scoped roles/RLS and fenced outbox claims.
+Its 34 real PostgreSQL cases bring the independent suite to 145 tests. See
+[[MarkOS v0.3 M0-B Durable Storage]]. This is not a live RabbitMQ worker or M0
+completion. PR #10’s CI context error is fixed and its corrected hosted run passes;
+PR #9 remains the separate, consistent ADR-002 correction.
+
 ## Immediate plan
 
 1. Review this architecture correction and retire PR #7 as a foundation path; preserve all history.
-2. Review the independent M0-A scaffold/contracts/configuration PR and its candidate-fit and isolation evidence. Then implement M0-B persistence; no automatic merge or promotion of old PR #6/#7.
+2. Review the independent M0-A scaffold/contracts/configuration PR and its candidate-fit and isolation evidence. Review M0-B persistence next; no automatic merge or promotion of old PR #6/#7.
 3. Add durable state and migrations, then RabbitMQ handoff, then execution/scheduling, replay/retention and a synthetic end-to-end harness in separate PRs.
 4. Gather actual broker/database fault evidence before declaring M0 complete. Only then advance gateway and Gmail work.
 5. Before provisioning, review provider plans, region, cost, network/security, retention, monitoring and recovery targets. Deployment requires separate authorization.
