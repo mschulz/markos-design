@@ -17,3 +17,9 @@ documentation/link review for design changes, and any limits of validation.
 
 Explain how prior work and history are preserved. Identify any changes affecting
 runtime data, external services or deployment and their authorization.
+
+## Architecture boundary
+
+- [ ] Uses the current event-driven baseline (ADR-004), with no PARA/Obsidian or legacy markos dependency.
+- [ ] Distinguishes archived regression evidence from independent runtime acceptance.
+- [ ] Records proposed versus accepted choices; includes no merge/deployment or personal-data migration without scope.

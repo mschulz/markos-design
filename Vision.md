@@ -2,13 +2,12 @@
 title: Vision
 type: vision
 status: active
-version: 1.0
+version: 2.0
 owner: Mark Schulz
-created: 2026-08-02
-updated: 2026-08-02
-reviewed:
+created: 2026-11-12
+updated: 2026-11-12
+reviewed: 2026-11-12
 tags:
-  - vision
   - architecture
 ---
 
@@ -16,62 +15,26 @@ tags:
 
 ## Purpose
 
-MarkOS exists to augment human thinking while preserving complete ownership of knowledge.
+MarkOS is an always-on personal agent operating system. It ingests information, preserves source evidence, coordinates specialist agents and helps the user understand findings and approve actions.
 
-Its purpose is to provide a long-lived Personal Knowledge Engine that organises, connects and makes knowledge accessible independently of any editor, database, AI model or software platform.
+## Principles
 
-## Vision Statement
+1. Human judgement and scoped approval control consequential actions.
+2. Knowledge is source-grounded, owner/domain-scoped and durable independently of a client device.
+3. Agents communicate through versioned events and bounded interfaces; RabbitMQ distributes internal events while PostgreSQL records durable state.
+4. Immutable originals and structured knowledge are distinct from generated summaries. Markdown is a portable view/export, not canonical system state.
+5. Components and providers remain replaceable through explicit contracts, tests and recovery procedures.
 
-Knowledge should outlive the tools used to create, edit and consume it.
+## Product direction
 
-MarkOS separates knowledge from applications so that the same body of knowledge can be explored through multiple interfaces while remaining stored in open, human-readable formats.
+The first workflow is Gmail ingestion, classification, electricity-bill processing, source-linked knowledge and notification. A shared authenticated gateway supports browser/PWA, CLI and optional messaging. Cloud scheduling and processing continue with the MacBook off.
 
-## Core Objectives
+No PARA note hierarchy, Obsidian installation, local Markdown index or native desktop application is a foundation requirement. Source originals remain accessible with provenance; structured records and exports need documented recovery and portability.
 
-MarkOS will:
+## Supersession
 
-- preserve knowledge in plain Markdown;
-- model knowledge independently of storage technologies;
-- maintain rebuildable indexes for fast discovery;
-- provide intelligent assistance without removing human control;
-- support multiple editors and interfaces;
-- remain extensible through adapters rather than modifications to the core.
+This revision replaces the original Markdown-canonical Personal Knowledge Engine vision following the owner's explicit architecture correction. Previous text remains in Git history. [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] defines precedence and boundaries; [[MarkOS v0.3 Specification]] defines the current design. Preserving legacy code does not make it the new implementation baseline.
 
-## Design Philosophy
+## Success criteria
 
-MarkOS is built around five principles.
-
-1. Knowledge is primary.
-2. Markdown is the canonical representation of knowledge.
-3. Applications are interchangeable.
-4. AI augments human judgement rather than replacing it.
-5. Small, well-defined components are preferred over large integrated systems.
-
-## Success Criteria
-
-MarkOS is successful when:
-
-- knowledge remains accessible regardless of the editor being used;
-- new capabilities can be added without redesigning the core;
-- indexes can always be rebuilt from Markdown;
-- users trust the system with their long-term knowledge.
-
-## Non-Goals
-
-MarkOS is not intended to:
-
-- become a proprietary knowledge store;
-- replace Markdown with a custom format;
-- depend on a specific editor;
-- allow AI to modify knowledge without explicit human approval.
-
-## Design Rationale
-
-The vision defines the long-term purpose of MarkOS.
-
-It should change very rarely. Architectural decisions, engineering practices and implementation details may evolve over time, but they should remain consistent with this vision.
-
-## Related
-
-- [[MarkOS Specification]] — supersedes the never-written ADR-0000, ADR-0001,
-  and Engineering Charter documents this section used to point to.
+The initial workflow survives duplicate events and service restarts, preserves source traceability and domain access, surfaces uncertainty, and operates without a personal computer running. Adding an agent does not require rewriting producers. Consequential actions remain reviewable and auditable.

@@ -1,73 +1,44 @@
 # MarkOS
 
-MarkOS augments human thinking through source-grounded knowledge and human-controlled assistance. This repository is the canonical GitHub home for its project artifacts: code, tests, infrastructure and documentation. ChatGPT Space is for collaborative drafting; approved changes are incorporated through pull requests.
+MarkOS is a cloud-hosted, event-driven personal agent operating system. The current design replaces the original PARA/Markdown/DuckDB system; the imported code is preserved history, not the foundation of the new runtime.
 
-This M0.0 branch imports the existing markos v0.2 application and tests while
-preserving both repositories' Git histories. The original markos repository is
-unchanged. The import is pending owner review; no v0.3 runtime is implemented.
-See [the import record](MarkOS%20v0.3%20M0.0%20Import%20Record.md) for provenance,
-file mapping and regression evidence.
+RabbitMQ is the internal event bus. Supabase PostgreSQL owns durable events, tasks, schedules, structured knowledge and conversations. Immutable source originals live in cloud object storage (provider pending). Generated Markdown is a derived view/export in an ordinary folder, without PARA or Obsidian requirements. Always-on services run on DigitalOcean with Docker Compose, independently of the MacBook.
 
-## Start here
+GitHub is canonical for all project code, tests, infrastructure and documentation; Space is for drafting. Runtime data and secrets never belong here.
 
-- [Vision](Vision.md): the existing governing principles.
-- [MarkOS v0.3 Specification](MarkOS%20v0.3%20Specification.md): complete Gmail-first event-system **review draft**, not approved for runtime implementation.
-- [MarkOS v0.3 M0 Implementation Plan](MarkOS%20v0.3%20M0%20Implementation%20Plan.md): inspected existing code, import strategy, ordered changes and acceptance matrix.
-- [MarkOS v0.3 Roadmap](MarkOS%20v0.3%20Roadmap.md): prior-architecture reconciliation, repository transition, approval gates and new milestones.
-- [ADR-003 RabbitMQ Internal Event Bus](ADR-003%20RabbitMQ%20Internal%20Event%20Bus.md): proposed AMQP transport, durable handoff, retry and recovery contract.
-- [ADR-002 Cloud-first Deployment](ADR-002%20Cloud-first%20Deployment.md): accepted DigitalOcean VM, Docker Compose and Supabase PostgreSQL baseline.
-- [MarkOS Cloud Deployment Architecture](MarkOS%20Cloud%20Deployment%20Architecture.md): scheduling, restart policies, backups, monitoring and recovery requirements.
-- [ADR-0002 GitHub as Canonical Project Record](ADR-0002%20GitHub%20as%20Canonical%20Project%20Record.md): accepted project governance and PR workflow.
-- [MarkOS Specification](MarkOS%20Specification.md): preserved earlier architecture and M0–M16 history.
-- [Markdown Memory Architecture](Markdown%20Memory%20Architecture.md), [Semantic Graph Extraction](Semantic%20Graph%20Extraction.md), [Semantic Graph Extraction Roadmap](Semantic%20Graph%20Extraction%20Roadmap.md) and [Graphify Evaluation](Graphify%20Evaluation.md): existing knowledge design, experiments and subsystem plan.
-- [Changelog](CHANGELOG.md): design progress.
+## Read first
 
-Production hosting is accepted: always-on services run on DigitalOcean with Docker Compose and durable operational state in Supabase PostgreSQL. The MacBook is development/admin only; shutting it down must not affect jobs. Runtime milestones, provisioning and deployment remain subject to separate approval.
+- [Architecture reset decision](ADR-004%20Event-driven%20Architecture%20Supersedes%20Legacy%20MarkOS.md): accepted replacement of the legacy baseline, evidence and limits.
+- [Vision](Vision.md), [v0.3 specification](MarkOS%20v0.3%20Specification.md) and [roadmap](MarkOS%20v0.3%20Roadmap.md): current product and architecture.
+- [M0 implementation plan](MarkOS%20v0.3%20M0%20Implementation%20Plan.md): independent runtime, ordered changes and acceptance tests.
+- [Documentation authority index](Documentation%20Authority%20Index.md): current requirements versus archived designs and evidence.
+- [RabbitMQ ADR](ADR-003%20RabbitMQ%20Internal%20Event%20Bus.md): selected transport and proposed operating profile.
+- [Cloud deployment architecture](MarkOS%20Cloud%20Deployment%20Architecture.md) and [cloud decision](ADR-002%20Cloud-first%20Deployment.md): hosting, durable scheduling, backup and recovery.
+- [Canonical project record](ADR-0002%20GitHub%20as%20Canonical%20Project%20Record.md): GitHub and review workflow.
 
-v0.3's PostgreSQL-backed knowledge, semantic retrieval and web/PWA direction differ from the existing Markdown, DuckDB and desktop design. Review those differences in the roadmap before implementation; Vision remains unchanged.
+## Implementation status
 
-## Local development and regression checks
+Main contains the historical v0.2 application imported through PR #5. PR #6's pure contract/config work was merged into an earlier feature branch, not main. PR #7's legacy naming cleanup is not the replacement-system baseline. Neither legacy regression counts nor pure-schema checks establish a working RabbitMQ/PostgreSQL runtime.
 
-Use Python 3.13 and uv in an isolated checkout outside synced folders. Set
-`UV_PROJECT_ENVIRONMENT` to `$PWD/venv` (or review/use `.envrc`), then run:
+The new independent runtime is planned under `services/runtime/` with its own package, dependency lock and tests. It is not implemented by this documentation correction. No new runtime may import the old `markos` package or require a Markdown folder, PARA tree or DuckDB.
 
-```console
-uv sync --locked
-uv lock --check
-uv run ruff check .
-uv run mypy
-uv run pytest
-```
+## Repository boundaries
 
-The installed `markos` CLI retains the v0.2 read-only behavior. Start with
-`uv run markos --help` and `uv run markos version`. Supply explicit paths or a
-reviewed configuration based on `config/legacy.example.toml`; the package
-configuration selects no real vault or index. The synthetic example paths are
-placeholders, not an instruction to access personal notes.
-
-[MarkOS v0.2 User Guide](MarkOS%20v0.2%20User%20Guide.md) is the exact historical
-source README, including its original repository URL. Its old clone instructions
-and [project memory](MarkOS%20v0.2%20Project%20Memory.md) are historical; current
-repository organization and instructions are here and in `AGENTS.md`.
-
-## Repository organization
-
-Existing documents remain flat at the root to preserve established paths. The [architecture document template](Templates/Architecture%20Document%20Template.md) remains in `Templates/`.
-
-| Path | Purpose |
+| Path | Role |
 |---|---|
-| [src/markos/](src/markos/README.md) | Imported read-only v0.2 application; future runtime under `markos.runtime` |
-| [tests/](tests/README.md) | Imported pytest suite, import guards and future runtime tests |
-| [config/](config/README.md) | Configuration schemas and sanitized examples |
-| [infrastructure/](infrastructure/README.md) | Infrastructure definitions and operational documentation |
-| [.github/](.github/PULL_REQUEST_TEMPLATE.md) | Review template; executable CI deferred until toolchain selection |
+| Root Title Case documents | Current decisions plus explicitly classified historical records |
+| `src/markos/`, root `pyproject.toml` and `uv.lock` | Archived application and its reproducible environment; no new product foundation |
+| `tests/` | Preserved legacy regression tests; new runtime acceptance tests will be independent |
+| `services/runtime/` (planned) | Independent runtime project, package `markos_runtime`, own tests and lock |
+| `config/`, `infrastructure/` | Versioned schemas/examples and reviewed infrastructure; legacy examples clearly separated |
+| `.github/`, `Templates/` | Review workflow and document template |
 
-## Milestone status
+## Preserving old work
 
-The earlier specification records **M0–M10 delivered** in the separate implementation repository and **M11–M16 accepted**. Those records are preserved and do not establish completion of the proposed **v0.3 M0–M8**, whose runtime slices remain unstarted; M0.0 import is prepared for review.
+Old source, evaluation results and Git ancestry remain recoverable. The v0.2 guide/project-memory snapshots and import manifest retain their original bytes. Their instructions, local paths and PARA conventions are historical, not directions to access personal notes. See the authority index before using any old document.
 
-## Contributing
+To reproduce the archived application's checks in an isolated synthetic environment, use Python 3.13 and uv: `uv sync --locked`, `uv lock --check`, `uv run ruff check .`, `uv run mypy`, `uv run pytest`. These checks protect the archive; they do not select the new architecture or complete M0.
 
-Read [AGENTS.md](AGENTS.md), the applicable specification and the roadmap. Use a focused `codex/` branch and pull request; include scope, validation and unresolved decisions. Implementation milestones include automated tests and documentation. Keep proposal and acceptance status explicit.
+## Working agreement
 
-Do not commit credentials, private notes, emails, bills or runtime data. This increment does not deploy code or modify an Obsidian vault.
+Use focused `codex/` branches and reviewable PRs to main. Keep implementation, acceptance evidence and docs together. No merge, deployment, provisioning or personal-folder migration is authorized by this documentation update. The separate `markos` repository remains untouched; no second active source of truth is introduced.

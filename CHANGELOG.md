@@ -10,6 +10,13 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ### Completed on 12 November 2026
 
+- Corrected the architecture baseline after the owner's explicit abandonment of the original design. ADR-004 supersedes PARA/Markdown-canonical/DuckDB/desktop assumptions and legacy-code reuse; RabbitMQ is selected internally and PostgreSQL/source objects own durable state.
+- Updated Vision, specification, roadmap, M0 plan, active contributor/boundary docs and authority labels. Proposed an independent runtime project and acceptance matrix; marked old designs/evaluations/imports as historical. Exact v0.2 snapshots, source code, dependency lock and import manifest remain unchanged.
+- PR #7's naming cleanup and PR #6's contracts are prior work, not the replacement foundation. No runtime, source migration, merge or deployment is performed by this documentation correction.
+
+Earlier entries below describe work at the time; they do not reinstate superseded plans.
+
+
 - Prepared M0.0 as a two-parent history-preserving import from markos d5d46cb,
   stacked on PR #3. Source application/tests and uv.lock remain byte-identical;
   source README/AGENTS are preserved as historical documents, active machine

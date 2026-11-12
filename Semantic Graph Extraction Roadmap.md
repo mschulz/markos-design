@@ -1,18 +1,21 @@
 ---
 title: Semantic Graph Extraction Roadmap
 type: roadmap
-status: proposed
-version: 1.0
+status: superseded
+version: 1.1
 owner: Mark Schulz
 created: 2026-08-13
-updated: 2026-08-13
-reviewed: 2026-08-13
+updated: 2026-11-12
+reviewed: 2026-11-12
 tags:
   - roadmap
   - architecture
   - knowledge-graph
   - provenance
 ---
+
+> **Superseded architecture — historical only.** The owner abandoned the original design. PARA storage, Markdown-canonical knowledge, legacy code reuse and desktop-first assumptions below are not current requirements. Do not implement the future milestones in this document. Follow [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]], [[MarkOS v0.3 Specification]] and the current M0 plan. Historical content is retained for provenance.
+
 
 # Semantic Graph Extraction Roadmap
 
