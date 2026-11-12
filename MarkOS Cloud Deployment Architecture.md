@@ -2,7 +2,7 @@
 title: MarkOS Cloud Deployment Architecture
 type: architecture
 status: draft
-version: 1.1
+version: 1.3
 owner: Mark Schulz
 created: 2026-11-11
 updated: 2026-11-12
@@ -59,13 +59,19 @@ If PostgreSQL is unavailable, stop claiming jobs and performing unrecorded side 
 
 ## Container and host lifecycle
 
+[[MarkOS v0.3 M0 Implementation Plan]] defines the code-import boundary, synthetic foundation slices and tests. Preserve Python 3.13 from the inspected implementation. Classic-queue consumers need a 10-second active handoff and 30-second total unacknowledged-age watchdog, dedicated consumer channels, and channel-close recovery after uncertain commits; health checks and heartbeats alone do not detect a stalled database handoff. Keep publishers separate and resolve retries by owner-scoped inbox identity.
+
 Set `restart: unless-stopped` for every long-running Compose service, including scheduler and ingestion. Enable Docker at host boot and verify recovery after a VM reboot. An intentionally stopped container remains stopped with this policy; maintenance recovery must explicitly start it. One-shot migrations and restore tasks need deliberate invocation and failure handling rather than an unlimited restart loop.
 
-Define readiness/liveness checks, startup grace periods, resource bounds and graceful termination. Workers finish safely or release/expire leases on shutdown. Persist RabbitMQ data in a named volume; use durable exchanges/queues and persistent messages, with confirms and manual acknowledgements as specified in [[ADR-003 RabbitMQ Internal Event Bus]]. Keep reviewed topology definitions, policies and permissions recoverable separately from secrets. Select queue type against the pinned broker version before M0; durable classic queues may suit a single-node pilot, while quorum replication requires a separately reviewed multi-node failure-domain design to provide availability. A single node on this VM is not highly available. Never store authoritative tasks only in container files.
+Define readiness/liveness checks, startup grace periods, resource bounds and graceful termination. Workers finish safely or release/expire leases on shutdown. Persist RabbitMQ data in a named volume; use durable exchanges/queues and persistent messages, with confirms and manual acknowledgements as specified in [[ADR-003 RabbitMQ Internal Event Bus]]. Keep reviewed topology definitions, policies and permissions recoverable separately from secrets. Propose RabbitMQ 4.4.0 with durable classic queues and aio-pika 10.2.3. The ADR-003 profile proposes a 4-vCPU/8-GiB/80-GiB SSD VM planning envelope, a 4-GiB broker cap with 2-GiB absolute memory alarm and a 10-GiB free-disk alarm (warning at 20 GiB). The broker CPU ceiling is 4, not reserved cores; shared-host contention and all service budgets require M0 measurement and cost review. Enforce ADR-003 queue, message, connection, channel, prefetch and publisher limits; reject-publish backpressure leaves work in PostgreSQL. Pin an image digest and dependency lock in the future implementation PR. Quorum replication requires a separately reviewed multi-node failure-domain design to provide availability. A single node on this VM is not highly available. Never store authoritative tasks only in container files.
 
 Use healthy dependency conditions for local Compose startup where appropriate; services still need runtime reconnect/backoff for broker and remote Supabase failures. A health check alone does not restart an unhealthy process: exit on unrecoverable failure or alert for operator remediation. Rotate logs, monitor disk and prevent crash loops from exhausting the VM.
 
 Pin reviewed image versions/digests, record the deployed Git commit, review migrations before rollout and retain the last working images/configuration. Application rollback is permitted only against a compatible schema; take a verified backup before a destructive migration and define a separate data-restore plan.
+
+## Replay retention and cleanup
+
+Use the proposed ADR-003 policy: 30-day routine event replay, retention through 30 days after required work is terminal, a 90-day deduplication floor after the latest terminal transition/attempt, and no age-based purge of unresolved work or required source bytes. Events older than 30 days require operator review before delivery/replay. Source deletion blocks replay. Audit dependency-aware daily cleanup and monitor database/object growth; a broker queue limit does not cap PostgreSQL backlog. These are proposed operational-event rules, not approval of the final source/audit/privacy retention policy. They do not extend the backup RPO below.
 
 ## Backups and recovery objectives
 

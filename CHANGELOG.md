@@ -10,6 +10,23 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ### Completed on 12 November 2026
 
+- Reviewed PR #3 and inspected markos main d5d46cb: Python 3.13/uv with a
+  read-only knowledge stack and tests, but no event/task/PostgreSQL runtime.
+- Added the proposed v0.3 M0 implementation plan, history-preserving import,
+  concrete source/schema changes, M0.0–M0.7 slices and A01–A20 acceptance matrix.
+- Closed two design gaps: required owner_id in event/inbox/business scope, and
+  application handoff watchdog/channel-close recovery for classic consumers.
+  Updated ADR-003 (1.2), specification (0.3.4), roadmap (1.4), cloud architecture
+  (1.3), navigation and future test guidance. No runtime/import/deployment or
+  test execution occurred; this records documentation review and planning only.
+
+- Prepared a follow-up to merged PR #2 with proposed RabbitMQ 4.4.0, aio-pika 10.2.3 and durable classic
+  queues, concrete single-VM resource/flow guardrails, 30-day routine replay and
+  90-day deduplication floors with unfinished-work holds and deletion gates.
+- Updated ADR-003 (1.1), specification (0.3.3), roadmap (1.3), cloud architecture
+  (1.2) and future test requirements. Sizing remains unmeasured and subject to
+  approval; no limits/retention applied, dependencies installed or deployment run.
+
 - Proposed ADR-003 RabbitMQ Internal Event Bus and updated v0.3 specification
   (0.3.2), roadmap (1.2) and cloud architecture (1.1) for AMQP routing, durable
   handoff, confirms/acks, bounded retries and broker-storage-loss replay.

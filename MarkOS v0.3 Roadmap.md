@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 1.2
+version: 1.4
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -51,6 +51,8 @@ Governance and [[ADR-002 Cloud-first Deployment]]'s DigitalOcean/Docker Compose/
 
 ## Repository transition
 
+The concrete inventory and proposed import are in [[MarkOS v0.3 M0 Implementation Plan]]. Inspection of markos main at `d5d46cbb231e95176a7d052553c176ebe8c805bb` confirms Python 3.13, uv, a read-only DuckDB/FastAPI stack and existing tests; no RabbitMQ/PostgreSQL runtime is present. Preserve that interpreter and all legacy safety gates. The plan defines M0.0–M0.7 slices and A01–A20 tests; no migration has been executed.
+
 1. Review this documentation baseline and settle the architecture conflicts needed for v0.3 M0.
 2. Inspect the separate `markos` repository: branches, unmerged work, package structure, dependencies, tests, licenses and existing CI. Record exact source commits and reusable services in a migration PR.
 3. Choose an import method that preserves commit history and attribution. Map existing paths and commands, keep a recoverable baseline, validate the imported tests, and define rollback before changing the canonical implementation location.
@@ -61,9 +63,9 @@ Governance and [[ADR-002 Cloud-first Deployment]]'s DigitalOcean/Docker Compose/
 
 [[ADR-003 RabbitMQ Internal Event Bus]] proposes RabbitMQ over AMQP 0-9-1 in place of the provisional Mosquitto/MQTT internal bus. MQTT remains optional at a device boundary; Google Cloud Pub/Sub remains the Gmail ingress mechanism. The accepted DigitalOcean VM / Docker Compose / Supabase placement is unchanged. This proposal adds no managed broker or high-availability cluster.
 
-Before v0.3 M0 coding, review broker/client versions, exchange/queue/binding and authorization contracts, queue type, limits/prefetch, retry/quarantine behavior, retention and broker-loss replay. Durable exchanges/queues, persistent messages, confirms with mandatory-return handling and manual acknowledgement after database handoff are required. Separate queues serve independent logical subscribers; replicas of one service share a queue. PostgreSQL retains outbox, per-consumer dispatch/inbox and business-task truth.
+Proposed M0 starting profile: RabbitMQ 4.4.0, aio-pika 10.2.3 and durable classic queues. Plan 4 vCPU / 8 GiB RAM / at least 80 GiB usable SSD, with a 4-GiB broker cap, 2-GiB memory alarm and 10-GiB free-disk alarm. Bound messages at 64 KiB, each queue at 10,000 ready messages or 32 MiB with reject-publish, consumer prefetch at 10 and replay at 10 events/second. Keep 30-day routine replay, a 90-day deduplication floor and dependency holds for unfinished work. [[ADR-003 RabbitMQ Internal Event Bus]] is the detailed profile, including client settings, quotas, age/deletion gates and cleanup semantics; these are proposals, not measured capacity or applied settings. Before v0.3 M0 coding, approve the profile, exchange/queue/binding and authorization contracts, retry/quarantine behavior and broker-loss replay. Durable exchanges/queues, persistent messages, confirms with mandatory-return handling and manual acknowledgement after database handoff are required. Separate queues serve independent logical subscribers; replicas of one service share a queue. PostgreSQL retains outbox, per-consumer dispatch/inbox and business-task truth.
 
-Add synthetic acceptance scenarios to M0: missing routing; lost publisher confirmation and duplicate retry; one subscriber offline; independent fan-out and competing workers; crash after database commit before acknowledgement; bounded poison-message quarantine; restart with persisted broker data; and complete broker-storage loss followed by replay of previously confirmed but unfinished work. Check domain/owner isolation, approval expiry and side-effect suppression throughout. M7 repeats the recovery drill on the approved topology and measures backlog recovery and operational targets. These are required future tests, not completed runtime evidence.
+Add synthetic acceptance scenarios to M0: missing routing; lost publisher confirmation and duplicate retry; one subscriber offline; independent fan-out and competing workers; crash after database commit before acknowledgement; bounded poison-message quarantine; restart with persisted broker data; and complete broker-storage loss followed by replay of previously confirmed but unfinished work. Check domain/owner isolation, approval expiry and side-effect suppression throughout. Add queue-limit partial fan-out, pressure/blocked-publisher recovery and controlled-clock tests at 30/90 days, including pending-work holds, source deletion and backup-RPO limits. Add required owner_id validation and owner-scoped inbox/business keys, plus classic-queue handoff watchdog and saturated-prefetch/channel-close recovery tests from the M0 plan. M7 repeats the recovery drill on the approved topology and measures backlog recovery and operational targets. These are required future tests, not completed runtime evidence.
 
 ## v0.3 delivery sequence
 
@@ -98,7 +100,7 @@ M7 hardens and proves controls first introduced in M0; backups and monitoring ca
 
 ## Decisions still open
 
-- Review the RabbitMQ internal-bus proposal and freeze its M0 transport contract, queue type, versions, resource limits and retention/replay policy. Multi-node quorum or managed hosting is a separate availability/cost decision; one VM is not highly available.
+- Review the concrete RabbitMQ profile in ADR-003: proposed versions, classic queue type, resource/flow limits and 30/90-day replay/deduplication policy. Resolve image digest/dependency lock, locked-client verification on the existing Python 3.13 interpreter, exact domain quotas/permissions, privacy/source retention, cost and capacity evidence before M0/production; choices are proposed rather than unspecified. Multi-node quorum or managed hosting is a separate availability/cost decision; one VM is not highly available.
 
 - Deployment details within accepted cloud baseline: region, sizing, plan/cost, secure networking, recovery targets and operational ownership. Hosting is no longer a local/cloud/hybrid question.
 - Shared knowledge service versus agent-private stores and domain isolation.
@@ -112,6 +114,8 @@ M7 hardens and proves controls first introduced in M0; backups and monitoring ca
 - Confirm intended repository visibility: GitHub reported `public` on inspection, while the prior conversation called it private. Do not store sensitive runtime data or change visibility in this PR.
 
 ## Related
+
+- [[MarkOS v0.3 M0 Implementation Plan]]
 
 - [[ADR-003 RabbitMQ Internal Event Bus]]
 

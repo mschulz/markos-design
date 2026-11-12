@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.2
+version: 0.3.4
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -50,9 +50,9 @@ See [[ADR-002 Cloud-first Deployment]] and [[MarkOS Cloud Deployment Architectur
 
 ## 3. Technology baseline (hosting accepted; other selections provisional)
 
-- Python for service and agent workers; typed schemas and tests.
+- Python 3.13 for service and agent workers, preserving the inspected markos implementation toolchain; typed schemas and tests. See [[MarkOS v0.3 M0 Implementation Plan]] for the source inventory and migration gate.
 
-- RabbitMQ over AMQP 0-9-1 (proposed), durable exchanges/queues, persistent messages, publisher confirms, manual consumer acknowledgements, TLS and per-service permissions. Version, Python client and queue type require M0 review; a single VM provides no broker high availability.
+- RabbitMQ over AMQP 0-9-1 (proposed), durable exchanges/queues, persistent messages, publisher confirms, manual consumer acknowledgements, TLS and per-service permissions. Proposed profile: RabbitMQ 4.4.0, aio-pika 10.2.3 (Python 3.11+), durable classic queues. [[ADR-003 RabbitMQ Internal Event Bus]] defines limits and retention; validate pins/digest and resource sizing in M0. A single VM provides no broker high availability.
 
 - Supabase PostgreSQL (accepted durable operational storage) for users, domains, messages, events, outbox, inbox deduplication, tasks, schedules, run history, leases, Gmail cursors, agents, approvals, conversations, notification attempts, knowledge metadata and audit.
 
@@ -71,13 +71,13 @@ Domains: personal, research, work. Every message, document, event, task, fact an
 
 ## 5. Event contract
 
-Every event includes: event_id (UUID), schema_version, event_type, domain, source, occurred_at (UTC), correlation_id, causation_id, trace_id, payload_ref or bounded payload, sensitivity, and optional expiry. Proposed RabbitMQ topology: one topic exchange `markos.{domain}.events` per domain, routing keys `v1.{category}.{event}` (for example `v1.email.ingested`), and a durable queue per logical subscribing service/domain. Queue names include domain and consumer identity; environments are isolated. Names and permissions must be frozen in the M0 contract. The earlier MQTT topic path is retired for internal traffic; an optional device adapter must explicitly map topics to this event envelope. Versioned schema registry, strict validation, backward compatibility rules and dead-letter handling are required. Events may be delivered more than once; consumers deduplicate by (logical consumer, domain, event_id) and business operation key so independent services each process their copy. No credentials or full sensitive email bodies in broker messages. Validate owner/domain and payload permissions at consumption as well as broker authorization.
+Every event includes: event_id (UUID), schema_version, event_type, owner_id (UUID), domain, source, occurred_at (UTC), correlation_id, causation_id, trace_id, payload_ref or bounded payload, sensitivity, and optional expiry. Proposed RabbitMQ topology: one topic exchange `markos.{domain}.events` per domain, routing keys `v1.{category}.{event}` (for example `v1.email.ingested`), and a durable queue per logical subscribing service/domain. Queue names include domain and consumer identity; environments are isolated. Names and permissions must be frozen in the M0 contract. The earlier MQTT topic path is retired for internal traffic; an optional device adapter must explicitly map topics to this event envelope. Versioned schema registry, strict validation, backward compatibility rules and dead-letter handling are required. Events may be delivered more than once; consumers deduplicate by (logical consumer, owner_id, domain, event_id) and business operation key so independent services each process their copy. No credentials or full sensitive email bodies in broker messages. Validate required owner_id/domain against trusted publisher/service scope and payload/source permissions at consumption as well as broker authorization. Business operation keys are owner/domain scoped.
 
 ### Delivery semantics
 
 PostgreSQL transaction persists domain changes and an outbox entry. Publisher sends persistent messages to RabbitMQ with publisher confirms and mandatory routing; a return, negative confirmation or unknown outcome leaves the entry pending for retry with the same event ID. Mark dispatched only after positive confirmation and no return. Declare required queues/bindings before enabling publishers and audit topology: mandatory routing detects zero matching queues, not a missing member of an expected subscriber set.
 
-Each subscribing service has its own durable queue; workers for the same service compete on that queue. After validation, a consumer transaction commits inbox/dedup and a durable task (or short business result) before manual acknowledgement. A crash before acknowledgement can redeliver; duplicate handling acknowledges only after checking durable state. Long agent work runs from the database task under leases and fencing, with completion recorded separately; broker acknowledgement means durable handoff, not successful LLM execution.
+Each subscribing service has its own durable queue; workers for the same service compete on that queue. After validation, a consumer transaction commits inbox/dedup and a durable task (or short business result) before manual acknowledgement. A crash before acknowledgement can redeliver; duplicate handling acknowledges only after checking durable state. Long agent work runs from the database task under leases and fencing, with completion recorded separately; broker acknowledgement means durable handoff, not successful LLM execution. Classic queues require an application handoff watchdog: 10 seconds active work and 30 seconds total unacknowledged age including semaphore wait. On timeout/uncertain commit, close the dedicated consumer channel without acknowledgement; resolve redelivery from the inbox. See ADR-003 and [[MarkOS v0.3 M0 Implementation Plan]] for database/close budgets and saturation tests.
 
 Database-backed retries use bounded exponential backoff/jitter and preserve operation keys; avoid immediate requeue loops. Persist poison-message diagnostics in a bounded, access-controlled quarantine and route a reference to a review queue/dead-letter exchange. Verify the selected RabbitMQ version/queue type's dead-letter safety; the database record is authoritative if transport fails. A reconciliation worker detects pending outbox, missing per-consumer work and stalled tasks. Retain source events, intended-consumer dispatch records and processing history under an approved retention policy so lost broker storage can be reconstructed, including previously confirmed events. Replay preserves original IDs and suppresses external side effects by default. No exactly-once or global-order guarantee is claimed.
 
@@ -184,7 +184,7 @@ All stages must survive duplicate notifications and service restarts.
 
 ## 15. Decisions awaiting review
 
-RabbitMQ is the proposed internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]. Before M0, review the pinned broker/client versions, exact topology/permissions, durable queue type, prefetch/resource limits, dead-letter safety and replay retention. Keep the accepted single-VM hosting baseline; managed service or multi-node quorum availability requires a separate topology/cost decision.
+RabbitMQ is the proposed internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]. The proposed starting choices are RabbitMQ 4.4.0, aio-pika 10.2.3 and durable classic queues; a 4-vCPU/8-GiB/80-GiB SSD VM planning envelope; a 4-GiB broker memory cap with 2-GiB alarm; 10-GiB disk-free alarm; 64-KiB messages; per-queue 10,000 ready messages/32 MiB with reject-publish; prefetch 10; and 30-day routine replay with a 90-day deduplication floor and holds for unfinished work. See ADR-003 for exact semantics and additional bounds. Before M0, approve these choices, exact topology/permissions, image digest/dependency lock, dead-letter safety and workload validation. Routine replay retention does not change backup RPO or authorize privacy retention. Keep the accepted single-VM hosting baseline; managed service or multi-node quorum availability requires a separate topology/cost decision.
 
 1. Hosting topology and durable operational database are resolved by [[ADR-002 Cloud-first Deployment]]: DigitalOcean VM, Docker Compose and Supabase PostgreSQL. Still review region, sizing, production plan/cost, network controls and recovery targets before provisioning.
 
@@ -201,5 +201,7 @@ RabbitMQ is the proposed internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]
 7. Whether electricity is the first specialist vertical slice or whether another category should precede it.
 
 ## 16. Implementation handoff rules
+
+[[MarkOS v0.3 M0 Implementation Plan]] records the inspected Python 3.13 markos baseline, history-preserving import, required paths/schema changes, ordered PR slices and A01–A20 acceptance tests. It is a proposal; no import or runtime implementation has been performed by this documentation review.
 
 Do not begin implementation until review and milestone approval. Treat the runtime specification as a proposal except for the accepted ADR-002 hosting baseline. This documentation update authorizes no provisioning, spending, deployment or merge. Generate ADRs for unresolved architecture choices, executable acceptance tests for each milestone, API/event contracts before coding, and a migration plan that preserves prior MarkOS design artifacts. Do not touch the Obsidian vault. Keep implementation-ready specifications version-controlled in markos-design.
