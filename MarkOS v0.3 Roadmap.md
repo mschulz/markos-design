@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.1
+version: 2.2
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -47,13 +47,17 @@ Propose `services/runtime/` as a separate project with its own lock and tests. T
 
 | Stage | MCP increment | Gate before advancing |
 |---|---|---|
-| M1 Control plane | Versioned server/grant registry, trusted owner/domain identity, tool gateway contracts, disclosure/effect policy, immutable approval intents and durable audit; synthetic read-only server only | MCP-01–MCP-09: deny by default, scope isolation, safe discovery, disclosure checks, expiry/revocation/one-use approval, egress and credential protections, bounded execution and audit/crash recovery |
-| M2–M4 Integrations and agents | Add a connector only where MCP meets the source permission and recovery contract; classifiers/electricity agents reuse the gateway | Separate reviewed PR per connector; synthetic fixtures and provider compatibility evidence before real-data enablement; Gmail watch/Pub/Sub remains native ingestion |
+| M1 Control plane | Versioned server/grant registry, trusted owner/domain identity, tool gateway contracts, disclosure/effect policy, immutable approval intents and durable audit; synthetic read-only server only | MCP-01–MCP-10 before any real MCP enablement, including connector-specific evidence: deny by default, scope isolation, safe discovery, disclosure checks, expiry/revocation/one-use approval, egress and credential protections, bounded execution and audit/crash recovery |
+| M2–M4 Integrations and agents | Add a connector only where MCP meets the source permission and recovery contract; classifiers/electricity agents reuse the gateway | Separate reviewed PR per connector; MCP-01–MCP-10 with synthetic fixtures and connector-specific interoperability/recovery evidence before real MCP data enablement; Gmail watch/Pub/Sub remains native ingestion |
 | M5 Knowledge | Optional scoped resource retrieval through the same policy gate; resource feature remains disabled until reviewed | Verify provenance, source access, domain separation and disclosure; resource URLs/handles grant no implicit fetch rights |
-| M7 Operations | Scoped credential rotation/revocation, audit backup/deletion/holds and unknown-effect reconciliation drills | MCP-07–MCP-10 with restore/replay/idempotency evidence and MacBook-off cloud operation; approve audit retention independently of event replay windows |
+| M7 Operations | Scoped credential rotation/revocation, audit backup/deletion/holds and unknown-effect reconciliation drills | Repeat and harden MCP-07–MCP-10 already required before real MCP enablement, with restore/replay/idempotency evidence and MacBook-off cloud operation; approve audit retention independently of event replay windows |
 | M8 Expansion | Additional approved servers/tools/features | Explicit grant/schema/version review and connector-specific acceptance; no wildcard access or automatic discovery enablement |
 
 MCP-01–MCP-10 are future acceptance cases in ADR-005, not passing tests in this documentation PR. Start with bounded synthetic reads. Consequential effects and new private-data disclosures require exact human approval; incomplete policy or unavailable approval/audit storage blocks calls. Do not introduce a second approval inbox, agent-owned credential store or per-agent bypass client.
+
+Proposed profile from ADR-005: official `mcp==2.3.0` without CLI extras; authenticated HTTPS Streamable HTTP with protocol 2026-07-28 only; 512 MiB/0.5 CPU aggregate gateway ceiling; two global concurrent attempts/one per agent run; 64 KiB arguments/1 MiB total decoded response; 5-second connect/10-second idle/30-second attempt/60-second total execution and retry budget; ten attempts/minute per owner/domain (burst two), ten attempts/run and 100 global ready calls. One proven-safe read retry, no paid synthetic tools. The implementation must test exact/one-over limits and SDK retry/OAuth behavior before enabling access.
+
+Proposed audit profile: 365-day minimal audit/approval metadata after the latest terminal transition or attempt; seven-day optional sensitive copies after completion/approval expiry; 14-day redacted logs; protected minimal unresolved/held evidence with a 24-hour unresolved alert; daily cleanup and deletion reapplication on restore. Keep the existing 7-daily/4-weekly backup proposal. These are unmeasured proposals requiring review, not configured limits or legal retention requirements. Native non-MCP adapters gain no MCP milestone dependency; M7 drills do not postpone the first-connector safety gate.
 
 ## Immediate plan
 
@@ -67,7 +71,7 @@ MCP-01–MCP-10 are future acceptance cases in ADR-005, not passing tests in thi
 
 - Independent runtime Python version and exact dependency lock; use a supported interpreter tested with selected libraries, rather than inherit the old project automatically.
 - Revalidate RabbitMQ/aio-pika pins and image digest; measure ADR-003's proposed classic queue and resource/flow profile. Review 30/90-day replay/dedup and final source/privacy retention separately.
-- MCP SDK/protocol allowlist and first server, gateway identity/credential placement, tool/data/recipient grants and measured limits, connector reconciliation, audit retention/access/erasure and operational ownership (ADR-005).
+- Approve/revalidate ADR-005’s proposed MCP SDK/protocol, resource and audit-retention profiles; select the first server and gateway identity/credential placement, grants, approval expiry, control-request/non-ready storage limits, connector reconciliation, erasure/holds and operational ownership.
 - Object-storage provider, schema/export/recovery/deletion contracts and backup-erasure handling.
 - Retrieval algorithms/indexes and shared knowledge-service API. Structured knowledge is selected; a specific embedding/vector technology is not implied.
 - Push adapter, model/privacy/budget policy, optional messaging priority, first-workflow details and operational ownership/cost.

@@ -42,6 +42,18 @@ Old source, evaluation results and Git ancestry remain recoverable. The v0.2 gui
 
 To reproduce the archived application's checks in an isolated synthetic environment, use Python 3.13 and uv: `uv sync --locked`, `uv lock --check`, `uv run ruff check .`, `uv run mypy`, `uv run pytest`. These checks protect the archive; they do not select the new architecture or complete M0.
 
+## Documentation checks
+
+The `Documentation checks` GitHub Actions job runs on pull requests and pushes to main. It checks the complete tracked Markdown inventory, required metadata and local links in current/template documents, then whitespace in the change. Historical documents remain inventoried; their old links are not current requirements. External URLs and heading anchors are not verified by this local-path checker. Run it without application dependencies:
+
+```sh
+python3 -B -m unittest discover -s scripts/tests -v
+python3 -B scripts/check_docs.py
+git diff --check
+```
+
+The workflow uses a pinned checkout action, read-only repository permissions, no persisted checkout credentials and no runtime services or deployment. This adds CI, not branch protection; making the check required is a separate repository setting. It does not validate MCP interoperability or complete runtime acceptance.
+
 ## Working agreement
 
 Use focused `codex/` branches and reviewable PRs to main. Keep implementation, acceptance evidence and docs together. No merge, deployment, provisioning or personal-folder migration is authorized by this documentation update. The separate `markos` repository remains untouched; no second active source of truth is introduced.

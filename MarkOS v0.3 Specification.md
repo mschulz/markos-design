@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.7
+version: 0.3.8
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -56,7 +56,7 @@ See [[ADR-002 Cloud-first Deployment]] and [[MarkOS Cloud Deployment Architectur
 
 - Supabase PostgreSQL (accepted durable operational storage) for users, domains, messages, events, outbox, inbox deduplication, tasks, schedules, run history, leases, Gmail cursors, agents, approvals, conversations, notification attempts, knowledge metadata and audit.
 
-- Governed MCP access for agent tools/data is proposed in [[ADR-005 Governed MCP Access for Agents]]. RabbitMQ remains the event bus; MCP does not replace native ingestion adapters. SDK, supported protocol versions and first server require compatibility/security review before implementation.
+- Governed MCP access for agent tools/data is proposed in [[ADR-005 Governed MCP Access for Agents]]. RabbitMQ remains the event bus; MCP does not replace native ingestion adapters. Propose official `mcp==2.3.0` without CLI extras, authenticated HTTPS Streamable HTTP and protocol 2026-07-28 only; independent locking, server compatibility/security review and measured acceptance remain required before enablement.
 
 - Versioned JSON event payloads; object storage for original attachments.
 
@@ -114,6 +114,10 @@ Partition credentials, calls, results, caches and any connection state by owner/
 A read-only call may disclose private data. Standing grants permit only reviewed bounded reads with defined data classes and recipients; new disclosure or consequential effects require human approval bound to an immutable, expiring, one-use call intent. Approval cannot override permissions. Persist authorization/approval consumption and dispatch audit before calls; unavailable policy/audit storage blocks dispatch. Unknown external outcomes require reconciliation, with no blind retries or exactly-once claim. Replay suppresses external effects by default.
 
 PostgreSQL stores scoped intent, approval, dispatch and result/unknown records with redacted provenance and correlation. Agents cannot rewrite audit history. [[ADR-005 Governed MCP Access for Agents]] defines transport/security controls, approval/revocation/retry semantics, audit fields and future MCP-01–MCP-10 acceptance tests. This proposal enables no MCP access and changes no M0 implementation scope.
+
+Proposed single-VM starting profile: aggregate gateway ceiling 512 MiB/0.5 CPU; two concurrent tool attempts globally and one per agent run; 64 KiB arguments/1 MiB cumulative decoded response; 5-second connect, 10-second idle, 30-second attempt and 60-second total execution/retry deadline. Admit ten attempts/minute per owner/domain (burst two), ten attempts/run and at most 100 durable ready calls globally. Permit one proven-safe read retry; no paid synthetic tools. ADR-005 defines precise counting, streaming, authentication and backpressure rules; these values are unmeasured proposals, not active configuration.
+
+Proposed audit retention is 365 days for minimal audit/approval metadata after the latest terminal transition or attempt, seven days for optional sensitive copies after completion/approval expiry, and 14 days for redacted diagnostic logs. Preserve minimal unresolved/held evidence and alert at 24 hours; daily cleanup and restores enforce deletion records. Audit copies do not set canonical source retention. See ADR-005 for holds, privacy deletion and the existing 7-daily/4-weekly backup proposal.
 
 ### Initial agents
 
@@ -185,13 +189,13 @@ All stages must survive duplicate notifications and service restarts.
 ## 14. Milestones and acceptance criteria
 
 **M0 Foundation:** cloud Compose service contracts, Supabase schemas, RabbitMQ contracts, outbox/inbox, worker runtime, persistent scheduling/leases, ACLs, restart/health policies, baseline backups/alerts and tests. Acceptance: duplicates, broker outage, worker restart and overdue schedule recovery preserve durable business results; concurrent claims and bounded catch-up are verified. Test publisher confirm/return handling, lost-confirm retries, independent subscriber delivery, competing workers, crash-before-ack deduplication, poison-message review and recovery after broker storage loss from retained events/dispatch state.
-**M1 Control plane:** authenticated minimal web chat, agent registry, configuration and event activity. Acceptance: inspect agent health and converse with test agent. Add MCP registry, least-privilege policy, immutable approvals and durable audit contracts with a synthetic read-only server; pass MCP-01–MCP-09 before enabling any real connector.
+**M1 Control plane:** authenticated minimal web chat, agent registry, configuration and event activity. Acceptance: inspect agent health and converse with test agent. Add MCP registry, least-privilege policy, immutable approvals and durable audit contracts with a synthetic read-only server; pass MCP-01–MCP-10, including connector-specific interoperability/recovery evidence, before enabling the first real MCP connector. Native Gmail/Pub/Sub and other non-MCP adapters do not depend on MCP acceptance.
 **M2 Gmail bridge:** watch, renewal, history cursor, ingestion and reconciliation. Acceptance: test mail appears once in durable source store and event history.
 **M3 Classification:** confidence-aware routing and manual review. Acceptance: test suite distinguishes bills, ordinary mail and ambiguous cases.
 **M4 Electricity:** extraction, validation, history and reporting. Acceptance: sample bills yield traceable figures and anomaly explanations.
 **M5 Knowledge:** source-linked facts, retrieval, weekly consolidation. Acceptance: facts trace to sources and contradictions are surfaced.
 **M6 Notifications:** push adapter and authenticated deep links. Acceptance: test alert reaches iPhone with appropriate privacy settings.
-**M7 Operations:** CLI, replay, metrics, verified backup/restore, replacement-VM runbook and failure drills. Acceptance: operator recovers an interrupted workflow, measures approved RPO/RTO, verifies independent outage alerts and proves jobs continue with MacBook off. M7 validates and hardens the operational controls introduced in M0; baseline backups/monitoring must precede any production data.
+**M7 Operations:** CLI, replay, metrics, verified backup/restore, replacement-VM runbook and failure drills. Acceptance: operator recovers an interrupted workflow, measures approved RPO/RTO, verifies independent outage alerts and proves jobs continue with MacBook off. M7 repeats and hardens MCP recovery drills already required before real MCP enablement. M7 validates and hardens the operational controls introduced in M0; baseline backups/monitoring must precede any production data.
 **M8 Expansion:** additional agents, integrations and optional messaging. Acceptance: new agent added without modifying existing producers. MCP-enabled agents reuse the governed boundary; each real connector needs scope, disclosure and recovery acceptance, including MCP-10, before enablement.
 
 ## 15. Decisions awaiting review
@@ -212,7 +216,7 @@ RabbitMQ is the selected internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]
 
 7. Whether electricity is the first specialist vertical slice or whether another category should precede it.
 
-8. MCP SDK/protocol compatibility, first server/tool grants, gateway identity/credential placement, measured limits, connector reconciliation and audit retention/erasure remain proposed in [[ADR-005 Governed MCP Access for Agents]].
+8. Approval/revalidation of the MCP SDK/protocol, resource-limit and audit-retention profiles, first server/tool grants, gateway identity/credential placement, measured limits and connector reconciliation/erasure remain proposed in [[ADR-005 Governed MCP Access for Agents]].
 
 ## 16. Implementation handoff rules
 

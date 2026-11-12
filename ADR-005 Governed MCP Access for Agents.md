@@ -2,7 +2,7 @@
 title: ADR-005 Governed MCP Access for Agents
 type: architecture-decision
 status: proposed
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -29,6 +29,24 @@ Add a logical MCP access gateway to the independent runtime's execution/tool bou
 Agents submit typed call intents; they cannot open arbitrary connections, execute server launch commands or hold provider credentials. Broker subscriptions grant no tool access. Existing ChatGPT/Codex connector permissions grant no MarkOS runtime access. Discovery and capability negotiation never automatically enable tools or confer authorization.
 
 The implementation PR must pin a supported SDK and explicit protocol-version allowlist, demonstrate interoperability, and reject unsupported versions/features without weakening policy. The official specification resolved to revision 2026-07-28 when reviewed on 12 November 2026; this is research evidence, not a dependency lock. Initially enable tool calls only. Resource reads need separate scoped grants before use. Prompts, sampling, elicitation, roots, apps, skills, long-running task extensions and other server-initiated/nested operations remain disabled until independently reviewed. MCP task handles never replace MarkOS durable tasks.
+
+### Proposed SDK and execution profile
+
+All choices in this profile remain **proposed**, unmeasured starting values. This PR installs no dependency and applies no runtime configuration. Revalidate release/security status, resolve the independent runtime lock, prove compatibility and measure shared-VM contention in the implementation PR before enablement.
+
+| Area | Proposed choice and semantics |
+|---|---|
+| Python SDK | Official **`mcp==2.3.0`**, without CLI extras; lock transitive dependencies in `services/runtime/`, independently of the archived application |
+| Transport and protocol | Authenticated HTTPS Streamable HTTP; initially allow **2026-07-28** only. Validate server identity/capabilities and compatibility during registration and reconnect; no silent fallback. Stdio and legacy SSE remain deferred |
+| Gateway resource ceiling | **512 MiB RAM, 0.5 CPU** for the logical gateway's aggregate deployment, within the shared 4-vCPU/8-GiB VM envelope. If embedded in another service, account for this budget in that service rather than claim a separate container limit. No local model inference |
+| Concurrent tool attempts | **2 across the VM**, **1 per agent run**; enforce shared admission rather than multiply limits per worker/replica |
+| Payload bounds | **64 KiB serialized arguments; 1 MiB cumulative decoded response per attempt**, including streamed events. Enforce before unbounded buffering/parsing for JSON and SSE, including decompression; an SSE event cap alone is insufficient. Broker messages retain references, not tool payloads |
+| Deadlines | **5-second connection**, **10-second read-idle**, **30-second absolute attempt**, **60-second total execution/retry budget** from first dispatch, including backoff and authentication work; progress must not reset the absolute deadline |
+| Rate/run admission | **10 dispatched attempts/minute per owner/domain**, token-bucket burst **2**; **10 tool attempts per agent run** including retries. Validate budgets before dispatch; discovery/authentication also consume bounded control-request and byte/time budgets within the gateway ceiling |
+| Durable ready backlog | At most **100 ready calls globally**, atomically enforced across replicas. Backpressure/refuse new admissions with an explicit recorded outcome; never discard already-accepted work. Approval wait and unresolved-outcome records are distinct from ready calls and require monitored storage/admission bounds before real use |
+| Retry and cost | At most **one retry for a proven-safe read**, within all attempt/rate/time budgets and after reauthorization. No blind retry of uncertain mutations. Synthetic phase permits **no paid tools**; paid connectors require separately approved monetary ceilings |
+
+SDK behavior is not an authorization boundary. Version 2.3.0 can re-list tools and retry after a `HeaderMismatch`; prevent that automatic path from bypassing grant/schema review, approval, audit or attempt limits. Use a controlled lower-level path if the high-level client cannot gate each wire attempt. A schema change fails closed for review, rather than accepting a newly discovered schema and retrying. The SDK can exclude interactive OAuth waits from request timeouts: the gateway's outer deadline still applies; account onboarding is a separate bounded user workflow, never an unattended tool worker waiting indefinitely. Version pinning alone does not verify a server's identity or capabilities.
 
 ### 2. Permissions and credentials
 
@@ -62,9 +80,23 @@ Audit records include UTC times, trusted principal, owner/domain, agent version,
 
 Use restricted append-only audit writer permissions and separate authorized audit readers; agents cannot rewrite their own history. Administrative repair/deletion must be separately authorized and audited. This is application-level audit integrity, not a claim of cryptographic tamper-proof storage. Backups, restore reconciliation and deletion/holds must include MCP records and payload references. Audit retention, access roles and erasure treatment require owner review before real data; ADR-003's event replay/dedup windows do not automatically set tool-audit retention.
 
+### Proposed audit retention profile
+
+These are engineering proposals for owner review, not a legal retention requirement or an applied deletion policy. Tool audit is separate from ADR-003's 30-day event replay and 90-day deduplication floor.
+
+| Record | Proposed retention |
+|---|---|
+| Minimal audit/approval metadata, operation IDs and terminal outcomes | **365 days after the latest terminal transition or attempt**, whichever is later; never purge records still needed for unresolved work, deduplication or an explicit hold |
+| Optional argument/result copies and sensitive approval previews | **7 days after completion or approval expiry**. Avoid copies where possible; retain only minimal necessary reconciliation evidence for unresolved work under an explicit reviewed hold |
+| Redacted diagnostic logs | **14 days**; no credentials or unrestricted source payloads |
+
+Alert on unresolved outcomes after **24 hours**; retain minimal reconciliation/idempotency evidence until resolved. Holds identify owner, purpose and review/expiry date and require periodic review; they do not justify indefinite retention of full payloads. Expired/rejected/revoked approvals cannot authorize a later call even while their audit metadata remains. Still-active previews require a bounded approval expiry policy before real use.
+
+Run dependency-aware daily cleanup with scoped deletion permissions and an audit record. Purging audit copies must neither delete canonical source evidence nor silently extend source retention. Authorized privacy deletion can supersede routine retention through the explicit deletion workflow; preserve only permitted tombstones that block replay. Keep the cloud proposal of **7 daily and 4 weekly encrypted independent backup copies**; expiry is distinct from live-data deletion. Document managed backup retention before real data. Restores must reapply deletion records and reconcile external outcomes before releasing work, so deleted data is not resurrected into service. Payload encryption, erasure/hold handling, cleanup boundary tests and storage-growth monitoring remain implementation gates.
+
 ## Delivery and acceptance gates
 
-M0 remains the existing independent foundation; this ADR adds no M0 dependency or broker change. M1 introduces registry/policy/approval/audit contracts and a synthetic read-only MCP adapter. Real accounts and consequential tools remain disabled until their connector, isolation, consent and recovery tests pass in separate reviewed PRs. Later agents reuse this boundary; they never implement their own bypass clients. See [[MarkOS v0.3 Roadmap]].
+M0 remains the existing independent foundation; this ADR adds no M0 dependency or broker change. M1 introduces registry/policy/approval/audit contracts and a synthetic read-only MCP adapter. Real MCP accounts and consequential tools remain disabled until MCP-01–MCP-10, including connector-specific interoperability and recovery evidence, pass in separate reviewed PRs before the first real MCP connector. These gates do not block native Gmail/Pub/Sub or other non-MCP adapters. M7 repeats and hardens MCP recovery/operational drills; it is not permission to defer baseline safety until after enablement. Later agents reuse this boundary; they never implement their own bypass clients. See [[MarkOS v0.3 Roadmap]].
 
 These are future implementation tests, not executed evidence from this documentation PR:
 
@@ -75,10 +107,10 @@ These are future implementation tests, not executed evidence from this documenta
 | MCP-03 | Read-only private-data disclosure to an unapproved recipient is blocked; standing grants cover only their exact classified scope. Effect/disclosure uncertainty denies dispatch. |
 | MCP-04 | Approval preview matches immutable intent; changed args/schema/policy, wrong approver, expiry, revocation and replay deny dispatch. Concurrent claims consume approval once. |
 | MCP-05 | OAuth/provider profile tests reject wrong-audience tokens and token passthrough; discovery/redirect/SSRF/rebinding cases cannot leak credentials or reach metadata endpoints. |
-| MCP-06 | Malicious tool descriptions/results cannot enable tools, alter permissions or trigger nested calls; oversized payloads and exhausted timeout/rate/concurrency/cost budgets stop safely. |
+| MCP-06 | Malicious tool descriptions/results cannot enable tools, alter permissions or trigger nested calls. Test exact byte/time/rate/run/backlog/concurrency limits and one-over boundaries, streamed/JSON/compressed oversize responses, slow progress, OAuth waits, SDK hidden retries and multiple replicas; exhaustion stops safely. No paid synthetic tools. |
 | MCP-07 | Unavailable policy/approval/audit database means zero calls. Crash before dispatch and after remote effect/before result commit leaves recoverable evidence; unresolved effects are not blindly retried. |
 | MCP-08 | Verified idempotency/reconciliation prevents duplicate effects across lost responses, lease expiry, cancellation, replay and restore; unsupported providers require human resolution. |
-| MCP-09 | Audit captures allowed/denied/approval/unknown paths with correlation and redaction; agents cannot edit past records or read another scope. Revocation blocks queued/retried calls. |
+| MCP-09 | Audit captures allowed/denied/approval/unknown paths with correlation and redaction; agents cannot edit past records or read another scope. Revocation blocks queued/retried calls. Controlled-clock tests cover 365/7/14-day boundaries, unresolved/hold protection, the 24-hour alert, daily cleanup and deletion reapplication after restore. |
 | MCP-10 | Isolated SDK/server interoperability and cloud recovery demonstrate MCP works with MacBook off; RabbitMQ still carries internal events. No personal folders or legacy imports are required. |
 
 ## Alternatives and consequences
@@ -89,10 +121,10 @@ The gateway concentrates policy and credentials, so its failure must fail closed
 
 ## Unresolved implementation decisions
 
-- Supported SDK/version, tested protocol versions, transport and first synthetic/real server; pin only after compatibility/security checks.
+- Approve/revalidate the proposed SDK and protocol/transport profile, independent dependency lock and first synthetic/real server; compatibility/security evidence remains required.
 - Gateway package/process placement, trusted runtime authentication and scoped credential storage/rotation; no new infrastructure is provisioned here.
-- First tool/source/destination allowlist, data/effect classification, standing-grant policy and measured byte/rate/concurrency/time/cost limits.
-- Connector-specific idempotency/reconciliation evidence, audit retention/access/erasure/holds and operational owner before production use.
+- First tool/source/destination allowlist, data/effect classification, standing-grant/approval-expiry policy and validation of proposed limits, including control-request and non-ready storage bounds.
+- Connector-specific idempotency/reconciliation evidence, approval of proposed retention, audit access/erasure/hold procedures and operational owner before production use.
 
 ## Protocol sources
 
@@ -101,5 +133,8 @@ Reviewed 12 November 2026. These sources describe MCP; the stricter permissions,
 - [MCP specification, revision 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28): protocol roles and negotiated capabilities.
 - [MCP HTTP authorization](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization): transport authorization, distinct from MarkOS action approval.
 - [MCP security best practices](https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices): token, proxy, discovery, egress and local-server risks.
+
+- [Official Python SDK 2.3.0 release](https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.3.0): stable release, schema retry and OAuth timeout behavior.
+- [SDK transport controls](https://py.sdk.modelcontextprotocol.io/client/transports/) and [protocol version selection](https://py.sdk.modelcontextprotocol.io/protocol-versions/): size/timeout coverage and pinning limitations.
 
 Related: [[MarkOS v0.3 Specification]], [[MarkOS v0.3 Roadmap]], [[ADR-0002 GitHub as Canonical Project Record]], [[ADR-003 RabbitMQ Internal Event Bus]].

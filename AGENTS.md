@@ -27,6 +27,6 @@
 ## Validation and data access
 
 - Use synthetic fixtures and isolated services. No personal notes, Gmail accounts, provider calls, production credentials, cloud provisioning or deployment in this correction.
-- Documentation-only changes need link/authority/consistency checks. To verify the archived code was preserved, its existing gate is `uv lock --check`, `uv run ruff check .`, `uv run mypy`, `uv run pytest` in an isolated Python 3.13 uv environment.
+- Documentation-only changes run `python3 -B -m unittest discover -s scripts/tests -v`, `python3 -B scripts/check_docs.py` and `git diff --check`. Keep every tracked Markdown file classified in the authority index; current local links resolve and metadata is complete. The Documentation workflow does not run legacy/runtime dependencies or verify external URLs/anchors. To verify the archived code was preserved, its existing gate is `uv lock --check`, `uv run ruff check .`, `uv run mypy`, `uv run pytest` in an isolated Python 3.13 uv environment.
 - New acceptance must prove independent dependency/import boundaries, strict event/identity validation, atomic event/outbox and inbox/task state, confirms/returns, replay, scheduler recovery and owner/domain isolation against isolated PostgreSQL/RabbitMQ. Legacy checks are not substitutes.
 - Keep consequential effects disabled in M0; approval, privacy, provenance and no secrets in messages/logs remain requirements.

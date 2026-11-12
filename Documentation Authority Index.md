@@ -2,7 +2,7 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.1
+version: 1.2
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -74,4 +74,6 @@ All 29 Markdown documents are classified. Local links in the 19 current/template
 
 ## MCP documentation update
 
-ADR-005 adds a proposed MCP access boundary, leaving the accepted event/data architecture and existing M0 scope intact. The inventory now classifies all 30 Markdown documents. Local links in the 20 current/template documents resolve. This update changes documentation only; source, tests, locks, import manifest and exact archived snapshots are unchanged. Runtime and MCP acceptance tests were not run or implemented by this update. Earlier regression counts above remain historical evidence, not new results.
+ADR-005 adds a proposed MCP access boundary, leaving the accepted event/data architecture and existing M0 scope intact. The inventory now classifies all 30 Markdown documents. Local links in the 20 current/template documents resolve. This update changes architecture documentation and adds isolated documentation-check tooling/tests plus a read-only GitHub Actions workflow; application source, legacy/runtime tests, locks, import manifest and exact archived snapshots are unchanged. Runtime and MCP acceptance tests were not run or implemented by this update. Earlier regression counts above remain historical evidence, not new results.
+
+The proposed SDK/resource/audit profile is specified in ADR-005; first real MCP enablement requires MCP-01–MCP-10, while native adapters remain independent. Documentation CI validates inventory, current metadata/local paths and changed whitespace; synthetic checker tests cover broken/stale/duplicate inventory entries, links, root-scoped wikilinks, path escape and missing metadata. External URLs, heading anchors, MCP interoperability and runtime behavior are outside that check. Branch protection is not modified.
