@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M0 Implementation Plan
 type: implementation-plan
 status: proposed
-version: 2.0
+version: 2.3
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -17,7 +17,19 @@ tags:
 
 Build an independent synthetic event-to-task foundation from [[MarkOS v0.3 Specification]], [[ADR-003 RabbitMQ Internal Event Bus]] and [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]]. The old import/reuse plan is superseded. No PARA note storage, Markdown database, DuckDB, legacy CLI/API/watcher or original dependency lock is a foundation requirement.
 
-This plan proposes concrete next PRs; this correction implements no runtime, merges nothing and deploys nothing. The M0.0 import remains archival evidence. The new slice numbering below replaces the prior import-first sequence; use these names to avoid transferring old completion claims.
+This plan defines reviewable implementation slices. M0-A supplies contracts/configuration, M0-B explicit PostgreSQL storage and M0-C explicit RabbitMQ adapters for review. No runnable business worker service exists, and nothing is merged or deployed by this work. The M0.0 import remains archival evidence. The new slice numbering below replaces the prior import-first sequence; use these names to avoid transferring old completion claims.
+
+## M0-A implementation status
+
+The owner authorized M0-A on 12 November 2026. [[MarkOS v0.3 M0-A Contracts and Configuration]] records its independent implementation and A01–A03 evidence, prepared for review. The acceptance table below remains the full M0 target: M0-A cases have unit/isolation evidence; the later sections record M0-B/M0-C evidence. No database/broker behavior or deployment is implemented by M0-A.
+
+## M0-B implementation status
+
+The owner authorized M0-B after review of PRs #9/#10. [[MarkOS v0.3 M0-B Durable Storage]] records the independent storage/migration/role API and 34 real PostgreSQL integration cases. A04–A05 have database evidence; the M0-C section records subsequent transport evidence. M0-B’s publication fence is a storage primitive, not broker confirmation. The runtime preflight remains validation-only.
+
+## M0-C implementation status
+
+The owner authorized M0-C after PR #11 review/green CI. [[MarkOS v0.3 M0-C RabbitMQ Transport]] records pinned RabbitMQ/aio-pika, live topology/identity checks, confirmed outbox publication, durable retry/review, manual ack after commit and independent watchdog/recovery. A06–A10 have transport evidence from real broker/database CI plus fault-injection unit tests. A11–A20 remain later milestones; broker volume-loss replay, source access and production operations are not completed here.
 
 ## Existing repositories and disposition
 
@@ -47,7 +59,7 @@ The scaffold must run without installing the root project or reading any persona
 |---|---|---|
 | M0-A Independent contracts/config | Own project/lock/entry point; strict event and identity schemas; explicit runtime config and `foundation.noop`; review prior contract ideas | A01–A03; schemas/examples agree; no connection or folder discovery during preflight |
 | M0-B Durable store | Ordered migrations; scoped events/consumer dispatch/outbox/inbox/tasks/results/quarantine; non-admin runtime roles | A04–A05; rollback/uniqueness/isolation and migration checks against isolated PostgreSQL |
-| M0-C RabbitMQ transport | Locked client/image; exchanges, durable classic queues and permissions; publisher/consumer/reconciler/watchdog | A06–A10; real confirms, returns, partial fan-out, commit-before-ack, reconnect and deadline evidence |
+| M0-C RabbitMQ transport | Locked client/image; exchanges, durable classic queues and permissions; publisher/consumer, topology auditor and watchdog | A06–A10; real confirms, returns, partial fan-out, commit-before-ack, reconnect and deadline evidence |
 | M0-D Execution/scheduling | Durable synthetic worker, DB-clock leases/fences/global slots, persistent occurrences, retries and missed-run policy | A11–A13; competing workers, crash recovery, bounded catch-up and stale-owner rejection |
 | M0-E Replay/retention | Retained event/consumer recovery, quarantine, deletion/source-access checks, cleanup and suppressed effects | A14–A16; controlled-clock boundaries and broker-storage-loss recovery |
 | M0-F Lifecycle/CI/closeout | Isolated Compose harness, private health, redacted telemetry, clean-install CI and runbook | A17–A20; process faults, pressure, independent environment and explicit readiness gaps |
@@ -60,7 +72,7 @@ PostgreSQL commits immutable event identity/body hash and intended logical consu
 
 Consumers atomically persist inbox identity `(consumer, owner_id, domain, event_id)` and durable task/result before manual acknowledgement. Same ID with changed body is a conflict; operation keys prevent double application. Long work executes from database tasks, not an unacknowledged broker delivery. Sources are object references; no filesystem or PARA model appears in these contracts.
 
-Use separate migration/runtime roles and tested owner/domain RLS/grants based on trusted service identity. Claims use database time, bounded locks, leases and monotonic fencing. Do not hold transactions open across broker/provider calls. Select and lock a PostgreSQL driver in M0-B; an async Psycopg approach remains a proposal, not inherited code.
+Use separate migration/runtime roles and tested owner/domain RLS/grants based on trusted service identity. Claims use database time, bounded locks, leases and monotonic fencing. Do not hold transactions open across broker/provider calls. M0-B independently locks Psycopg 3.3.8 and pool 3.3.3; the archived driver/dependency graph is not inherited.
 
 ## Transport and operating profile
 
@@ -68,11 +80,11 @@ RabbitMQ is selected; retain ADR-003's proposed AMQP profile until verified: dur
 
 Proposed classic-queue flow: prefetch 10, two handoffs per process, 10-second active and 30-second total delivery-to-ack budget including waiting; 5-second DB statement/1-second lock timeout; close the dedicated channel on timeout/uncertain commit with a 2-second close budget then connection abort. No immediate requeue loop. Quarantine must be durable before acknowledgement. Reconnect must not create overlapping subscriptions.
 
-ADR-003 owns the proposed broker/client pins, resource/queue limits, retention and recovery budget. Recheck support/security, lock/digest and actual library behavior before use. Do not silently turn prior version recommendations into current verified facts.
+ADR-003 owns the proposed broker/client pins, resource/queue limits, retention and recovery budget. M0-C records tested pins and synthetic transport behavior. Recheck support/security before production use; host capacity and retention remain unverified. Do not silently turn prior version recommendations into current verified facts.
 
 ## Acceptance matrix
 
-All new-system cases below remain unexecuted requirements. Unit fakes help prove decisions; real isolated PostgreSQL/RabbitMQ and process fault points must prove persistence, roles, locks and delivery behavior.
+A01–A03 have M0-A evidence; A04–A05 have M0-B PostgreSQL evidence; A06–A10 have M0-C broker/handoff evidence. A11–A20 remain full future requirements, even where a lower-level storage primitive has partial coverage. Unit fakes help prove decisions; real isolated PostgreSQL/RabbitMQ and process fault points must prove persistence, roles, locks and delivery behavior.
 
 | ID | Concrete test/fault | Acceptance |
 |---|---|---|

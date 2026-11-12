@@ -8,13 +8,35 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M0-C RabbitMQ transport prepared for review — 12 November 2026
+
+- Reviewed PR #11’s transaction/identity/migration boundaries and passing CI. Added pinned, independent RabbitMQ transport, live topology/validated identity checks, actual confirms/returns, durable retry/review state, manual ack after commit and independent watchdog/generation recovery.
+- Added additive migration 0002, operational review schema, credential-free broker definitions/profile and required real-broker/database CI. The suite has 194 cases; local RabbitMQ absence skips 11 explicitly. See [[MarkOS v0.3 M0-C RabbitMQ Transport]]. No agent worker, full replay, merge, cloud provisioning or deployment.
+
+### M0-B durable storage prepared for review — 12 November 2026
+
+- Reviewed PRs #9/#10 for the independent architecture; corrected PR #10’s invalid CI runner context, and its corrected hosted workflow passes.
+- Added explicit PostgreSQL storage, ordered checksummed migration, login-bound roles/RLS, atomic event/outbox and inbox/task writes, dedup/conflict quarantine and fenced claims. 145 independent tests include 34 real PostgreSQL cases. See [[MarkOS v0.3 M0-B Durable Storage]]. No RabbitMQ adapter, worker execution, merge, cloud SQL or deployment.
+
+### M0-A implementation prepared for review — 12 November 2026
+
+- Prepared independent M0-A contracts/configuration for review in services/runtime, with a fresh minimal lock, validation-only CLI, synthetic schemas/examples and scoped CI. 104 independent tests and clean-wheel isolation checks pass. Source/manifest trust and unimplemented database/broker guarantees are explicit; see [[MarkOS v0.3 M0-A Contracts and Configuration]]. Archived source, root package/lock and personal data remain unchanged. No merge or deployment.
+
 ### Completed on 12 November 2026
 
-- Corrected ADR-002’s active decision/durability text to RabbitMQ and the settled PostgreSQL/source-object/derived-Markdown authority. Removed the stale open Markdown-authority conflict; hosting placement is unchanged. Documentation only; no merge or deployment.
+- Corrected ADR-002’s active decision/durability text to RabbitMQ and the settled PostgreSQL/source-object/derived-Markdown authority. Removed the stale open Markdown-authority conflict; hosting placement is unchanged. Updated against merged M0-A–M0-C without altering their code or evidence. Documentation only; no PR merge or deployment.
+
 
 - Corrected the architecture baseline after the owner's explicit abandonment of the original design. ADR-004 supersedes PARA/Markdown-canonical/DuckDB/desktop assumptions and legacy-code reuse; RabbitMQ is selected internally and PostgreSQL/source objects own durable state.
 - Updated Vision, specification, roadmap, M0 plan, active contributor/boundary docs and authority labels. Proposed an independent runtime project and acceptance matrix; marked old designs/evaluations/imports as historical. Exact v0.2 snapshots, source code, dependency lock and import manifest remain unchanged.
 - PR #7's naming cleanup and PR #6's contracts are prior work, not the replacement foundation. No runtime, source migration, merge or deployment is performed by this documentation correction.
+
+### M3 rules-first routing specified for review — 12 November 2026
+
+- Updated [[MarkOS v0.3 Specification]] and [[MarkOS v0.3 Roadmap]] to apply reviewed email-routing rules before an interchangeable Jev or LLM classifier. Application code retains owner/domain permissions, agent selection, thresholds and approval control; uncertain/no-match/conflicting cases retain durable review state.
+- Added M3-A–M3-D gates for shared labelled fixtures, adapter contracts, held-out comparison against rules alone, measured accuracy/coverage/cost/latency, and atomic audited dispatch/corrections. No winning provider or numerical threshold is assumed; privacy, budgets and fallback policy require review.
+- Reviewed the M0-A–M0-D branches for integration: isolate the M3 amendment revision/insertion points to preserve M0 versions and review-status text. Explicitly require versioned email contracts/consumer intent, task fencing and provider calls outside broker handoff/database transactions. Freeze thresholds before held-out acceptance; retuning requires fresh acceptance data.
+- Documentation only: no classifier calls, runtime changes, merge, deployment or personal-data access. M0 implementation remains separate.
 
 Earlier entries below describe work at the time; they do not reinstate superseded plans.
 

@@ -11,7 +11,7 @@
 
 - GitHub `markos-design` is canonical for all project artifacts. Space is drafting material. Keep runtime data, personal notes and secrets outside GitHub.
 - Existing `src/markos/`, root package/lock and legacy tests are a preserved archive, not the new runtime base. Do not add v0.3 features there, expose its local API as the new gateway, or make the new runtime depend on it.
-- The proposed independent project is `services/runtime/`, package `markos_runtime`, with its own pyproject, lock, tests and entry point. Select dependencies from v0.3 needs; do not inherit the archived lock or require Python solely because the old application did.
+- M0-A is implemented for review under `services/runtime/`, package `markos_runtime`, with its own pyproject, lock, tests and validation-only entry point. See [[MarkOS v0.3 M0-A Contracts and Configuration]]. Python 3.13 and Pydantic were selected/tested independently; do not inherit the archived root lock. M0-B adds explicit PostgreSQL storage for review; M0-C adds explicit RabbitMQ library adapters for review. The CLI remains validation-only; agent/worker execution and a deployed service lifecycle are not implemented. See [[MarkOS v0.3 M0-B Durable Storage]] and [[MarkOS v0.3 M0-C RabbitMQ Transport]].
 - PR #6 contracts may be evaluated and adapted only with explicit review of their new-system fit. PR #7 is legacy naming work, not a prerequisite. No import/promotion is required to begin the independent design.
 - Preserve source history, exact v0.2 guide/project-memory snapshots and import manifest. Do not delete source or relocate the separate `markos` repository in this correction.
 
@@ -26,5 +26,8 @@
 
 - Use synthetic fixtures and isolated services. No personal notes, Gmail accounts, provider calls, production credentials, cloud provisioning or deployment in this correction.
 - Documentation-only changes need link/authority/consistency checks. To verify the archived code was preserved, its existing gate is `uv lock --check`, `uv run ruff check .`, `uv run mypy`, `uv run pytest` in an isolated Python 3.13 uv environment.
+- Run independent checks from `services/runtime/` with an explicit separate `UV_PROJECT_ENVIRONMENT`: `uv lock --check`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy`, `uv run pytest`, and `uv run python -m markos_runtime.schemas --output-dir ../../config/runtime/schemas`. Preserve the root archive environment.
+- Storage integration needs an explicit dedicated local `MARKOS_TEST_ADMIN_DSN`; it creates/drops synthetic test databases/roles. CI requires these cases. Never point tests at shared/live data. Migrations run only through the explicit migration-role API, never preflight or worker startup.
+- Real broker tests require disposable local RabbitMQ/management endpoints; CI requires both broker and PostgreSQL suites. Runtime identities never configure/bind arbitrary topology; management auditing uses a separate read-only identity. Preserve migration 0001; transport state is additive migration 0002.
 - New acceptance must prove independent dependency/import boundaries, strict event/identity validation, atomic event/outbox and inbox/task state, confirms/returns, replay, scheduler recovery and owner/domain isolation against isolated PostgreSQL/RabbitMQ. Legacy checks are not substitutes.
 - Keep consequential effects disabled in M0; approval, privacy, provenance and no secrets in messages/logs remain requirements.

@@ -6,6 +6,10 @@ RabbitMQ is the internal event bus. Supabase PostgreSQL owns durable events, tas
 
 GitHub is canonical for all project code, tests, infrastructure and documentation; Space is for drafting. Runtime data and secrets never belong here.
 
+M0-A is now prepared for review as an independent contracts/configuration project;
+see [the implementation record](MarkOS%20v0.3%20M0-A%20Contracts%20and%20Configuration.md).
+Its preflight validates synthetic documents only. M0-B adds [explicit PostgreSQL storage](MarkOS%20v0.3%20M0-B%20Durable%20Storage.md) for review; M0-C adds [explicit RabbitMQ transport](MarkOS%20v0.3%20M0-C%20RabbitMQ%20Transport.md) for review. No deployed services or agent/worker execution are implemented.
+
 ## Read first
 
 - [Architecture reset decision](ADR-004%20Event-driven%20Architecture%20Supersedes%20Legacy%20MarkOS.md): accepted replacement of the legacy baseline, evidence and limits.
@@ -18,9 +22,9 @@ GitHub is canonical for all project code, tests, infrastructure and documentatio
 
 ## Implementation status
 
-Main contains the historical v0.2 application imported through PR #5. PR #6's pure contract/config work was merged into an earlier feature branch, not main. PR #7's legacy naming cleanup is not the replacement-system baseline. Neither legacy regression counts nor pure-schema checks establish a working RabbitMQ/PostgreSQL runtime.
+Main contains the historical v0.2 application imported through PR #5. PR #6's pure contract/config work was merged into an earlier feature branch, not main. PR #7 is closed unmerged with its branch retained; its legacy naming cleanup is not the replacement-system baseline. Neither legacy regression counts nor pure-schema checks establish a working RabbitMQ/PostgreSQL runtime.
 
-The new independent runtime is planned under `services/runtime/` with its own package, dependency lock and tests. It is not implemented by this documentation correction. No new runtime may import the old `markos` package or require a Markdown folder, PARA tree or DuckDB.
+The independent M0-A project under `services/runtime/` has its own package, dependency lock, tests and validation-only entry point. It does not import the old `markos` package or require a Markdown folder, PARA tree or DuckDB. PostgreSQL storage primitives are now implemented for review; RabbitMQ transport is now implemented for review; worker execution and full replay/recovery services remain future slices.
 
 ## Repository boundaries
 
@@ -28,8 +32,8 @@ The new independent runtime is planned under `services/runtime/` with its own pa
 |---|---|
 | Root Title Case documents | Current decisions plus explicitly classified historical records |
 | `src/markos/`, root `pyproject.toml` and `uv.lock` | Archived application and its reproducible environment; no new product foundation |
-| `tests/` | Preserved legacy regression tests; new runtime acceptance tests will be independent |
-| `services/runtime/` (planned) | Independent runtime project, package `markos_runtime`, own tests and lock |
+| `tests/` | Preserved legacy regression tests; independent runtime acceptance tests live under services/runtime/tests |
+| `services/runtime/` | Independent contracts/configuration, PostgreSQL storage and M0-C RabbitMQ transport, own tests and lock |
 | `config/`, `infrastructure/` | Versioned schemas/examples and reviewed infrastructure; legacy examples clearly separated |
 | `.github/`, `Templates/` | Review workflow and document template |
 
@@ -41,4 +45,4 @@ To reproduce the archived application's checks in an isolated synthetic environm
 
 ## Working agreement
 
-Use focused `codex/` branches and reviewable PRs to main. Keep implementation, acceptance evidence and docs together. No merge, deployment, provisioning or personal-folder migration is authorized by this documentation update. The separate `markos` repository remains untouched; no second active source of truth is introduced.
+Use focused `codex/` branches and reviewable PRs to main. Keep implementation, acceptance evidence and docs together. No merge, deployment, provisioning or personal-folder migration is performed by this increment. The separate `markos` repository remains untouched; no second active source of truth is introduced.

@@ -1,0 +1,7 @@
+{
+  "broker_version": "4.4.0",
+  "client": "aio-pika==10.2.3",
+  "image": "rabbitmq:4.4.0-management@sha256:7ddb7fd4630026bc84f72760f33629e8c1ef3bb106360fb385fae0dd4ef886f3",
+  "source": "https://hub.docker.com/v2/repositories/library/rabbitmq/tags/4.4.0-management",
+  "status": "synthetic-test-baseline-not-production-readiness"
+}

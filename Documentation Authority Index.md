@@ -2,7 +2,7 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.0
+version: 1.3
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -39,7 +39,7 @@ This table covers every Markdown file in this PR's repository tree, including hi
 | [MarkOS Specification](MarkOS%20Specification.md) | Superseded original design; retained historical content, not instructions |
 | [MarkOS v0.2 Project Memory](MarkOS%20v0.2%20Project%20Memory.md) | Exact archived source snapshot; not applicable agent instructions |
 | [MarkOS v0.2 User Guide](MarkOS%20v0.2%20User%20Guide.md) | Exact archived source snapshot; all instructions and paths non-normative |
-| [MarkOS v0.3 M0 Implementation Plan](MarkOS%20v0.3%20M0%20Implementation%20Plan.md) | Current independent M0-A–M0-F proposal and unexecuted A01–A20 tests |
+| [MarkOS v0.3 M0 Implementation Plan](MarkOS%20v0.3%20M0%20Implementation%20Plan.md) | Current M0-A–M0-F plan; A01–A10 evidence and future A11–A20 acceptance |
 | [MarkOS v0.3 M0.0 Import Record](MarkOS%20v0.3%20M0.0%20Import%20Record.md) | Historical preservation/provenance evidence, not a foundation prerequisite |
 | [MarkOS v0.3 M0.0 Review](MarkOS%20v0.3%20M0.0%20Review.md) | Historical import review, not new-system architecture acceptance |
 | [MarkOS v0.3 Roadmap](MarkOS%20v0.3%20Roadmap.md) | Current delivery proposal; supersedes import-first/reuse path |
@@ -54,6 +54,10 @@ This table covers every Markdown file in this PR's repository tree, including hi
 | [README](infrastructure/README.md) | Current new-runtime infrastructure boundary; no deployment |
 | [README](src/markos/README.md) | Current archive boundary; no new product implementation in legacy package |
 | [README](tests/README.md) | Current distinction between archived regressions and new acceptance |
+| [MarkOS v0.3 M0-A Contracts and Configuration](MarkOS%20v0.3%20M0-A%20Contracts%20and%20Configuration.md) | Current independent M0-A implementation/evidence and explicit limits |
+| [MarkOS v0.3 M0-B Durable Storage](MarkOS%20v0.3%20M0-B%20Durable%20Storage.md) | Current storage implementation, role/migration boundaries and real-database evidence |
+| [MarkOS v0.3 M0-C RabbitMQ Transport](MarkOS%20v0.3%20M0-C%20RabbitMQ%20Transport.md) | Current transport, identity/topology trust and real-broker evidence; later recovery gates explicit |
+| [Independent runtime README](services/runtime/README.md) | Current independent project commands, dependencies and preflight limits |
 
 ## Prior branch documents and PRs
 
@@ -65,8 +69,8 @@ PR #7 is superseded as the foundation route; preserve its code/history for revie
 
 The accessible Agent PubSub chat returned five recent turns and no older cursor. It confirms cloud placement and the GitHub handoff but is not a full transcript. The Space specification supplies the event-driven design and derived-Markdown policy; later instructions replace its MQTT and undecided-hosting text. The owner's present instruction explicitly settles abandonment of the old design. The source Space draft remains unchanged and is not the current canonical specification.
 
-Unsettled implementation choices include source provider/retention, detailed retrieval algorithms, model/push providers, runtime dependency choices and operating cost/recovery evidence. Do not reintroduce the abandoned architecture to fill those gaps.
+Unsettled implementation choices include source provider/retention, detailed retrieval algorithms, model/push providers, remaining agent/provider dependencies and operating cost/recovery evidence. Do not reintroduce the abandoned architecture to fill those gaps.
 
 ## Validation of this correction
 
-All 29 Markdown documents are classified. Local links in the 19 current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. The independent A01–A20 runtime acceptance suite remains unimplemented.
+All 33 Markdown documents are classified. Local links in current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, archived root package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. Independent M0-A/M0-B/M0-C now has 194 tests: 143 unit/boundary, 40 PostgreSQL and 11 broker/database cases, with A01–A10 evidence. Full A11–A20 execution/replay/operations acceptance remains future work. Local broker absence is explicit; required CI runs both services. See [[MarkOS v0.3 M0-A Contracts and Configuration]].
