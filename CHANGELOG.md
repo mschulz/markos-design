@@ -8,6 +8,14 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### PR #15 documentation reconciliation — 12 November 2026
+
+- Reconciled AGENTS, authority-index, roadmap and README with main at `4d06339`, preserving the merged MCP safeguards, rules-first routing and ADR-002 correction alongside M0-D's synthetic execution/scheduling boundary.
+- Incorporated main into the review branch while preserving all original PR #15 commits. Runtime source/tests, locks and migrations are unchanged; M0-E remains a separate PR.
+- Retained the documentation workflow/checker and all 35 inventoried Markdown documents. The pull request remains unmerged; no deployment or real-provider access.
+
+
+
 ### M0-E replay and retention prepared for review — 12 November 2026
 
 - Reviewed PR #15 at `8286870`: no blocking correctness/architecture findings; 256-case CI green. Preserved current main's governed MCP/rules-first routing decisions and the original prerequisite branch.
