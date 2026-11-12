@@ -2,11 +2,12 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.10
+version: 0.3.6
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
 reviewed: 2026-11-12
+m3_routing_revision: 1.1
 tags:
   - architecture
   - governance
@@ -101,13 +102,19 @@ Database-backed retries use bounded exponential backoff/jitter and preserve oper
 
 ### Rules-first email routing (M3)
 
-Use one classification component to decide which registered agent or agents should handle an ingested email. This is a future M3 capability, not a claim that the synthetic M0 runtime already classifies mail. Keep the existing PostgreSQL authority, RabbitMQ transport, independent runtime and owner/domain boundaries.
+Use one classification component to decide which registered agent or agents should handle an ingested email. This is a future M3 capability, not a claim that the synthetic M0 runtime already classifies mail. Keep the existing PostgreSQL authority, RabbitMQ transport, independent runtime and owner/domain boundaries. The `m3_routing_revision` metadata versions this amendment independently of the shared document version, so parallel M0 implementation revisions remain intact.
 
 1. **Establish scope in code.** Resolve owner/domain and permitted source access from trusted ingestion identity. Build candidates from enabled, authorised agent manifests and their declared responsibilities. Email text and model output cannot grant permissions, choose a different owner/domain or enable an agent.
 2. **Apply reviewed rules first.** Version explicit user overrides, policy-approved thread assignments and verified sender plus recognised content/document patterns. A display name, sender address alone or a broad keyword is insufficient. Conflicting rules, changed thread context or missing evidence produce an unresolved outcome; they must not silently use the first match. Use a model only when rules do not establish a reliable assignment, or in a separately configured evaluation/shadow run.
 3. **Evaluate an interchangeable classifier.** Support Jev and an LLM behind the same bounded classification interface. Supply only permitted, minimal email context and approved candidate descriptions. Treat email and attachments as untrusted data, not instructions. Both backends return validated category candidates and explicit applicable, no-match, uncertain or multiple-match outcomes, with available scores and evidence references. Provider/model and question/prompt versions remain attached. Jev need not generate a prose rationale; code can explain a decision from rule IDs, evidence references and typed answers. The contract must preserve each backend's score meaning rather than treating Jev confidence, option probabilities and LLM self-reported confidence as equivalent or calibrated accuracy.
 4. **Accept or escalate in code.** Map categories to permitted agent subscriptions through versioned configuration. Apply per-category acceptance thresholds chosen on tuning examples and validated on the held-out acceptance set, including ambiguity between leading candidates. For Jev, evaluate whether any candidate applies separately from choosing among candidates; a forced choice is not evidence of applicability. Permit multiple assignments only when policy allows and the evidence supports each. Unknown, conflicting or insufficient results go to durable review. At most one configured escalation to a stronger model may gather a second judgment when allowed by privacy, time and cost budgets; repeated agreement is not proof of correctness. Unavailable providers, invalid responses and exhausted budgets leave recoverable review/retry state without a guessed assignment. Privacy denial must not trigger an unapproved provider fallback.
 5. **Persist before dispatch.** Commit the classification decision, approved assignments and outbox entries atomically in PostgreSQL, preserving source/event identity and operation keys. Record the route policy, matched rule IDs, source references, backend/model version, input/question or prompt version, scores, acceptance/review reason and later user correction under access control. Keep raw mail, credentials and hidden reasoning out of broker messages and general logs. Reclassification is explicit and audited; duplicate delivery must not create duplicate agent work. RabbitMQ receives only authorised event types/routing keys through the normal publisher and subscription checks.
+
+#### M0 execution and contract boundary
+
+The open M0 implementation uses the synthetic `foundation.noop.requested` schema, fixed routing key and scoped no-op handoff. It does not implement email categories, classifier providers, a general agent registry or dynamic per-event subscription selection. M3 must add reviewed, versioned email/classification event schemas, exact routing/binding contracts and matching database validation/consumer-intent migrations before dispatching real category-specific work. Category mapping must select approved event types and persist the corresponding intended consumers; it must not merely put arbitrary agent IDs in a payload, broadcast sensitive mail to every registered consumer or relax M0 validation/ACLs. Preserve existing schema versions and synthetic regression coverage.
+
+Classifier network calls execute from durable database tasks under database-clock leases/fences after the handoff transaction commits. The broker handler promptly acknowledges that durable handoff independently; the classifier worker owns no broker delivery and does not wait for business completion to release it. Do not hold a broker delivery or database transaction open while calling a provider, and do not call models inside a scheduler scan. Persist the versioned classification request/input reference before the call; commit the accepted decision and downstream outbox only with a current task fence, policy and source-access check. If a lease expires, a late result cannot dispatch work. An interrupted read-only inference may be repeated within a durable cost/attempt budget, but its output cannot bypass inbox/operation deduplication. Exceeding that budget leaves durable review state. M3 must extend the fixed synthetic executor explicitly; this document does not enable arbitrary handlers, provider calls or consequential effects in M0. Long-running classifier deadlines/lease renewal and shared execution capacity require their own measured M3 contract, rather than inheriting synthetic timeout values blindly.
 
 No classifier may initiate consequential actions or bypass approvals. User corrections are reviewed input to later rule/model changes, not automatic rule promotion. Provider privacy/retention terms, model/version, budgets and numerical thresholds remain decisions for M3 evaluation; this specification selects the architecture, not a winning provider.
 
