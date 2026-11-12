@@ -73,3 +73,7 @@ These are M0-A evidence only. A04–A20 remain unimplemented: no real database t
 ## Next slice
 
 M0-B defines the durable state/migrations and non-admin role model against isolated PostgreSQL. Reconcile event/task/dispatch uniqueness and trusted identity mapping before storage code. M0-C separately verifies and locks broker/client versions and permissions. No M0-A pass promotes the proposed operating profile into production readiness.
+
+## Follow-up CI review
+
+Review of PR #10 found the initial hosted workflow failed before any jobs: its job-level environment referenced `runner.temp`, which is unavailable in that context. The workflow now selects its isolated environment in a run step through `GITHUB_ENV`, where `RUNNER_TEMP` is available. This changes CI configuration only; subsequent hosted results must be checked separately. PR #9’s ADR-002 correction is consistent with the new architecture.
