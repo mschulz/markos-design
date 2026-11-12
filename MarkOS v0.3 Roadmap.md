@@ -64,7 +64,11 @@ M0-C is merged through PR #12 and adds pinned RabbitMQ/aio-pika library transpor
 confirms/mandatory returns, durable backoff/review outboxes and generation-fenced
 consumer recovery with independent watchdogs. The required suite has 194 cases,
 including 11 real broker/database cases. See [[MarkOS v0.3 M0-C RabbitMQ Transport]].
-No agent worker, full broker-loss replay or production deployment is delivered.
+That transport slice delivers no agent worker, full broker-loss replay or production deployment.
+
+## M0-D review status
+
+[[MarkOS v0.3 M0-D Execution and Scheduling]] adds a fixed no-op worker, DB-clock leases/fencing and a global two-lease budget, durable attempts/retry/review and atomic interval/daily scheduling. Missed policies, timezone/DST, versions and controls are explicit/audited. The required 256-case suite includes 12 broker/database cases. Real agents/tools/approval expiry, retained-event replay and the deployed lifecycle remain later gates.
 
 ## Governed MCP access proposal
 
@@ -86,7 +90,7 @@ Proposed audit profile: 365-day minimal audit/approval metadata after the latest
 
 ## Immediate plan
 
-1. Review this architecture correction and retire PR #7 as a foundation path; preserve all history.
+1. Retain the accepted architecture correction; PR #7 is closed unmerged and its reference branch/history is preserved.
 2. Preserve merged M0-A–M0-C and their independent contracts, isolation and database/broker evidence; no automatic promotion of old PR #6/#7.
 3. Review M0-D execution/scheduling separately, then implement M0-E replay/retention and M0-F lifecycle evidence in separate PRs.
 4. Gather actual broker/database fault evidence before declaring M0 complete. Only then advance gateway and Gmail work.
