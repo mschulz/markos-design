@@ -9,7 +9,7 @@ from pathlib import Path
 def test_runtime_dependency_set_excludes_archive() -> None:
     requirements = importlib.metadata.requires("markos-runtime") or []
     assert any(r.startswith("pydantic==") for r in requirements)
-    forbidden = {"markos", "duckdb", "fastapi", "markdown-it-py", "aio-pika"}
+    forbidden = {"markos", "duckdb", "fastapi", "markdown-it-py"}
     installed = {
         d.metadata["Name"].lower().replace("_", "-") for d in importlib.metadata.distributions()
     }
@@ -91,7 +91,7 @@ def test_schemas_and_examples_match() -> None:
     config, manifest = load_config(examples / "runtime.example.toml", {})
     event = EventEnvelope.from_wire((examples / "noop.example.json").read_bytes())
     manifest.authorize_publish(event, config.service_id)
-    assert len(artifacts()) == 4
+    assert len(artifacts()) == 5
     schema = json.loads(artifacts()["event.schema.json"])
     assert schema["additionalProperties"] is False
     assert "causation_id" in schema["required"]
