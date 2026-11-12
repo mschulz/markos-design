@@ -318,7 +318,7 @@ def test_database_failure_does_not_run_handler(database: dict[str, str]) -> None
         await seed(database)
         with psycopg.connect(database["admin"], autocommit=True) as admin:
             admin.execute(
-                "REVOKE EXECUTE ON FUNCTION markos_runtime.claim_task(uuid,integer) FROM "
+                "REVOKE EXECUTE ON FUNCTION markos_runtime.claim_task_epoch(uuid,integer) FROM "
                 "markos_runtime_client"
             )
         async with DurableStore.connect(database["consumer"]) as store:
@@ -378,7 +378,7 @@ def test_finalization_database_failure_never_records_uncommitted_success(
         with psycopg.connect(database["admin"], autocommit=True) as conn:
             conn.execute(
                 "REVOKE EXECUTE ON FUNCTION "
-                "markos_runtime.finish_task(uuid,bigint,uuid,text,integer) "
+                "markos_runtime.finish_task_epoch(uuid,bigint,uuid,text,integer,uuid) "
                 "FROM markos_runtime_client"
             )
         async with DurableStore.connect(database["consumer"]) as store:
@@ -388,7 +388,7 @@ def test_finalization_database_failure_never_records_uncommitted_success(
             with psycopg.connect(database["admin"], autocommit=True) as conn:
                 conn.execute(
                     "GRANT EXECUTE ON FUNCTION "
-                    "markos_runtime.finish_task(uuid,bigint,uuid,text,integer) "
+                    "markos_runtime.finish_task_epoch(uuid,bigint,uuid,text,integer,uuid) "
                     "TO markos_runtime_client"
                 )
             expire(database)

@@ -43,6 +43,7 @@ class OutboxClaim:
     fence: int
     attempts: int = 0
     consumers: tuple[str, ...] = ()
+    epoch: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,7 @@ class ReviewClaim:
     reference: ReviewReference
     fence: int
     attempts: int
+    epoch: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -68,6 +70,7 @@ class TaskClaim:
     fence: int
     attempt: int
     lease_until: datetime
+    epoch: UUID | None = None
 
 
 class _SafeConnection(psycopg.AsyncConnection[Row]):
@@ -173,7 +176,7 @@ class DurableStore:
             raise StorageError("invalid claim budget")
         async with self._transaction() as connection:
             cursor = await connection.execute(
-                "SELECT * FROM markos_runtime.claim_outbox(%s,%s)", (limit, lease_seconds)
+                "SELECT * FROM markos_runtime.claim_outbox_epoch(%s,%s)", (limit, lease_seconds)
             )
             rows = await cursor.fetchall()
             return tuple(
@@ -183,17 +186,19 @@ class DurableStore:
                     row["fence"],
                     row["attempts"],
                     tuple(row["consumers"]),
+                    row["epoch"],
                 )
                 for row in rows
             )
 
-    async def record_publication(self, event_id: UUID, fence: int) -> bool:
+    async def record_publication(self, event_id: UUID, fence: int, *, epoch: UUID | None) -> bool:
         """Future publisher calls only after positive confirm/no return; no AMQP here."""
         if type(fence) is not int or fence < 1:
             raise StorageError("invalid publication fence")
         async with self._transaction() as connection:
             cursor = await connection.execute(
-                "SELECT markos_runtime.record_publication(%s,%s) AS recorded", (event_id, fence)
+                "SELECT markos_runtime.record_publication_epoch(%s,%s,%s) AS recorded",
+                (event_id, fence, epoch),
             )
             row = await cursor.fetchone()
             assert row is not None
@@ -218,8 +223,8 @@ class DurableStore:
         async with self._transaction() as connection:
             row = await (
                 await connection.execute(
-                    "SELECT markos_runtime.retry_outbox(%s,%s,%s,%s) AS ok",
-                    (claim.event_id, claim.fence, delay, code),
+                    "SELECT markos_runtime.retry_outbox_epoch(%s,%s,%s,%s,%s) AS ok",
+                    (claim.event_id, claim.fence, delay, code, claim.epoch),
                 )
             ).fetchone()
             assert row is not None
@@ -240,7 +245,7 @@ class DurableStore:
         async with self._transaction() as connection:
             rows = await (
                 await connection.execute(
-                    "SELECT * FROM markos_runtime.claim_reviews(%s,60)", (limit,)
+                    "SELECT * FROM markos_runtime.claim_reviews_epoch(%s,60)", (limit,)
                 )
             ).fetchall()
             return tuple(
@@ -255,6 +260,7 @@ class DurableStore:
                     ),
                     row["fence"],
                     row["attempts"],
+                    row["epoch"],
                 )
                 for row in rows
             )
@@ -263,8 +269,8 @@ class DurableStore:
         async with self._transaction() as connection:
             row = await (
                 await connection.execute(
-                    "SELECT markos_runtime.finish_review(%s,%s,%s) AS ok",
-                    (claim.reference.review_id, claim.fence, delay),
+                    "SELECT markos_runtime.finish_review_epoch(%s,%s,%s,%s) AS ok",
+                    (claim.reference.review_id, claim.fence, delay, claim.epoch),
                 )
             ).fetchone()
             assert row is not None
@@ -274,8 +280,8 @@ class DurableStore:
         async with self._transaction() as connection:
             row = await (
                 await connection.execute(
-                    "SELECT markos_runtime.hold_for_review(%s,%s,%s) AS ok",
-                    (claim.event_id, claim.fence, reason),
+                    "SELECT markos_runtime.hold_for_review_epoch(%s,%s,%s,%s) AS ok",
+                    (claim.event_id, claim.fence, reason, claim.epoch),
                 )
             ).fetchone()
             assert row is not None
@@ -287,7 +293,8 @@ class DurableStore:
         async with self._transaction() as connection:
             row = await (
                 await connection.execute(
-                    "SELECT * FROM markos_runtime.claim_task(%s,%s)", (executor_id, lease_seconds)
+                    "SELECT * FROM markos_runtime.claim_task_epoch(%s,%s)",
+                    (executor_id, lease_seconds),
                 )
             ).fetchone()
             if row is None:
@@ -298,6 +305,7 @@ class DurableStore:
                 row["fence"],
                 row["attempt"],
                 row["lease_until"],
+                row["epoch"],
             )
 
     async def finish_task(
@@ -306,8 +314,8 @@ class DurableStore:
         async with self._transaction() as connection:
             row = await (
                 await connection.execute(
-                    "SELECT markos_runtime.finish_task(%s,%s,%s,%s,%s) AS ok",
-                    (claim.task_id, claim.fence, executor_id, failure, delay),
+                    "SELECT markos_runtime.finish_task_epoch(%s,%s,%s,%s,%s,%s) AS ok",
+                    (claim.task_id, claim.fence, executor_id, failure, delay, claim.epoch),
                 )
             ).fetchone()
             assert row is not None
@@ -319,19 +327,37 @@ class DurableStore:
         async with self._transaction() as connection:
             row = await (
                 await connection.execute(
-                    "SELECT markos_runtime.renew_task(%s,%s,%s,%s) AS ok",
-                    (claim.task_id, claim.fence, executor_id, seconds),
+                    "SELECT markos_runtime.renew_task_epoch(%s,%s,%s,%s,%s) AS ok",
+                    (claim.task_id, claim.fence, executor_id, seconds, claim.epoch),
                 )
             ).fetchone()
             assert row is not None
             return bool(row["ok"])
 
-    async def authorize_publication(self, event_id: UUID, fence: int) -> bool:
+    async def authorize_publication(
+        self, event_id: UUID, fence: int, *, epoch: UUID | None
+    ) -> bool:
         async with self._transaction() as connection:
             row = await (
                 await connection.execute(
-                    "SELECT markos_runtime.authorize_publication(%s,%s) AS ok", (event_id, fence)
+                    "SELECT markos_runtime.authorize_publication_epoch(%s,%s,%s) AS ok",
+                    (event_id, fence, epoch),
                 )
             ).fetchone()
             assert row is not None
             return bool(row["ok"])
+
+    async def current_epoch(self) -> UUID:
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute("SELECT markos_runtime.current_epoch() AS epoch")
+            ).fetchone()
+            assert row is not None
+            return cast(UUID, row["epoch"])
+
+    async def heartbeat(self, component: str, instance_id: UUID, epoch: UUID, status: str) -> None:
+        async with self._transaction() as connection:
+            await connection.execute(
+                "SELECT markos_runtime.heartbeat(%s,%s,%s,%s)",
+                (component, instance_id, epoch, status),
+            )

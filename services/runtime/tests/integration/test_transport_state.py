@@ -27,7 +27,9 @@ def test_retry_delay_and_original_identity_are_durable(database: dict[str, str])
                 and second.attempts == 1
                 and second.fence > first.fence
             )
-            assert not await store.record_publication(first.event_id, first.fence)
+            assert not await store.record_publication(
+                first.event_id, first.fence, epoch=first.epoch
+            )
 
     asyncio.run(scenario())
 

@@ -74,10 +74,10 @@ class FakeStore:
     async def claim_outbox(self, **kwargs: object) -> tuple[OutboxClaim, ...]:
         return self.claims
 
-    async def authorize_publication(self, eid: UUID, fence: int) -> bool:
+    async def authorize_publication(self, eid: UUID, fence: int, *, epoch: UUID | None) -> bool:
         return True
 
-    async def record_publication(self, eid: UUID, fence: int) -> bool:
+    async def record_publication(self, eid: UUID, fence: int, *, epoch: UUID | None) -> bool:
         self.trace.append("publication-commit")
         return True
 
