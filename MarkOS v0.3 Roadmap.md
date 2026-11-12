@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.3
+version: 2.4
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -22,9 +22,9 @@ Accepted direction: cloud-first DigitalOcean / Compose, Supabase durable operati
 
 ## Repository and prior work
 
-Use `markos-design` for code, tests, infrastructure and docs together. Leave `markos` untouched. M0.0 import history is archived; preserving it was not approval to build on it. PR #6's contract/config artifacts and PR #7's naming cleanup are prior review material, not automatic prerequisites. Main still contains the legacy application; the independent new runtime is not delivered.
+Use `markos-design` for code, tests, infrastructure and docs together. Leave `markos` untouched. M0.0 import history is archived; preserving it was not approval to build on it. PR #6's contract/config artifacts and PR #7's naming cleanup are prior review material, not automatic prerequisites. Main preserves the legacy application and now includes merged independent M0-A–M0-C contracts, storage and transport. This is not a deployed runtime or M0 completion.
 
-Propose `services/runtime/` as a separate project with its own lock and tests. The first gate forbids imports/dependencies on the old package, DuckDB or note-tree configuration. No bulk deletion or code relocation occurs in this documentation PR.
+`services/runtime/` is a separate project with its own lock and tests. The first gate forbids imports/dependencies on the old package, DuckDB or note-tree configuration. No bulk deletion or code relocation occurs in this documentation PR.
 
 ## Delivery sequence
 
@@ -42,42 +42,61 @@ Propose `services/runtime/` as a separate project with its own lock and tests. T
 
 [[MarkOS v0.3 M0 Implementation Plan]] breaks M0 into reviewable slices and acceptance cases. Old M0–M16 completion records do not transfer to this sequence. Baseline backup/monitoring design belongs in M0 before real data; M7 proves and hardens it.
 
-## M0-A review status
+## M0-A merged status
 
-M0-A contracts/configuration are implemented on an independent review branch,
+M0-A contracts/configuration are merged through PR #10,
 with 104 tests, its own lock/CLI, schemas/examples and a clean-wheel isolation
 check. See [[MarkOS v0.3 M0-A Contracts and Configuration]]. This does not deliver
 M0-B–M0-F or any runtime service. PR #7 is closed unmerged; its branch is retained.
 
-## M0-B review status
+## M0-B merged status
 
-M0-B adds explicit PostgreSQL events/outbox/consumer intent, atomic inbox/task
+M0-B is merged through PR #11 and adds explicit PostgreSQL events/outbox/consumer intent, atomic inbox/task
 handoff, bounded conflict quarantine, scoped roles/RLS and fenced outbox claims.
 Its 34 real PostgreSQL cases bring the independent suite to 145 tests. See
 [[MarkOS v0.3 M0-B Durable Storage]]. This is not a live RabbitMQ worker or M0
 completion. PR #10’s CI context error is fixed and its corrected hosted run passes;
 PR #9 remains the separate, consistent ADR-002 correction.
 
-## M0-C review status
+## M0-C merged status
 
-M0-C adds pinned RabbitMQ/aio-pika library transport, exact live topology audit,
+M0-C is merged through PR #12 and adds pinned RabbitMQ/aio-pika library transport, exact live topology audit,
 confirms/mandatory returns, durable backoff/review outboxes and generation-fenced
 consumer recovery with independent watchdogs. The required suite has 194 cases,
 including 11 real broker/database cases. See [[MarkOS v0.3 M0-C RabbitMQ Transport]].
 No agent worker, full broker-loss replay or production deployment is delivered.
 
+## Governed MCP access proposal
+
+[[ADR-005 Governed MCP Access for Agents]] adds a tool/data integration boundary, not a replacement event bus. RabbitMQ, PostgreSQL authority, source objects, derived Markdown and the independent runtime remain unchanged. This documentation adds no M0 dependency, implements no MCP client and enables no personal account, credential or server. Merged M0-A–M0-C contracts/storage/transport and their acceptance evidence remain intact; later M0 slices remain separate review units. No MCP implementation is added to those slices.
+
+| Stage | MCP increment | Gate before advancing |
+|---|---|---|
+| M1 Control plane | Versioned server/grant registry, trusted owner/domain identity, tool gateway contracts, disclosure/effect policy, immutable approval intents and durable audit; synthetic read-only server only | MCP-01–MCP-10 before any real MCP enablement, including connector-specific evidence: deny by default, scope isolation, safe discovery, disclosure checks, expiry/revocation/one-use approval, egress and credential protections, bounded execution and audit/crash recovery |
+| M2–M4 Integrations and agents | Add a connector only where MCP meets the source permission and recovery contract; classifiers/electricity agents reuse the gateway | Separate reviewed PR per connector; MCP-01–MCP-10 with synthetic fixtures and connector-specific interoperability/recovery evidence before real MCP data enablement; Gmail watch/Pub/Sub remains native ingestion |
+| M5 Knowledge | Optional scoped resource retrieval through the same policy gate; resource feature remains disabled until reviewed | Verify provenance, source access, domain separation and disclosure; resource URLs/handles grant no implicit fetch rights |
+| M7 Operations | Scoped credential rotation/revocation, audit backup/deletion/holds and unknown-effect reconciliation drills | Repeat and harden MCP-07–MCP-10 already required before real MCP enablement, with restore/replay/idempotency evidence and MacBook-off cloud operation; approve audit retention independently of event replay windows |
+| M8 Expansion | Additional approved servers/tools/features | Explicit grant/schema/version review and connector-specific acceptance; no wildcard access or automatic discovery enablement |
+
+MCP-01–MCP-10 are future acceptance cases in ADR-005, not passing tests in this documentation PR. Start with bounded synthetic reads. Consequential effects and new private-data disclosures require exact human approval; incomplete policy or unavailable approval/audit storage blocks calls. Do not introduce a second approval inbox, agent-owned credential store or per-agent bypass client.
+
+Proposed profile from ADR-005: official `mcp==2.3.0` without CLI extras; authenticated HTTPS Streamable HTTP with protocol 2026-07-28 only; 512 MiB/0.5 CPU aggregate gateway ceiling; two global concurrent attempts/one per agent run; 64 KiB arguments/1 MiB total decoded response; 5-second connect/10-second idle/30-second attempt/60-second total execution and retry budget; ten attempts/minute per owner/domain (burst two), ten attempts/run and 100 global ready calls. One proven-safe read retry, no paid synthetic tools. The implementation must test exact/one-over limits and SDK retry/OAuth behavior before enabling access.
+
+Proposed audit profile: 365-day minimal audit/approval metadata after the latest terminal transition or attempt; seven-day optional sensitive copies after completion/approval expiry; 14-day redacted logs; protected minimal unresolved/held evidence with a 24-hour unresolved alert; daily cleanup and deletion reapplication on restore. Keep the existing 7-daily/4-weekly backup proposal. These are unmeasured proposals requiring review, not configured limits or legal retention requirements. Native non-MCP adapters gain no MCP milestone dependency; M7 drills do not postpone the first-connector safety gate.
+
 ## Immediate plan
 
 1. Review this architecture correction and retire PR #7 as a foundation path; preserve all history.
-2. Review the independent M0-A scaffold/contracts/configuration PR and its candidate-fit and isolation evidence. Review M0-B persistence next; no automatic merge or promotion of old PR #6/#7.
-3. Review M0-B/M0-C storage and transport, then implement M0-D execution/scheduling, M0-E replay/retention and M0-F lifecycle evidence in separate PRs.
+2. Preserve merged M0-A–M0-C and their independent contracts, isolation and database/broker evidence; no automatic promotion of old PR #6/#7.
+3. Review M0-D execution/scheduling separately, then implement M0-E replay/retention and M0-F lifecycle evidence in separate PRs.
 4. Gather actual broker/database fault evidence before declaring M0 complete. Only then advance gateway and Gmail work.
 5. Before provisioning, review provider plans, region, cost, network/security, retention, monitoring and recovery targets. Deployment requires separate authorization.
 
 ## Open implementation decisions
 
-- Independent runtime Python version and exact dependency lock; use a supported interpreter tested with selected libraries, rather than inherit the old project automatically.
+- Preserve the independently tested M0-A–M0-C interpreter/lock baseline; select remaining agent/provider/MCP dependencies through reviewed PRs, without inheriting the archived project.
 - Revalidate RabbitMQ/aio-pika pins and image digest; measure ADR-003's proposed classic queue and resource/flow profile. Review 30/90-day replay/dedup and final source/privacy retention separately.
+- Approve/revalidate ADR-005’s proposed MCP SDK/protocol, resource and audit-retention profiles; select the first server and gateway identity/credential placement, grants, approval expiry, control-request/non-ready storage limits, connector reconciliation, erasure/holds and operational ownership.
 - Object-storage provider, schema/export/recovery/deletion contracts and backup-erasure handling.
 - Retrieval algorithms/indexes and shared knowledge-service API. Structured knowledge is selected; a specific embedding/vector technology is not implied.
 - Push adapter, model/privacy/budget policy, optional messaging priority, first-workflow details and operational ownership/cost.

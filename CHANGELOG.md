@@ -22,6 +22,15 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 - Prepared independent M0-A contracts/configuration for review in services/runtime, with a fresh minimal lock, validation-only CLI, synthetic schemas/examples and scoped CI. 104 independent tests and clean-wheel isolation checks pass. Source/manifest trust and unimplemented database/broker guarantees are explicit; see [[MarkOS v0.3 M0-A Contracts and Configuration]]. Archived source, root package/lock and personal data remain unchanged. No merge or deployment.
 
+### Agent MCP access proposed on 12 November 2026
+
+- Added ADR-005 and specification/roadmap gates for governed agent MCP tools: explicit grants, owner/domain isolation, scoped disclosure/effect approvals, durable audit and unknown-outcome reconciliation. RabbitMQ remains the internal bus.
+- Added future MCP-01–MCP-10 acceptance cases and phased synthetic-first delivery from M1; existing M0 scope is unchanged. SDK/server selection, measured limits and audit retention remain review decisions.
+- Updated navigation, contributor guidance and the documentation inventory. No runtime feature, dependency, credential, server, merge or deployment is enabled.
+- Kept proposed ADR-005 profile: official `mcp==2.3.0`, HTTPS/protocol 2026-07-28, bounded shared-VM resources/attempts/payloads/deadlines and 365/7/14-day audit/copy/log retention. Documented SDK hidden-retry/OAuth/streaming controls, holds and deletion-safe restore requirements.
+- Reconciled latest main, preserving merged M0-A–M0-C and M3 routing. Specified task-fenced gateway dispatch outside broker callbacks/transactions, nested execution/tool capacity, durable approval waits and unchanged native classifier independence; no runtime code or dependency changes.
+- Clarified that MCP-01–MCP-10 precede real MCP enablement; native adapters are independent and M7 repeats operational drills. Added a read-only documentation CI workflow, dependency-free inventory/metadata/local-link checker and synthetic failure tests. The workflow makes no runtime acceptance claim and changes no branch protection.
+
 ### Completed on 12 November 2026
 
 - Corrected ADR-002’s active decision/durability text to RabbitMQ and the settled PostgreSQL/source-object/derived-Markdown authority. Removed the stale open Markdown-authority conflict; hosting placement is unchanged. Updated against merged M0-A–M0-C without altering their code or evidence. Documentation only; no PR merge or deployment.

@@ -2,7 +2,7 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.3
+version: 1.4
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -30,6 +30,7 @@ This table covers every Markdown file in this PR's repository tree, including hi
 | [ADR-002 Cloud-first Deployment](ADR-002%20Cloud-first%20Deployment.md) | Accepted placement; earlier MQTT wording amended by ADR-003 |
 | [ADR-003 RabbitMQ Internal Event Bus](ADR-003%20RabbitMQ%20Internal%20Event%20Bus.md) | Selected RabbitMQ transport; exact operating profile remains proposed |
 | [ADR-004 Event-driven Architecture Supersedes Legacy MarkOS](ADR-004%20Event-driven%20Architecture%20Supersedes%20Legacy%20MarkOS.md) | Accepted owner decision: replacement architecture and independent runtime |
+| [ADR-005 Governed MCP Access for Agents](ADR-005%20Governed%20MCP%20Access%20for%20Agents.md) | Proposed agent tool integration boundary, permissions/isolation/approvals/audit and future MCP acceptance gates; no runtime enablement |
 | [AGENTS](AGENTS.md) | Current agent instructions; overrides historical project memory |
 | [CHANGELOG](CHANGELOG.md) | Chronological evidence; earlier accepted plans may now be superseded |
 | [CLAUDE](CLAUDE.md) | Current pointer to shared instructions |
@@ -71,6 +72,12 @@ The accessible Agent PubSub chat returned five recent turns and no older cursor.
 
 Unsettled implementation choices include source provider/retention, detailed retrieval algorithms, model/push providers, remaining agent/provider dependencies and operating cost/recovery evidence. Do not reintroduce the abandoned architecture to fill those gaps.
 
-## Validation of this correction
+## Validation and retained M0 evidence
 
-All 33 Markdown documents are classified. Local links in current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, archived root package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. Independent M0-A/M0-B/M0-C now has 194 tests: 143 unit/boundary, 40 PostgreSQL and 11 broker/database cases, with A01–A10 evidence. Full A11–A20 execution/replay/operations acceptance remains future work. Local broker absence is explicit; required CI runs both services. See [[MarkOS v0.3 M0-A Contracts and Configuration]].
+All 34 Markdown documents are classified. Local links in current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, archived root package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. Independent M0-A/M0-B/M0-C now has 194 tests: 143 unit/boundary, 40 PostgreSQL and 11 broker/database cases, with A01–A10 evidence. Full A11–A20 execution/replay/operations acceptance remains future work. Local broker absence is explicit; required CI runs both services. See [[MarkOS v0.3 M0-A Contracts and Configuration]].
+
+## MCP documentation update
+
+ADR-005 adds a proposed MCP access boundary, leaving the accepted event/data architecture and existing M0 scope intact. The combined inventory now classifies all 34 Markdown documents. The documentation gate checks current/template metadata and local links. This update changes architecture documentation and adds isolated documentation-check tooling/tests plus a read-only GitHub Actions workflow; application source, legacy/runtime tests, locks, import manifest and exact archived snapshots are unchanged. MCP acceptance tests are not implemented or run by this update. The merged M0-A–M0-C implementation/evidence above remains intact; this PR does not change its runtime code or locks. Earlier regression counts above remain historical evidence, not new results.
+
+The proposed SDK/resource/audit profile is specified in ADR-005; first real MCP enablement requires MCP-01–MCP-10, while native adapters remain independent. Documentation CI validates inventory, current metadata/local paths and changed whitespace; synthetic checker tests cover broken/stale/duplicate inventory entries, links, root-scoped wikilinks, path escape and missing metadata. External URLs, heading anchors, MCP interoperability and runtime behavior are outside that check. Branch protection is not modified.
