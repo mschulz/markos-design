@@ -103,7 +103,7 @@ class Harness:
                 username,
                 data={
                     "password": "synthetic-test-only",
-                    "tags": "monitoring" if role == "observer" else "",
+                    "tags": "management" if role == "observer" else "",
                 },
             )
             write = (

@@ -8,6 +8,11 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M0-C RabbitMQ transport prepared for review — 12 November 2026
+
+- Reviewed PR #11’s transaction/identity/migration boundaries and passing CI. Added pinned, independent RabbitMQ transport, live topology/validated identity checks, actual confirms/returns, durable retry/review state, manual ack after commit and independent watchdog/generation recovery.
+- Added additive migration 0002, operational review schema, credential-free broker definitions/profile and required real-broker/database CI. The suite has 194 cases; local RabbitMQ absence skips 11 explicitly. See [[MarkOS v0.3 M0-C RabbitMQ Transport]]. No agent worker, full replay, merge, cloud provisioning or deployment.
+
 ### M0-B durable storage prepared for review — 12 November 2026
 
 - Reviewed PRs #9/#10 for the independent architecture; corrected PR #10’s invalid CI runner context, and its corrected hosted workflow passes.

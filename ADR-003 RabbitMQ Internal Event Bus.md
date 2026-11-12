@@ -2,7 +2,7 @@
 title: ADR-003 RabbitMQ Internal Event Bus
 type: architecture-decision
 status: accepted
-version: 1.3
+version: 1.4
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -22,6 +22,16 @@ RabbitMQ over AMQP 0-9-1 is the selected internal event transport, replacing pro
 Preserve accepted [[ADR-002 Cloud-first Deployment]]: a DigitalOcean VM runs Docker Compose services and Supabase PostgreSQL holds durable operational state. The MQTT references in that earlier ADR describe the previous provisional transport, not a requirement to retain it. This ADR scopes transport; ADR-004 separately supersedes the legacy product/storage design; managed RabbitMQ or a multi-node cluster would require a separate placement/cost review.
 
 MQTT may later serve device/Home Assistant adapters with explicit topic-to-event mapping. Google Cloud Pub/Sub still supplies Gmail mailbox-change notifications to the ingestion bridge; it is a separate ingress service.
+
+## M0-C implementation amendment
+
+[[MarkOS v0.3 M0-C RabbitMQ Transport]] records the independently locked aio-pika
+10.2.3 client and digest-pinned RabbitMQ 4.4.0 test image, live topology audit,
+manual durable handoff, retry/review outboxes and real broker/database tests.
+`infrastructure/rabbitmq/` holds credential-free definitions and verified image
+metadata. These pins are now a tested implementation baseline; resource capacity,
+production credentials/TLS, replay/source retention and launch readiness remain
+subject to the gates below. No provisioning or deployment occurs.
 
 ## Motivation
 
@@ -55,12 +65,12 @@ The accepted single-VM topology has downtime on VM failure. Propose durable clas
 
 ## Proposed single-VM choices
 
-These are MarkOS engineering starting values for low-volume mail/agent workflows, not vendor defaults or measured capacity. Keep status proposed until review and M0 acceptance. Freeze the resolved image digest and Python dependency lock in the future implementation PR; this documentation does not add runnable configuration.
+These are MarkOS engineering starting values for low-volume mail/agent workflows, not vendor defaults or measured capacity. Keep status proposed until review and M0 acceptance. M0-C now freezes the image digest/client lock and exercises synthetic broker definitions; broader production configuration and measured capacity remain future gates.
 
 | Choice | Proposed value | Reason and qualification |
 |---|---|---|
-| Broker | RabbitMQ **4.4.0**, official `rabbitmq:4.4.0-management` image, pinned by digest before use | Current stable release checked 12 November 2026; 4.4 community support is listed through 31 July 2027. Recheck supported patches/security notices at implementation and monthly; update through tested PRs, never floating `latest` |
-| Python client | **aio-pika 10.2.3**, exact lock including transitive dependencies | Async API, robust reconnection, confirms and mandatory returns suit async ingestion/API services. Requires Python 3.11+ according to the earlier review; choose and test the independent runtime interpreter/library set in M0-A/M0-C rather than inherit the archived project |
+| Broker | RabbitMQ **4.4.0**, official `rabbitmq:4.4.0-management` image, digest pinned in M0-C | Current stable release checked 12 November 2026; 4.4 community support is listed through 31 July 2027. Recheck supported patches/security notices at implementation and monthly; update through tested PRs, never floating `latest` |
+| Python client | **aio-pika 10.2.3**, exact lock including transitive dependencies | Async API, robust reconnection, confirms and mandatory returns suit async ingestion/API services. Requires Python 3.11+ according to the earlier review; M0-A/M0-C independently test Python 3.13.14 and this lock without the archived project |
 | Queue type | Explicit `x-queue-type=classic`, durable, non-exclusive, no auto-delete; persistent messages; durable exchanges | Classic storage v2 is built into RabbitMQ 4.x. This node has no replica to benefit from quorum availability; retain database replay. Changing type later requires a reviewed drain/redeclare migration |
 | VM planning envelope | **4 vCPU, 8 GiB RAM, at least 80 GiB usable SSD-backed storage** | Keep Supabase and source objects remote; no local model inference or heavy bulk extraction. This is shared compute, not four dedicated broker cores |
 | Broker container | At most **4 CPUs**, **4 GiB hard memory cap**; absolute memory alarm **2 GiB** | Cap is a ceiling, not a reservation. Budget the other 4 GiB for OS/cache and bounded MarkOS services; load-test contention. Memory alarm applies backpressure before the hard cap; it is not an OOM guarantee |
@@ -74,7 +84,7 @@ These are MarkOS engineering starting values for low-volume mail/agent workflows
 
 RabbitMQ's production guidance recommends four cores, 4 GiB RAM and avoiding colocated I/O-heavy services. The shared VM is a deliberate low-volume compromise within the accepted topology. Before launch, measure broker RSS, host pressure, disk latency and backlog drain with simultaneous workers, realistic bursts and outage catch-up. If it fails, propose a larger/dedicated node or revised placement with cost review; do not assume this profile qualifies production automatically.
 
-For aio-pika, use `connect_robust`, a confirm-enabled publishing channel with `on_return_raises=True`, mandatory publication, explicit persistent delivery and manual ack after commit. Handle returned messages, nacks, disconnects and timeout/cancellation without advancing outbox state. Reconnection restores connectivity/topology, not business idempotency or proof that an uncertain publish failed. Keep robust recovery declarations within service permissions and test topology recovery before enabling publishers.
+For aio-pika, use `connect_robust`, a confirm-enabled publishing channel with `on_return_raises=True`, mandatory publication, explicit persistent delivery and manual ack after commit. Handle returned messages, nacks, disconnects and timeout/cancellation without advancing outbox state. Reconnection restores connectivity/topology, not business idempotency or proof that an uncertain publish failed. M0-C runtime users do not declare topology; an administrator provisions it. Audit topology and serialize subscription recovery before enabling publishers.
 
 RabbitMQ 4.3+ supports delivery acknowledgement timeouts only for quorum queues. For classic queues, use one consumer per dedicated channel and an independent application watchdog: 10 seconds for active database handoff, 30 seconds total unacknowledged age including semaphore wait. Propose transaction-local statement_timeout 5 seconds and lock_timeout 1 second. On stall or uncertain commit, do not ack; close the channel with a 2-second close budget and abort the consumer connection if closure hangs. Cancellation alone does not requeue deliveries. Gate reconnect/resubscription, resolve uncertain commits from the owner-scoped inbox, and test saturated prefetch plus sibling redelivery. Keep the publisher's independent confirm deadline; heartbeat is not a handoff deadline. See [[MarkOS v0.3 M0 Implementation Plan]].
 
@@ -91,7 +101,7 @@ Classic dead-letter forwarding is not a lossless handoff. Persist quarantine and
 - **Cleanup and deletion:** run audited daily cleanup with dependency checks. A privacy deletion request is an explicit workflow: redact/delete the payload, record a minimal permitted tombstone and block replay, rather than letting retention override deletion. Do not resurrect deleted bytes from an archive/backup. Final source/audit retention and backup-erasure policy still require review before real data.
 - **Recovery limit:** 30-day replay retention is not 30-day zero-loss backup. The separately proposed 24-hour RPO still bounds possible database/object loss after restore; reconciliation cannot recreate events absent from the recovery set. M7 must prove replay from that set and reconcile external effects before release.
 
-M0 must test the 30/90-day boundaries with a controlled clock, pending-work holds, deletion tombstones, payload availability, queue-full partial fan-out, blocked-publisher backpressure and memory/disk pressure using synthetic fixtures. No real queue, data-retention policy or resource limit is applied by this PR.
+M0 must test the 30/90-day boundaries with a controlled clock, pending-work holds, deletion tombstones, payload availability, queue-full partial fan-out, blocked-publisher backpressure and memory/disk pressure using synthetic fixtures. M0-C applies synthetic queue/message/channel bounds only in disposable integration services. No production queue, data-retention policy or host resource limit is applied.
 
 ## Alternatives considered
 
@@ -102,7 +112,7 @@ M0 must test the 30/90-day boundaries with a controlled clock, pending-work hold
 
 ## Acceptance before foundation completion and launch
 
-Approve the M0 contract, then implement synthetic tests for confirm/return handling, unknown publish outcomes, independent subscribers and competing workers, domain/owner denial, database commit before ack, bounded poison review, restart persistence and complete broker-storage-loss replay. Prove no lost durable work or double-applied business effects within the approved retention window. Include side-effect suppression and expired-approval tests. M7 rehearses recovery and operational targets. None of these runtime tests has been executed in this documentation change.
+Approve the M0 contract, then implement synthetic tests for confirm/return handling, unknown publish outcomes, independent subscribers and competing workers, domain/owner denial, database commit before ack, bounded poison review, restart persistence and complete broker-storage-loss replay. Prove no lost durable work or double-applied business effects within the approved retention window. Include side-effect suppression and expired-approval tests. M7 rehearses recovery and operational targets. M0-C now executes the documented transport subset; full retained-event replay, broker-volume-loss and production recovery tests remain M0-E/M0-F/M7 work.
 
 ## Consequences
 
