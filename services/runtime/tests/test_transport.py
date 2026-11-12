@@ -71,7 +71,7 @@ class FakeStore:
         self.trace.append("review-commit:" + reason)
         return UUID(int=2)
 
-    async def claim_outbox(self) -> tuple[OutboxClaim, ...]:
+    async def claim_outbox(self, **kwargs: object) -> tuple[OutboxClaim, ...]:
         return self.claims
 
     async def record_publication(self, eid: UUID, fence: int) -> bool:

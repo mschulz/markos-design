@@ -12,6 +12,8 @@ from aiormq.connection import TCPTransportFactory, TLSTransportFactory, Transpor
 from pamqp.commands import Basic
 from yarl import URL
 
+from markos_runtime.config import ProposedLimits
+
 
 class TransportError(ValueError):
     """Redacted transport failure; no URL, credentials, payload or broker reply text."""
@@ -60,8 +62,13 @@ def positive_confirmation(result: object) -> None:
 
 class BrokerSession:
     def __init__(
-        self, connection: AbstractRobustConnection, factory: AbortableFactory, url: URL
+        self,
+        connection: AbstractRobustConnection,
+        factory: AbortableFactory,
+        url: URL,
+        limits: ProposedLimits | None = None,
     ) -> None:
+        self.limits = limits or ProposedLimits()
         self.connection = connection
         self.factory = factory
         self.username = str(url.user)
@@ -69,7 +76,10 @@ class BrokerSession:
 
     @classmethod
     @asynccontextmanager
-    async def connect(cls, dsn: str) -> AsyncIterator[Self]:
+    async def connect(
+        cls, dsn: str, *, limits: ProposedLimits | None = None
+    ) -> AsyncIterator[Self]:
+        profile = limits or ProposedLimits()
         url = endpoint(dsn)
         factory = AbortableFactory()
 
@@ -81,8 +91,8 @@ class BrokerSession:
         try:
             connection = await aio_pika.connect_robust(
                 url,
-                timeout=10,
-                heartbeat=30,
+                timeout=profile.connect_seconds,
+                heartbeat=profile.heartbeat_seconds,
                 reconnect_interval=1,
                 fail_fast=True,
                 ssl_context=ssl.create_default_context(),
@@ -91,7 +101,7 @@ class BrokerSession:
         except Exception:
             factory.abort()
             raise TransportError("broker connection unavailable") from None
-        session = cls(connection, factory, url)
+        session = cls(connection, factory, url, profile)
         try:
             yield session
         finally:
@@ -99,16 +109,18 @@ class BrokerSession:
 
     async def channel(self, *, publisher: bool) -> AbstractRobustChannel:
         try:
-            async with asyncio.timeout(10):
+            async with asyncio.timeout(self.limits.connect_seconds):
                 return await self.connection.channel(
                     publisher_confirms=publisher, on_return_raises=publisher
                 )
         except Exception:
             raise TransportError("broker channel unavailable") from None
 
-    async def close_channel(self, channel: AbstractRobustChannel, seconds: float = 2) -> None:
+    async def close_channel(
+        self, channel: AbstractRobustChannel, seconds: float | None = None
+    ) -> None:
         try:
-            async with asyncio.timeout(seconds):
+            async with asyncio.timeout(self.limits.close_seconds if seconds is None else seconds):
                 await channel.close()
         except Exception:
             self.factory.abort()  # StreamWriter transport abort: no protocol round trip.
@@ -116,7 +128,7 @@ class BrokerSession:
 
     async def close(self) -> None:
         try:
-            async with asyncio.timeout(2):
+            async with asyncio.timeout(self.limits.close_seconds):
                 await self.connection.close()
         except Exception:
             self.factory.abort()
@@ -140,9 +152,12 @@ class BrokerSession:
                 type=message_type,
                 user_id=self.username,
             )
-            async with asyncio.timeout(10):
+            async with asyncio.timeout(self.limits.confirm_seconds):
                 result = await target.publish(
-                    message, routing_key=routing_key, mandatory=True, timeout=10
+                    message,
+                    routing_key=routing_key,
+                    mandatory=True,
+                    timeout=self.limits.confirm_seconds,
                 )
             positive_confirmation(result)
         except Exception:

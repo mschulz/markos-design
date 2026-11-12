@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from aio_pika.abc import AbstractRobustChannel
 
+from markos_runtime.config import ProposedLimits
 from markos_runtime.contracts.base import ContractError
 from markos_runtime.store.database import DurableStore, OutboxClaim
 from markos_runtime.transport.broker import BrokerSession, TransportError
@@ -23,16 +24,23 @@ class Publisher:
         channel: AbstractRobustChannel,
         store: DurableStore,
         audit: TopologyAudit,
+        *,
+        limits: ProposedLimits | None = None,
     ) -> None:
         if session.vhost != audit.vhost:
             raise TransportError("broker/audit namespace mismatch")
         self.session, self.channel, self.store, self.audit = session, channel, store, audit
-        self._inflight = asyncio.Semaphore(100)
+        self.limits = limits or ProposedLimits()
+        self._inflight = asyncio.Semaphore(self.limits.max_inflight_confirms)
 
     async def _one(self, claim: OutboxClaim) -> bool:
         code = "topology"
         try:
             async with self._inflight, asyncio.timeout(25):
+                if len(claim.event.to_wire()) > self.limits.max_message_bytes:
+                    await self.store.review_delivery(claim.event.to_wire(), "oversize")
+                    await self.store.hold_for_review(claim, "oversize")
+                    return False
                 claim.event.require_live(datetime.now(UTC))
                 await self.audit.verify(claim.event.domain, claim.consumers)
                 code = "confirm"
@@ -48,7 +56,7 @@ class Publisher:
         except ContractError:
             code = "expired"
             await self.store.review_delivery(claim.event.to_wire(), "expired")
-            await self.store.hold_expired(claim)
+            await self.store.hold_for_review(claim, "expired")
             return False
         except (TransportError, TimeoutError):
             pass
@@ -57,12 +65,12 @@ class Publisher:
         return False
 
     async def publish_once(self) -> int:
-        claims = await self.store.claim_outbox()
+        claims = await self.store.claim_outbox(limit=min(10, self.limits.max_inflight_confirms))
         return sum(await asyncio.gather(*(self._one(c) for c in claims)))
 
     async def publish_reviews_once(self) -> int:
         count = 0
-        for claim in await self.store.claim_reviews():
+        for claim in await self.store.claim_reviews(limit=1):
             ref = claim.reference
             try:
                 async with self._inflight, asyncio.timeout(25):

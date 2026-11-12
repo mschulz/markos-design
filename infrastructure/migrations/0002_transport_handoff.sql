@@ -141,15 +141,16 @@ WHEN raise_exception THEN
 END $$;
 ALTER TABLE markos_runtime.outbox DROP CONSTRAINT outbox_state_check;
 ALTER TABLE markos_runtime.outbox ADD CONSTRAINT outbox_state_check CHECK(state IN ('pending','leased','published','review'));
-CREATE FUNCTION markos_runtime.hold_expired(p_event uuid,p_fence bigint)
+CREATE FUNCTION markos_runtime.hold_for_review(p_event uuid,p_fence bigint,p_reason text)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime
 AS $$ DECLARE principal markos_runtime.service_identities;
 BEGIN
  SELECT * INTO STRICT principal FROM markos_runtime.service_identities WHERE login_role=session_user AND can_publish;
- UPDATE markos_runtime.outbox SET state='review',lease_until=NULL,last_failure='expired'
+ IF p_reason NOT IN ('expired','oversize') THEN RAISE EXCEPTION 'invalid review hold'; END IF;
+ UPDATE markos_runtime.outbox SET state='review',lease_until=NULL,last_failure=p_reason
  WHERE owner_id=principal.owner_id AND domain=principal.domain AND event_id=p_event
  AND publisher_id=principal.service_id AND state='leased' AND fence=p_fence AND lease_until>clock_timestamp();
  RETURN FOUND;
 END $$;
-REVOKE ALL ON FUNCTION markos_runtime.handoff(uuid,text),markos_runtime.hold_expired(uuid,bigint) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION markos_runtime.handoff(uuid,text),markos_runtime.hold_expired(uuid,bigint) TO markos_runtime_client;
+REVOKE ALL ON FUNCTION markos_runtime.handoff(uuid,text),markos_runtime.hold_for_review(uuid,bigint,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION markos_runtime.handoff(uuid,text),markos_runtime.hold_for_review(uuid,bigint,text) TO markos_runtime_client;

@@ -102,7 +102,7 @@ class TopologyAudit:
             or descriptor.get("operator_policy") is not None
         ):
             raise TransportError("exchange safety profile mismatch")
-        bindings = await self.get("bindings", self.vhost, "e", exchange)
+        bindings = await self.get("exchanges", self.vhost, exchange, "bindings", "source")
         actual = {
             (b.get("destination"), b.get("routing_key"), b.get("destination_type"))
             for b in bindings

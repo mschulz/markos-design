@@ -98,7 +98,7 @@ def test_expired_outbox_is_held_for_review(database: dict[str, str]) -> None:
             await store.append(event(expired=True))
             claim = (await store.claim_outbox())[0]
             await store.review_delivery(claim.event.to_wire(), "expired")
-            assert await store.hold_expired(claim)
+            assert await store.hold_for_review(claim, "expired")
             assert await store.claim_outbox() == ()
 
     asyncio.run(scenario())

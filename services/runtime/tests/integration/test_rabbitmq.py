@@ -213,6 +213,7 @@ def test_confirm_independent_subscribers_and_commit_before_ack(
             BrokerSession.connect(rabbit.dsn("publisher")) as session,
         ):
             assert session.factory.writer is not None
+            await rabbit.auditor().verify("personal", ("foundation-worker", "foundation-audit"))
             item = event()
             await store.append(item)
             publisher = Publisher(

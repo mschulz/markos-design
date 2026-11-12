@@ -225,10 +225,12 @@ class DurableStore:
             assert row is not None
             return cast(UUID, row["id"])
 
-    async def claim_reviews(self) -> tuple[ReviewClaim, ...]:
+    async def claim_reviews(self, *, limit: int = 10) -> tuple[ReviewClaim, ...]:
         async with self._transaction() as connection:
             rows = await (
-                await connection.execute("SELECT * FROM markos_runtime.claim_reviews(10,60)")
+                await connection.execute(
+                    "SELECT * FROM markos_runtime.claim_reviews(%s,60)", (limit,)
+                )
             ).fetchall()
             return tuple(
                 ReviewClaim(
@@ -257,11 +259,12 @@ class DurableStore:
             assert row is not None
             return bool(row["ok"])
 
-    async def hold_expired(self, claim: OutboxClaim) -> bool:
+    async def hold_for_review(self, claim: OutboxClaim, reason: str) -> bool:
         async with self._transaction() as connection:
             row = await (
                 await connection.execute(
-                    "SELECT markos_runtime.hold_expired(%s,%s) AS ok", (claim.event_id, claim.fence)
+                    "SELECT markos_runtime.hold_for_review(%s,%s,%s) AS ok",
+                    (claim.event_id, claim.fence, reason),
                 )
             ).fetchone()
             assert row is not None

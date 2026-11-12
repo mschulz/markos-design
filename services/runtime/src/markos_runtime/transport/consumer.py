@@ -5,6 +5,7 @@ from contextlib import suppress
 
 from aio_pika.abc import AbstractIncomingMessage, AbstractRobustChannel
 
+from markos_runtime.config import ProposedLimits
 from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
 from markos_runtime.contracts.events import EventEnvelope
 from markos_runtime.store.database import DurableStore, StorageError, StorageRejected, StoreIdentity
@@ -18,14 +19,25 @@ class Consumer:
         store: DurableStore,
         publisher_users: dict[str, str],
         *,
-        active_seconds: float = 10,
-        total_seconds: float = 30,
+        active_seconds: float | None = None,
+        total_seconds: float | None = None,
+        limits: ProposedLimits | None = None,
     ) -> None:
-        if not 0 < active_seconds < total_seconds <= 30 or active_seconds > 10:
+        self.limits = limits or ProposedLimits()
+        active_seconds = (
+            self.limits.active_handoff_seconds if active_seconds is None else active_seconds
+        )
+        total_seconds = (
+            self.limits.total_delivery_seconds if total_seconds is None else total_seconds
+        )
+        if (
+            not 0 < active_seconds < total_seconds <= self.limits.total_delivery_seconds
+            or active_seconds > self.limits.active_handoff_seconds
+        ):
             raise TransportError("invalid handoff deadlines")
         self.session, self.store, self.publisher_users = session, store, dict(publisher_users)
         self.active_seconds, self.total_seconds = active_seconds, total_seconds
-        self._handoffs = asyncio.Semaphore(2)
+        self._handoffs = asyncio.Semaphore(self.limits.handoffs_per_process)
         self._tasks: set[asyncio.Task[None]] = set()
         self._closed = asyncio.Event()
         self._channel: AbstractRobustChannel | None = None
@@ -54,7 +66,7 @@ class Consumer:
         self._failed.clear()
         channel.close_callbacks.add(self._closed_callback)
         try:
-            await channel.set_qos(prefetch_count=10)
+            await channel.set_qos(prefetch_count=self.limits.prefetch)
             queue = await channel.declare_queue(
                 f"markos.{self.identity.domain}.{self.identity.service_id}",
                 passive=True,
