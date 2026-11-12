@@ -1,4 +1,4 @@
-# Independent MarkOS runtime — M0-A / M0-B / M0-C / M0-D
+# Independent MarkOS runtime — M0-A / M0-B / M0-C / M0-D / M0-E
 
 This standalone project provides strict synthetic contracts and validation-only
 preflight. The explicit PostgreSQL and M0-C RabbitMQ libraries connect only when called with DSNs.
@@ -52,3 +52,14 @@ Only inline synthetic no-op work executes; source references enter review.
 The strict interval/daily example is `config/runtime/schedule.example.json` at
 repository root. See [[MarkOS v0.3 M0-D Execution and Scheduling]] for policies,
 DST, retry/deadline limits, explicit invocation and production gaps.
+
+M0-E adds `Recovery(store)` with explicit reconciliation/replay, one-use permits,
+synthetic source observations, scoped deletion/review resolution and dry-run-first
+cleanup. Grants default false; runtime has no clock override, real source adapter
+or external effects. Migration 0004 preserves all prior checksums. See
+[[MarkOS v0.3 M0-E Replay and Retention]] for source/privacy limits and API semantics.
+
+The normal gate is `pytest --ignore=tests/integration/test_volume_loss.py`.
+The separate CI-only volume test needs its unique labelled disposable Compose
+project and `MARKOS_REQUIRE_VOLUME_TEST=1`; it destroys only that broker volume.
+Use neither the acceptance harness nor its credentials for a real service.

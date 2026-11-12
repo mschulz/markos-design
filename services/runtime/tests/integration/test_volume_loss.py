@@ -5,7 +5,9 @@ import json
 import os
 import re
 import subprocess
+from datetime import timedelta
 from pathlib import Path
+from urllib.error import URLError
 
 import psycopg
 import pytest
@@ -17,6 +19,7 @@ from markos_runtime.transport.broker import BrokerSession
 from markos_runtime.transport.consumer import Consumer
 from markos_runtime.transport.publisher import Publisher
 from tests.integration.test_rabbitmq import Harness, until
+from tests.integration.test_recovery import clock
 from tests.integration.test_storage import count, event
 
 pytest_plugins = ["tests.integration.test_rabbitmq"]
@@ -74,10 +77,23 @@ def test_confirmed_broker_volume_loss_recovers_every_missing_consumer(
                 await consumer.stop()
         assert count(database, "task_results") == 1
         await asyncio.to_thread(remove_test_broker_volume)
+
+        def management_ready() -> bool:
+            try:
+                rabbit.request("GET", "vhosts")
+                return True
+            except URLError:
+                return False
+
+        await until(management_ready, seconds=30)
         # Prove the old namespace is absent before restoring only reviewed topology/permissions.
         assert rabbit.vhost not in {v["name"] for v in rabbit.request("GET", "vhosts")}
         assert count(database, "events") == count(database, "task_results") == 1
         rabbit.setup()
+        with psycopg.connect(database["admin"]) as conn:
+            due = conn.execute("SELECT replay_after FROM markos_runtime.events").fetchone()
+            assert due is not None
+        clock(database, due[0] + timedelta(seconds=1))
         async with (
             DurableStore.connect(database["publisher"]) as pub,
             BrokerSession.connect(rabbit.dsn("publisher")) as session,

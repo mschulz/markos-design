@@ -65,7 +65,7 @@ A11 has synthetic lease/crash/fencing evidence; A12 has synthetic schedule concu
 
 ## Remaining decisions and readiness
 
-M0-E owns full retained-event/consumer recovery after broker storage loss, source permission/deletion/tombstones and 30/90-day cleanup/replay. M0-F owns Compose/process lifecycle, startup/periodic loops, private health, monitoring/alerts, pressure and restart rehearsals. Real agents/MCP providers, scoped approvals, per-job production budgets and richer calendar schedules need separate reviewed contracts. The new APIs are explicitly invoked libraries; the CLI remains validation-only. No scheduler/worker daemon, cloud SQL, provisioning, deployment, merge, real account or personal-note change is performed.
+The subsequent [[MarkOS v0.3 M0-E Replay and Retention]] supplies synthetic retained-event/consumer recovery after actual disposable broker-volume loss, source observations/deletion/tombstones and 30/90-day cleanup/replay; real providers and erasure/restore remain gates. M0-F owns Compose/process lifecycle, startup/periodic loops, private health, monitoring/alerts, pressure and restart rehearsals. Real agents/MCP providers, scoped approvals, per-job production budgets and richer calendar schedules need separate reviewed contracts. The new APIs are explicitly invoked libraries; the CLI remains validation-only. No scheduler/worker daemon, cloud SQL, provisioning, deployment, merge, real account or personal-note change is performed.
 
 ## References
 

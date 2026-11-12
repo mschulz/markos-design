@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.4
+version: 2.5
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -88,11 +88,15 @@ Proposed profile from ADR-005: official `mcp==2.3.0` without CLI extras; authent
 
 Proposed audit profile: 365-day minimal audit/approval metadata after the latest terminal transition or attempt; seven-day optional sensitive copies after completion/approval expiry; 14-day redacted logs; protected minimal unresolved/held evidence with a 24-hour unresolved alert; daily cleanup and deletion reapplication on restore. Keep the existing 7-daily/4-weekly backup proposal. These are unmeasured proposals requiring review, not configured limits or legal retention requirements. Native non-MCP adapters gain no MCP milestone dependency; M7 drills do not postpone the first-connector safety gate.
 
+## M0-E review status
+
+[[MarkOS v0.3 M0-E Replay and Retention]] adds bounded retained-event recovery, suppressed replay with one-use older-event permits, synthetic source gates/deletion and staged 30/90-day operational cleanup. The 294-case acceptance set includes an actual disposable broker-volume-loss drill while PostgreSQL survives. Real object-provider/backup erasure, action approvals and deployed lifecycle/pressure/monitoring remain gates. The MCP audit-retention proposal remains separate.
+
 ## Immediate plan
 
 1. Retain the accepted architecture correction; PR #7 is closed unmerged and its reference branch/history is preserved.
 2. Preserve merged M0-A–M0-C and their independent contracts, isolation and database/broker evidence; no automatic promotion of old PR #6/#7.
-3. Review M0-D execution/scheduling separately, then implement M0-E replay/retention and M0-F lifecycle evidence in separate PRs.
+3. Review M0-D execution/scheduling and M0-E synthetic replay/retention separately, then implement M0-F lifecycle evidence in its own PR.
 4. Gather actual broker/database fault evidence before declaring M0 complete. Only then advance gateway and Gmail work.
 5. Before provisioning, review provider plans, region, cost, network/security, retention, monitoring and recovery targets. Deployment requires separate authorization.
 

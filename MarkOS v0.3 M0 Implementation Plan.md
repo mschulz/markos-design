@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M0 Implementation Plan
 type: implementation-plan
 status: proposed
-version: 2.4
+version: 2.5
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -17,7 +17,7 @@ tags:
 
 Build an independent synthetic event-to-task foundation from [[MarkOS v0.3 Specification]], [[ADR-003 RabbitMQ Internal Event Bus]] and [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]]. The old import/reuse plan is superseded. No PARA note storage, Markdown database, DuckDB, legacy CLI/API/watcher or original dependency lock is a foundation requirement.
 
-This plan defines reviewable implementation slices. M0-A supplies contracts/configuration, M0-B explicit PostgreSQL storage and M0-C explicit RabbitMQ adapters and M0-D synthetic execution/scheduling for review. No runnable business worker service exists, and nothing is merged or deployed by this work. The M0.0 import remains archival evidence. The new slice numbering below replaces the prior import-first sequence; use these names to avoid transferring old completion claims.
+This plan defines reviewable implementation slices. M0-A supplies contracts/configuration, M0-B explicit PostgreSQL storage and M0-C explicit RabbitMQ adapters and M0-D synthetic execution/scheduling and M0-E synthetic replay/retention for review. No runnable business worker service exists, and nothing is merged or deployed by this work. The M0.0 import remains archival evidence. The new slice numbering below replaces the prior import-first sequence; use these names to avoid transferring old completion claims.
 
 ## M0-A implementation status
 
@@ -34,6 +34,10 @@ The owner authorized M0-C after PR #11 review/green CI. [[MarkOS v0.3 M0-C Rabbi
 ## M0-D implementation status
 
 [[MarkOS v0.3 M0-D Execution and Scheduling]] records fixed no-op execution, global database lease slots/fencing, attempts/retry/review and atomic versioned interval/daily scheduling. A11/A12 have synthetic crash/concurrency/DST evidence; A13 has database-failure/no-effect evidence. Real approval expiry and full A14–A20 remain gates. No real agents/tools, daemon or deployment is delivered.
+
+## M0-E implementation status
+
+[[MarkOS v0.3 M0-E Replay and Retention]] records retained intended-consumer recovery after actual disposable broker-volume loss, scoped one-use replay permits, synthetic source/checksum/access observations, deletion tombstones and explicit 30/90-day cleanup with holds. A14–A16 have synthetic evidence. Real source-provider/backup erasure, real action approvals and full A17–A20 remain gates; no deployed loop is added.
 
 ## Existing repositories and disposition
 
@@ -88,7 +92,7 @@ ADR-003 owns the proposed broker/client pins, resource/queue limits, retention a
 
 ## Acceptance matrix
 
-A01–A03 have M0-A evidence; A04–A05 have M0-B PostgreSQL evidence; A06–A10 have M0-C broker/handoff evidence. M0-D supplies A11/A12 synthetic evidence and the A13 database-failure portion. Actual approval expiry and A14–A20 remain future requirements, even where a lower-level primitive has partial coverage. Unit fakes help prove decisions; real isolated PostgreSQL/RabbitMQ and process fault points must prove persistence, roles, locks and delivery behavior.
+A01–A03 have M0-A evidence; A04–A05 have M0-B PostgreSQL evidence; A06–A10 have M0-C broker/handoff evidence. M0-D supplies A11/A12 synthetic evidence and the A13 database-failure portion. M0-E adds A14–A16 synthetic evidence. Actual provider/action approvals, erasure/restore and A17–A20 remain future requirements, even where a lower-level primitive has partial coverage. Unit fakes help prove decisions; real isolated PostgreSQL/RabbitMQ and process fault points must prove persistence, roles, locks and delivery behavior.
 
 | ID | Concrete test/fault | Acceptance |
 |---|---|---|

@@ -2,7 +2,7 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.4
+version: 1.5
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -40,7 +40,7 @@ This table covers every Markdown file in this PR's repository tree, including hi
 | [MarkOS Specification](MarkOS%20Specification.md) | Superseded original design; retained historical content, not instructions |
 | [MarkOS v0.2 Project Memory](MarkOS%20v0.2%20Project%20Memory.md) | Exact archived source snapshot; not applicable agent instructions |
 | [MarkOS v0.2 User Guide](MarkOS%20v0.2%20User%20Guide.md) | Exact archived source snapshot; all instructions and paths non-normative |
-| [MarkOS v0.3 M0 Implementation Plan](MarkOS%20v0.3%20M0%20Implementation%20Plan.md) | Current M0-A–M0-F plan; A01–A12 synthetic evidence, partial A13 and later acceptance gates |
+| [MarkOS v0.3 M0 Implementation Plan](MarkOS%20v0.3%20M0%20Implementation%20Plan.md) | Current M0-A–M0-F plan; A01–A12/A14–A16 synthetic evidence, partial A13 and later operational gates |
 | [MarkOS v0.3 M0.0 Import Record](MarkOS%20v0.3%20M0.0%20Import%20Record.md) | Historical preservation/provenance evidence, not a foundation prerequisite |
 | [MarkOS v0.3 M0.0 Review](MarkOS%20v0.3%20M0.0%20Review.md) | Historical import review, not new-system architecture acceptance |
 | [MarkOS v0.3 Roadmap](MarkOS%20v0.3%20Roadmap.md) | Current delivery proposal; supersedes import-first/reuse path |
@@ -59,6 +59,7 @@ This table covers every Markdown file in this PR's repository tree, including hi
 | [MarkOS v0.3 M0-B Durable Storage](MarkOS%20v0.3%20M0-B%20Durable%20Storage.md) | Current storage implementation, role/migration boundaries and real-database evidence |
 | [MarkOS v0.3 M0-C RabbitMQ Transport](MarkOS%20v0.3%20M0-C%20RabbitMQ%20Transport.md) | Current transport, identity/topology trust and real-broker evidence; later recovery gates explicit |
 | [MarkOS v0.3 M0-D Execution and Scheduling](MarkOS%20v0.3%20M0-D%20Execution%20and%20Scheduling.md) | Current synthetic lease/execution/scheduling evidence; real agents, approvals and production gates explicit |
+| [MarkOS v0.3 M0-E Replay and Retention](MarkOS%20v0.3%20M0-E%20Replay%20and%20Retention.md) | Current synthetic replay/source/deletion/retention evidence, real volume-loss drill and production/privacy limits |
 | [Independent runtime README](services/runtime/README.md) | Current independent project commands, dependencies and preflight limits |
 
 ## Prior branch documents and PRs
@@ -75,10 +76,10 @@ Unsettled implementation choices include source provider/retention, detailed ret
 
 ## Validation and retained M0 evidence
 
-All 35 Markdown documents are classified. Local links in current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, archived root package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. Independent M0-A through M0-D now has 256 tests: 169 unit/boundary, 75 PostgreSQL and 12 broker/database cases. A01–A12 have synthetic evidence and A13 has database-failure evidence. Real approval expiry and full A14–A20 replay/operations acceptance remain future work. Local broker absence is explicit; required CI runs both services. See [[MarkOS v0.3 M0-A Contracts and Configuration]].
+All 36 Markdown documents are classified. Local links in current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, archived root package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. Independent M0-A through M0-E now has 294 cases: 177 unit/boundary, 103 PostgreSQL, 13 broker/database and one dedicated broker-volume-loss drill. A01–A12 and A14–A16 have synthetic evidence; A13 has database-failure evidence. Real provider/action approvals, erasure/restore and A17–A20 operations remain future gates. Local broker absence is explicit; required CI runs both services. See [[MarkOS v0.3 M0-A Contracts and Configuration]].
 
 ## MCP documentation update
 
-ADR-005 adds a proposed MCP access boundary, leaving the accepted event/data architecture and existing M0 scope intact. The combined inventory now classifies all 35 Markdown documents. The documentation gate checks current/template metadata and local links. This update changes architecture documentation and adds isolated documentation-check tooling/tests plus a read-only GitHub Actions workflow; application source, legacy/runtime tests, locks, import manifest and exact archived snapshots are unchanged. MCP acceptance tests are not implemented or run by this update. The merged M0-A–M0-C implementation/evidence above remains intact; this PR does not change its runtime code or locks. Earlier regression counts above remain historical evidence, not new results.
+ADR-005 adds a proposed MCP access boundary, leaving the accepted event/data architecture and existing M0 scope intact. The current inventory, including later runtime slices, classifies all 36 Markdown documents. The documentation gate checks current/template metadata and local links. This update changes architecture documentation and adds isolated documentation-check tooling/tests plus a read-only GitHub Actions workflow; application source, legacy/runtime tests, locks, import manifest and exact archived snapshots are unchanged. MCP acceptance tests are not implemented or run by this update. The merged M0-A–M0-C implementation/evidence above remains intact; that documentation slice changed no runtime code or locks; subsequent implementation evidence is listed above. Earlier regression counts above remain historical evidence, not new results.
 
 The proposed SDK/resource/audit profile is specified in ADR-005; first real MCP enablement requires MCP-01–MCP-10, while native adapters remain independent. Documentation CI validates inventory, current metadata/local paths and changed whitespace; synthetic checker tests cover broken/stale/duplicate inventory entries, links, root-scoped wikilinks, path escape and missing metadata. External URLs, heading anchors, MCP interoperability and runtime behavior are outside that check. Branch protection is not modified.

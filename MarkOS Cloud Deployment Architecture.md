@@ -2,7 +2,7 @@
 title: MarkOS Cloud Deployment Architecture
 type: architecture
 status: draft
-version: 1.5
+version: 1.6
 owner: Mark Schulz
 created: 2026-11-11
 updated: 2026-11-12
@@ -145,3 +145,7 @@ Single-VM downtime remains unavoidable without a later availability design. Oper
 - [Supabase database backups and storage boundaries](https://supabase.com/docs/guides/platform/backups)
 
 Provider behavior was checked against these official references on 11 November 2026. Proposed MarkOS policies and targets are design choices, not provider guarantees.
+
+## M0-E synthetic recovery evidence
+
+[[MarkOS v0.3 M0-E Replay and Retention]] proves retained intended-consumer recovery after removal/recreation of an owned disposable RabbitMQ volume while PostgreSQL stays intact. Its scoped synthetic source gates, tombstones and staged cleanup do not implement cloud object/backup erasure or restore tombstone reapplication. Production lifecycle, real-provider recovery, restore/pressure and operational drills remain future acceptance.

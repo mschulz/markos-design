@@ -14,7 +14,8 @@ ALTER TABLE markos_runtime.events
  ADD COLUMN retired_at timestamptz,
  ADD COLUMN terminal_at timestamptz,
  ADD COLUMN activity_at timestamptz NOT NULL DEFAULT clock_timestamp(),
- ADD COLUMN replay_until timestamptz;
+ ADD COLUMN replay_until timestamptz,
+ ADD COLUMN replay_after timestamptz NOT NULL DEFAULT clock_timestamp();
 UPDATE markos_runtime.events SET occurred_at=(convert_from(wire,'UTF8')::jsonb->>'occurred_at')::timestamptz,
  source_id=(convert_from(wire,'UTF8')::jsonb->'payload_ref'->>'source_id')::uuid,
  source_hash=convert_from(wire,'UTF8')::jsonb->'payload_ref'->>'sha256';
@@ -83,7 +84,7 @@ END $$;
 REVOKE ALL ON markos_runtime.replay_budget FROM PUBLIC,markos_runtime_client;
 
 CREATE FUNCTION markos_runtime.event_gate(p_owner uuid,p_domain text,p_event uuid,p_service text,p_allow_age boolean DEFAULT false)
-RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE e markos_runtime.events;s markos_runtime.source_observations;n timestamptz:=markos_runtime.recovery_now();
 BEGIN
  SELECT * INTO e FROM markos_runtime.events WHERE owner_id=p_owner AND domain=p_domain AND event_id=p_event;
@@ -107,13 +108,13 @@ BEGIN
  RETURN NULL;
 END $$;
 CREATE FUNCTION markos_runtime.recovery_review(p_owner uuid,p_domain text,p_service text,p_event uuid,p_reason text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
  INSERT INTO markos_runtime.recovery_reviews(owner_id,domain,service_id,event_id,reason,created_at)
  VALUES(p_owner,p_domain,p_service,p_event,p_reason,markos_runtime.recovery_now())
  ON CONFLICT(owner_id,domain,service_id,event_id,reason) DO UPDATE SET resolved_at=NULL
 $$;
 CREATE FUNCTION markos_runtime.hold_recovery(p_owner uuid,p_domain text,p_event uuid,p_reason text)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE publisher text;
 BEGIN
  SELECT publisher_id INTO STRICT publisher FROM markos_runtime.events WHERE owner_id=p_owner AND domain=p_domain AND event_id=p_event;
@@ -122,7 +123,7 @@ BEGIN
  WHERE owner_id=p_owner AND domain=p_domain AND event_id=p_event;
 END $$;
 CREATE FUNCTION markos_runtime.block_task(p_task uuid,p_reason text)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE t markos_runtime.tasks;
 BEGIN
  SELECT * INTO STRICT t FROM markos_runtime.tasks WHERE task_id=p_task FOR UPDATE;
@@ -134,7 +135,7 @@ BEGIN
  VALUES(t.owner_id,t.domain,t.consumer_id,t.task_id,p_reason) ON CONFLICT DO NOTHING;
 END $$;
 CREATE FUNCTION markos_runtime.refresh_terminal(p_owner uuid,p_domain text)
-RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
  UPDATE markos_runtime.events e SET terminal_at=markos_runtime.recovery_now()
  WHERE e.owner_id=p_owner AND e.domain=p_domain AND e.terminal_at IS NULL
  AND (e.deleted_at IS NOT NULL OR (
@@ -145,7 +146,7 @@ RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,markos_run
 $$;
 
 CREATE FUNCTION markos_runtime.observe_source(p_id uuid,p_hash text,p_access boolean,p_services text[])
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;sv text;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_manage_retention;
@@ -166,7 +167,7 @@ END $$;
 
 -- Wrap every durable entry point; old bodies remain preserved, but are no longer callable by runtime.
 ALTER FUNCTION markos_runtime.append_event(bytea) RENAME TO append_event_m0b;
-CREATE FUNCTION markos_runtime.append_event(p_wire bytea) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+CREATE FUNCTION markos_runtime.append_event(p_wire bytea) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;doc jsonb;eid uuid;status text;why text;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_publish;
@@ -188,7 +189,7 @@ BEGIN
 END $$;
 ALTER FUNCTION markos_runtime.handoff(uuid,text) RENAME TO handoff_m0c;
 CREATE FUNCTION markos_runtime.handoff(p_event uuid,p_hash text) RETURNS TABLE(status text,task_id uuid)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;why text;expected text;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_consume;
@@ -209,7 +210,7 @@ END $$;
 ALTER FUNCTION markos_runtime.claim_outbox(integer,integer) RENAME TO claim_outbox_m0c;
 CREATE FUNCTION markos_runtime.claim_outbox(p_limit integer,p_seconds integer)
 RETURNS TABLE(event_id uuid,wire bytea,fence bigint,attempts integer,consumers text[])
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;r record;why text;sv text;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_publish;
@@ -225,20 +226,20 @@ BEGIN
 END $$;
 ALTER FUNCTION markos_runtime.record_publication(uuid,bigint) RENAME TO record_publication_m0b;
 CREATE FUNCTION markos_runtime.record_publication(p_event uuid,p_fence bigint) RETURNS boolean
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;ok boolean;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_publish;
  PERFORM pg_advisory_xact_lock(712093482);
  IF NOT markos_runtime.authorize_publication(p_event,p_fence) THEN RETURN false; END IF;
  ok:=markos_runtime.record_publication_m0b(p_event,p_fence);
- IF ok THEN UPDATE markos_runtime.events SET activity_at=markos_runtime.recovery_now() WHERE owner_id=p.owner_id AND domain=p.domain AND event_id=p_event;END IF;
+ IF ok THEN UPDATE markos_runtime.events SET activity_at=markos_runtime.recovery_now(),replay_after=markos_runtime.recovery_now()+interval '60 seconds' WHERE owner_id=p.owner_id AND domain=p.domain AND event_id=p_event;END IF;
  PERFORM markos_runtime.refresh_terminal(p.owner_id,p.domain);RETURN ok;
 END $$;
 ALTER FUNCTION markos_runtime.claim_task(uuid,integer) RENAME TO claim_task_m0d;
 CREATE FUNCTION markos_runtime.claim_task(p_executor uuid,p_seconds integer)
 RETURNS TABLE(task_id uuid,wire bytea,fence bigint,attempt integer,lease_until timestamptz)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;r record;eid uuid;why text;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_consume AND can_execute;
@@ -253,7 +254,7 @@ BEGIN
 END $$;
 ALTER FUNCTION markos_runtime.finish_task(uuid,bigint,uuid,text,integer) RENAME TO finish_task_m0d;
 CREATE FUNCTION markos_runtime.finish_task(p_task uuid,p_fence bigint,p_executor uuid,p_failure text DEFAULT NULL,p_delay integer DEFAULT 1)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;t markos_runtime.tasks;why text;ok boolean;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_consume AND can_execute;
@@ -269,7 +270,7 @@ BEGIN
  PERFORM markos_runtime.refresh_terminal(p.owner_id,p.domain);RETURN ok;
 END $$;
 CREATE FUNCTION markos_runtime.approve_replay(p_event uuid,p_seconds integer)
-RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;e markos_runtime.events;ident uuid;targets text[];why text;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_approve_replay;
@@ -285,7 +286,7 @@ BEGIN
  RETURN ident;
 END $$;
 CREATE FUNCTION markos_runtime.request_replay(p_event uuid,p_permit uuid DEFAULT NULL)
-RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;e markos_runtime.events;why text;targets text[];sv text;
  permit markos_runtime.replay_permits;tick timestamptz;n timestamptz:=markos_runtime.recovery_now();
 BEGIN
@@ -337,20 +338,20 @@ BEGIN
  UPDATE markos_runtime.replay_budget SET next_at=tick+interval '0.1 second' WHERE id=1;
  UPDATE markos_runtime.outbox SET state='pending',lease_until=NULL,fence=fence+1,available_at=tick,last_failure=NULL
  WHERE owner_id=p.owner_id AND domain=p.domain AND event_id=p_event;
- UPDATE markos_runtime.events SET activity_at=n WHERE owner_id=p.owner_id AND domain=p.domain AND event_id=p_event;
+ UPDATE markos_runtime.events SET activity_at=n,replay_after=n+interval '60 seconds' WHERE owner_id=p.owner_id AND domain=p.domain AND event_id=p_event;
  INSERT INTO markos_runtime.replay_history(owner_id,domain,event_id,publisher_id,consumers,requested_at,available_at,permit_id)
  VALUES(p.owner_id,p.domain,p_event,p.service_id,targets,n,tick,p_permit);
  RETURN 'queued';
 END $$;
 CREATE FUNCTION markos_runtime.reconcile(p_limit integer)
-RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;eid uuid;total integer:=0;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_publish AND can_replay;
  IF p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 10 THEN RAISE EXCEPTION 'invalid recovery batch'; END IF;
  PERFORM pg_advisory_xact_lock(712093482);
  FOR eid IN SELECT e.event_id FROM markos_runtime.events e JOIN markos_runtime.outbox o USING(owner_id,domain,event_id)
- WHERE e.owner_id=p.owner_id AND e.domain=p.domain AND e.publisher_id=p.service_id AND o.state='published'
+ WHERE e.owner_id=p.owner_id AND e.domain=p.domain AND e.publisher_id=p.service_id AND o.state='published' AND e.replay_after<=markos_runtime.recovery_now()
  AND EXISTS(SELECT 1 FROM markos_runtime.event_consumers c WHERE (c.owner_id,c.domain,c.event_id)=(e.owner_id,e.domain,e.event_id) AND c.handed_off_at IS NULL AND c.cancelled_at IS NULL)
  ORDER BY e.created_at,e.event_id LIMIT p_limit LOOP
   IF markos_runtime.request_replay(eid)='queued' THEN total:=total+1;END IF;
@@ -359,7 +360,7 @@ BEGIN
 END $$;
 
 CREATE FUNCTION markos_runtime.redact_event(p_owner uuid,p_domain text,p_event uuid)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE e markos_runtime.events;tid uuid;n timestamptz:=markos_runtime.recovery_now();
 BEGIN
  SELECT * INTO STRICT e FROM markos_runtime.events WHERE owner_id=p_owner AND domain=p_domain AND event_id=p_event FOR UPDATE;
@@ -379,7 +380,7 @@ BEGIN
  VALUES(p_owner,p_domain,e.publisher_id,p_event,'deleted',n);
 END $$;
 CREATE FUNCTION markos_runtime.delete_event(p_event uuid)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_manage_retention;
@@ -389,7 +390,7 @@ BEGIN
  PERFORM markos_runtime.redact_event(p.owner_id,p.domain,p_event);
 END $$;
 CREATE FUNCTION markos_runtime.delete_source(p_source uuid)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;eid uuid;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_manage_retention;
@@ -403,7 +404,7 @@ BEGIN
  END LOOP;
 END $$;
 CREATE FUNCTION markos_runtime.resolve_event_reviews(p_event uuid)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;digest text;n timestamptz:=markos_runtime.recovery_now();
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_manage_retention;
@@ -414,11 +415,11 @@ BEGIN
  UPDATE markos_runtime.execution_reviews SET resolved_at=n WHERE owner_id=p.owner_id AND domain=p.domain AND task_id IN
  (SELECT task_id FROM markos_runtime.inbox WHERE owner_id=p.owner_id AND domain=p.domain AND event_id=p_event);
  UPDATE markos_runtime.delivery_reviews SET resolved_at=n WHERE owner_id=p.owner_id AND domain=p.domain AND body_hash=digest;
- UPDATE markos_runtime.events SET activity_at=n WHERE owner_id=p.owner_id AND domain=p.domain AND event_id=p_event;
+ UPDATE markos_runtime.events SET activity_at=n,replay_after=n+interval '60 seconds' WHERE owner_id=p.owner_id AND domain=p.domain AND event_id=p_event;
  INSERT INTO markos_runtime.retention_audit(owner_id,domain,service_id,event_id,action,recorded_at) VALUES(p.owner_id,p.domain,p.service_id,p_event,'reviews_resolved',n);
 END $$;
 CREATE FUNCTION markos_runtime.cleanup_retention(p_limit integer,p_dry_run boolean)
-RETURNS TABLE(event_id uuid,action text) LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS TABLE(event_id uuid,action text) LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 #variable_conflict use_column
 DECLARE p markos_runtime.service_identities;e markos_runtime.events;n timestamptz:=markos_runtime.recovery_now();choice text;
 BEGIN
@@ -426,7 +427,22 @@ BEGIN
  IF p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 100 OR p_dry_run IS NULL THEN RAISE EXCEPTION 'invalid cleanup budget'; END IF;
  PERFORM pg_advisory_xact_lock(712093482);
  FOR e IN SELECT * FROM markos_runtime.events x WHERE x.owner_id=p.owner_id AND x.domain=p.domain AND x.publisher_id=p.service_id
- AND x.terminal_at IS NOT NULL ORDER BY x.created_at,x.event_id LIMIT p_limit FOR UPDATE LOOP
+ AND x.terminal_at IS NOT NULL
+ AND ((x.wire IS NOT NULL AND greatest(x.created_at,x.terminal_at)<=n-interval '30 days')
+  OR (greatest(x.created_at,x.terminal_at,x.activity_at)<=n-interval '90 days' AND NOT EXISTS(
+   SELECT 1 FROM markos_runtime.tasks t JOIN markos_runtime.inbox i USING(owner_id,domain,consumer_id,task_id)
+   WHERE t.owner_id=x.owner_id AND t.domain=x.domain AND t.event_id=x.event_id AND i.event_id<>x.event_id)))
+ AND NOT EXISTS(SELECT 1 FROM markos_runtime.recovery_reviews r WHERE r.owner_id=x.owner_id AND r.domain=x.domain AND r.event_id=x.event_id AND r.resolved_at IS NULL)
+ AND NOT EXISTS(SELECT 1 FROM markos_runtime.quarantine r WHERE r.owner_id=x.owner_id AND r.domain=x.domain AND r.event_id=x.event_id AND r.resolved_at IS NULL)
+ AND NOT EXISTS(SELECT 1 FROM markos_runtime.execution_reviews r JOIN markos_runtime.inbox i USING(owner_id,domain,consumer_id,task_id)
+  WHERE i.owner_id=x.owner_id AND i.domain=x.domain AND i.event_id=x.event_id AND r.resolved_at IS NULL)
+ AND NOT EXISTS(SELECT 1 FROM markos_runtime.delivery_reviews r WHERE r.owner_id=x.owner_id AND r.domain=x.domain AND r.body_hash=x.body_hash AND r.resolved_at IS NULL)
+ AND (x.deleted_at IS NOT NULL OR (
+  NOT EXISTS(SELECT 1 FROM markos_runtime.outbox o WHERE o.owner_id=x.owner_id AND o.domain=x.domain AND o.event_id=x.event_id AND o.state<>'published')
+  AND NOT EXISTS(SELECT 1 FROM markos_runtime.event_consumers c WHERE c.owner_id=x.owner_id AND c.domain=x.domain AND c.event_id=x.event_id AND c.handed_off_at IS NULL)
+  AND NOT EXISTS(SELECT 1 FROM markos_runtime.inbox i JOIN markos_runtime.tasks t USING(owner_id,domain,consumer_id,task_id)
+   WHERE i.owner_id=x.owner_id AND i.domain=x.domain AND i.event_id=x.event_id AND t.state NOT IN ('completed','failed'))))
+ ORDER BY x.created_at,x.event_id LIMIT p_limit FOR UPDATE LOOP
   IF EXISTS(SELECT 1 FROM markos_runtime.recovery_reviews r WHERE r.owner_id=e.owner_id AND r.domain=e.domain AND r.event_id=e.event_id AND r.resolved_at IS NULL)
   OR EXISTS(SELECT 1 FROM markos_runtime.quarantine r WHERE r.owner_id=e.owner_id AND r.domain=e.domain AND r.event_id=e.event_id AND r.resolved_at IS NULL)
   OR EXISTS(SELECT 1 FROM markos_runtime.execution_reviews r JOIN markos_runtime.inbox i USING(owner_id,domain,consumer_id,task_id)
@@ -477,7 +493,7 @@ GRANT EXECUTE ON FUNCTION markos_runtime.append_event(bytea),markos_runtime.hand
  markos_runtime.cleanup_retention(integer,boolean) TO markos_runtime_client;
 
 CREATE FUNCTION markos_runtime.authorize_publication(p_event uuid,p_fence bigint)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime AS $$
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,markos_runtime SET TimeZone='UTC' AS $$
 DECLARE p markos_runtime.service_identities;why text;sv text;
 BEGIN
  SELECT * INTO STRICT p FROM markos_runtime.service_identities WHERE login_role=session_user AND can_publish;

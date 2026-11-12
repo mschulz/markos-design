@@ -1,6 +1,7 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import psycopg
@@ -51,7 +52,8 @@ async def seed(database: dict[str, str], *, completed: bool = False) -> tuple[UU
 
 def test_reconcile_includes_confirmed_events_and_is_idempotent(database: dict[str, str]) -> None:
     async def scenario() -> None:
-        eid, _ = await seed(database)
+        eid, start = await seed(database)
+        clock(database, start + timedelta(seconds=61))
         async with DurableStore.connect(database["publisher"]) as pub:
             recovery = Recovery(pub)
             assert await recovery.reconcile_once() == 1
@@ -114,6 +116,11 @@ def test_age_boundary_and_expiring_one_use_permit(database: dict[str, str]) -> N
             claim = (await pub.claim_outbox())[0]
             assert await pub.record_publication(eid, claim.fence)
             clock(database, start + timedelta(days=30, microseconds=1))
+            with psycopg.connect(database["publisher"], autocommit=True) as raw:
+                raw.execute("SET TIME ZONE 'America/New_York'")
+                assert raw.execute(
+                    "SELECT markos_runtime.request_replay(%s,NULL)", (eid,)
+                ).fetchone() == ("review",)
             assert await recovery.request(ReplayRequest(schema_version=1, event_id=eid)) == "review"
             permit = await recovery.approve(eid, seconds=1)
             clock(database, start + timedelta(days=30, seconds=2))
@@ -540,3 +547,95 @@ def test_shared_operation_retains_primary_task_until_alias_graph_is_released(
             assert count(database, "events") == count(database, "tasks") == 0
 
     asyncio.run(scenario())
+
+
+def test_held_old_records_do_not_starve_later_cleanup_batches(database: dict[str, str]) -> None:
+    async def scenario() -> None:
+        first, start = await seed(database, completed=True)
+        later, _ = await seed(database, completed=True)
+        with psycopg.connect(database["admin"], autocommit=True) as conn:
+            conn.execute(
+                "INSERT INTO markos_runtime.recovery_reviews"
+                "(owner_id,domain,service_id,event_id,reason) "
+                "VALUES(%s,'personal','foundation-generator',%s,'aged')",
+                ("11111111-1111-4111-8111-111111111111", first),
+            )
+        clock(database, start + timedelta(days=91))
+        async with DurableStore.connect(database["publisher"]) as pub:
+            decisions = await Recovery(pub).cleanup_once(limit=1, dry_run=False)
+            assert len(decisions) == 1 and decisions[0].event_id == later
+        assert count(database, "events") == 1
+
+    asyncio.run(scenario())
+
+
+def test_upgrade_preserves_existing_m0d_results_and_sets_conservative_floor(
+    admin_dsn: str, tmp_path: Path
+) -> None:
+    from psycopg.conninfo import make_conninfo
+    from psycopg.rows import dict_row
+
+    from markos_runtime.store.migrations import migrate
+    from tests.integration.conftest import ROLES
+
+    name = "markos_upgrade_" + uuid4().hex
+    directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+    for file in sorted(directory.glob("*.sql"))[:3]:
+        (tmp_path / file.name).write_bytes(file.read_bytes())
+    with psycopg.connect(admin_dsn, autocommit=True) as admin:
+        admin.execute(
+            sql.SQL("CREATE DATABASE {} OWNER markos_migrator").format(sql.Identifier(name))
+        )
+    migration = make_conninfo(
+        admin_dsn, dbname=name, user="markos_migrator", password="synthetic-test-only"
+    )
+    dsns = {
+        role: make_conninfo(admin_dsn, dbname=name, user=values[0], password="synthetic-test-only")
+        for role, values in ROLES.items()
+    }
+
+    async def scenario() -> None:
+        async with await psycopg.AsyncConnection.connect(
+            migration, autocommit=True, row_factory=dict_row
+        ) as conn:
+            await migrate(conn, tmp_path)
+            for identity in ROLES.values():
+                await conn.execute(
+                    "INSERT INTO markos_runtime.service_identities "
+                    "(login_role,service_id,owner_id,domain,can_publish,can_consume) "
+                    "VALUES(%s,%s,%s,%s,%s,%s)",
+                    identity,
+                )
+            await conn.execute(
+                "UPDATE markos_runtime.service_identities SET can_execute=can_consume"
+            )
+        item = event()
+        async with DurableStore.connect(dsns["publisher"]) as pub:
+            await pub.append(item)
+            claim = (await pub.claim_outbox())[0]
+            assert await pub.record_publication(item.event_id, claim.fence)
+        for role in ["consumer", "audit"]:
+            async with DurableStore.connect(dsns[role]) as store:
+                await store.handoff(item)
+                assert await Worker(store).run_once()
+        async with await psycopg.AsyncConnection.connect(
+            migration, autocommit=True, row_factory=dict_row
+        ) as conn:
+            await migrate(conn, directory)
+            row = await (
+                await conn.execute("SELECT wire,terminal_at FROM markos_runtime.events")
+            ).fetchone()
+            assert row and bytes(row["wire"]) == item.to_wire() and row["terminal_at"] is not None
+            total = await (
+                await conn.execute("SELECT count(*) FROM markos_runtime.task_results")
+            ).fetchone()
+            assert total and total["count"] == 2
+        async with DurableStore.connect(dsns["publisher"]) as pub:
+            with pytest.raises(StorageError):
+                await Recovery(pub).reconcile_once()
+
+    try:
+        asyncio.run(scenario())
+    finally:
+        with psycopg.connect(admin_dsn, autocommit=True) as admin:
+            admin.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(name)))
