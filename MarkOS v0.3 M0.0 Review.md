@@ -13,6 +13,9 @@ tags:
   - review
 ---
 
+> **Historical evidence, not the new implementation baseline.** This record preserves earlier work/results. It does not authorize PARA, Markdown/DuckDB authority or reuse of the imported application. [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] supersedes those assumptions; see [[Documentation Authority Index]].
+
+
 # MarkOS v0.3 M0.0 Review
 
 ## Result

@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.4
+version: 0.3.6
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -12,23 +12,23 @@ tags:
   - governance
 ---
 
-> Imported from the [MarkOS v0.3 review draft](https://chatgpt.com/space/page_826f242af13c8191a92a0e9a1a96dd3f) on 10 November 2026. The original 16-section draft is retained and amended on 11 November 2026 for accepted ADR-002 cloud-first deployment and on 12 November 2026 for proposed [[ADR-003 RabbitMQ Internal Event Bus]]; the source Space page has not been edited. v0.3 is the proposed event-driven system revision; it is not a downgrade of the existing specification's document version 2.1. Its M0–M8 labels are a new sequence, separate from the earlier M0–M16.
->
-> Project governance is recorded in [[ADR-0002 GitHub as Canonical Project Record]]. Reconciliation with [[Vision]], [[MarkOS Specification]] and [[Markdown Memory Architecture]], repository layout and approval gates are in [[MarkOS v0.3 Roadmap]]. Inclusion in GitHub records this proposal. Hosting and durable operational storage are now accepted through [[ADR-002 Cloud-first Deployment]]; other technology choices remain provisional, and runtime implementation is not authorized.
+> Source draft: [MarkOS v0.3 Space specification](https://chatgpt.com/space/page_826f242af13c8191a92a0e9a1a96dd3f). Later owner decisions select cloud hosting, RabbitMQ and replacement of the legacy design. The Space page remains an older MQTT draft; GitHub is canonical. See [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] and [[Documentation Authority Index]].
 
-# MarkOS v0.3 — System Specification (Review Draft)
+# MarkOS v0.3 — System Specification
 
-**Status:** Proposed runtime design with accepted ADR-002 hosting baseline; not approved for implementation  
-**Date:** 12 November 2026  
-**Design intent:** Gmail-first, proposed RabbitMQ internal event bus over AMQP, no Obsidian dependency.
+**Status:** Event-driven architecture selected; detailed implementation contracts/profile remain subject to review. This documentation change deploys nothing.
+**Date:** 12 November 2026
+**Design intent:** Gmail-first, RabbitMQ internal events, structured durable knowledge, no PARA or Obsidian dependency.
 
 ## 1. Vision and scope
+
+The original PARA/Markdown/DuckDB design is superseded. Implement an independent runtime from this specification; the imported `markos` application is archived work, not its base. Structured knowledge and durable operational state belong in PostgreSQL; immutable originals belong in object storage. Generated Markdown is a view/export, optionally written to an ordinary folder with no PARA convention. A future `markdown_root` export setting is not a required runtime input.
 
 MarkOS is an event-driven personal operating system. It ingests information, preserves original evidence, coordinates specialist AI agents, maintains durable contextual knowledge, and reports findings or proposes actions. It must remain usable through a browser, CLI, and optional messaging applications. The initial vertical slice is Gmail → classification → electricity bill processing → knowledge update → user notification.
 
 ### Non-goals for initial release
 
-No autonomous switching of energy retailers, sending emails, making purchases, or changing Home Assistant devices without explicit approval. No general-purpose autonomous agent marketplace. No migration or modification of the existing Obsidian vault. No native iOS app in the first release.
+No autonomous switching of energy retailers, sending emails, making purchases, or changing Home Assistant devices without explicit approval. No general-purpose autonomous agent marketplace. No migration or modification of personal note folders in this increment. No PARA storage architecture. No native iOS app in the first release.
 
 ## 2. Architecture
 
@@ -36,23 +36,23 @@ Three planes:
 
 - **Control plane:** authenticated API, conversation gateway, agent registry/configuration, approval inbox, notification preferences, web UI and CLI.
 
-- **Execution plane:** Gmail ingestion bridge, RabbitMQ broker (proposed), durable event outbox, task workers, specialist agents, schedulers and notification gateway.
+- **Execution plane:** Gmail ingestion bridge, RabbitMQ broker, durable event outbox, task workers, specialist agents, schedulers and notification gateway.
 
-- **Data plane:** PostgreSQL operational records, source document/object store, structured knowledge, full-text/semantic retrieval, provenance and audit.
+- **Data plane:** PostgreSQL operational records and structured knowledge, source document/object store, full-text/semantic retrieval, provenance and audit.
 
-RabbitMQ is proposed for internal event distribution and agent work handoff through AMQP 0-9-1, **not** as the authoritative event archive. Transactional outbox and durable processing state remain required. Publisher confirmation, consumer handoff acknowledgement and business-task completion are separate states. MQTT may be introduced later through an explicitly scoped device adapter; it is not the internal bus. See [[ADR-003 RabbitMQ Internal Event Bus]].
+RabbitMQ is selected for internal event distribution and agent work handoff through AMQP 0-9-1, **not** as the authoritative event archive. Transactional outbox and durable processing state remain required. Publisher confirmation, consumer handoff acknowledgement and business-task completion are separate states. MQTT may be introduced later through an explicitly scoped device adapter; it is not the internal bus. See [[ADR-003 RabbitMQ Internal Event Bus]].
 
 ### Production placement (accepted ADR-002)
 
-A DigitalOcean VM runs Docker Compose for the internal broker (proposed RabbitMQ), Gmail ingestion bridge, outbox/reconciliation services, agent workers, persistent scheduler, notification gateway and web API/control plane. Supabase PostgreSQL holds durable operational state. Cloud source-object storage remains a provider decision. The MacBook is only a development/admin client; shutdown, sleep or disconnection must not affect jobs. No production component may depend on a local tunnel, terminal or filesystem.
+A DigitalOcean VM runs Docker Compose for the internal RabbitMQ broker, Gmail ingestion bridge, outbox/reconciliation services, agent workers, persistent scheduler, notification gateway and web API/control plane. Supabase PostgreSQL holds durable operational state. Cloud source-object storage remains a provider decision. The MacBook is only a development/admin client; shutdown, sleep or disconnection must not affect jobs. No production component may depend on a local tunnel, terminal or filesystem.
 
 See [[ADR-002 Cloud-first Deployment]] and [[MarkOS Cloud Deployment Architecture]]. A single VM is not highly available; recovery is part of production readiness.
 
-## 3. Technology baseline (hosting accepted; other selections provisional)
+## 3. Technology baseline (architecture selected; implementation profile proposed)
 
-- Python 3.13 for service and agent workers, preserving the inspected markos implementation toolchain; typed schemas and tests. See [[MarkOS v0.3 M0 Implementation Plan]] for the source inventory and migration gate.
+- Independent Python service project with typed schemas and tests. Select and lock a supported interpreter/library set in M0-A; the legacy Python 3.13 toolchain is archive evidence, not a new-system dependency. See [[MarkOS v0.3 M0 Implementation Plan]].
 
-- RabbitMQ over AMQP 0-9-1 (proposed), durable exchanges/queues, persistent messages, publisher confirms, manual consumer acknowledgements, TLS and per-service permissions. Proposed profile: RabbitMQ 4.4.0, aio-pika 10.2.3 (Python 3.11+), durable classic queues. [[ADR-003 RabbitMQ Internal Event Bus]] defines limits and retention; validate pins/digest and resource sizing in M0. A single VM provides no broker high availability.
+- RabbitMQ over AMQP 0-9-1 (selected), durable exchanges/queues, persistent messages, publisher confirms, manual consumer acknowledgements, TLS and per-service permissions. Proposed profile: RabbitMQ 4.4.0, aio-pika 10.2.3 (Python 3.11+), durable classic queues. [[ADR-003 RabbitMQ Internal Event Bus]] defines limits and retention; validate pins/digest and resource sizing in M0. A single VM provides no broker high availability.
 
 - Supabase PostgreSQL (accepted durable operational storage) for users, domains, messages, events, outbox, inbox deduplication, tasks, schedules, run history, leases, Gmail cursors, agents, approvals, conversations, notification attempts, knowledge metadata and audit.
 
@@ -105,14 +105,14 @@ Agent manifest: ID/version, description, owner/domain, capabilities, input subsc
 
 ### Initial agents
 
-**Email classification agent:** classify incoming mail, produce confidence and rationale, detect bills and attachments, route events, and send uncertain classifications to review.  
-**Electricity agent:** parse bills, normalise billing periods, validate arithmetic, maintain charges/usage/export history, detect anomalies and propose plan reviews; do not fabricate tariff comparisons or claim savings without data.  
-**Knowledge agent:** extract source-grounded observations, maintain entities and relationships, resolve contradictions, preserve temporal context and publish updates.  
+**Email classification agent:** classify incoming mail, produce confidence and rationale, detect bills and attachments, route events, and send uncertain classifications to review.
+**Electricity agent:** parse bills, normalise billing periods, validate arithmetic, maintain charges/usage/export history, detect anomalies and propose plan reviews; do not fabricate tariff comparisons or claim savings without data.
+**Knowledge agent:** extract source-grounded observations, maintain entities and relationships, resolve contradictions, preserve temporal context and publish updates.
 **Coordinator:** routes direct/general user requests to agents, aggregates responses, enforces permissions; does not bypass approvals.
 
 ## 8. Knowledge and documents
 
-Preserve immutable source originals with checksums and access labels. Store extracted observations separately from generated summaries. Each fact has source reference, extraction method, observed time, validity period, confidence and supersession state. Search supports keyword and semantic retrieval, filtered by domain. Generated Markdown summaries are views, not canonical truth. Weekly consolidation reports new topics, changes, unresolved contradictions and source links. No Obsidian-specific APIs or folder conventions are required.
+Preserve immutable source originals with checksums and access labels. Store extracted observations separately from generated summaries. Each fact has source reference, extraction method, observed time, validity period, confidence and supersession state. Search supports keyword and semantic retrieval, filtered by domain. Generated Markdown summaries are derived views, not canonical truth. No PARA hierarchy is required; indexes and retrieval operate over structured knowledge and source references, not a legacy note tree. Weekly consolidation reports new topics, changes, unresolved contradictions and source links. No Obsidian-specific APIs or folder conventions are required.
 
 ## 9. Interaction Gateway
 
@@ -172,19 +172,19 @@ All stages must survive duplicate notifications and service restarts.
 
 ## 14. Milestones and acceptance criteria
 
-**M0 Foundation:** cloud Compose service contracts, Supabase schemas, RabbitMQ contracts, outbox/inbox, worker runtime, persistent scheduling/leases, ACLs, restart/health policies, baseline backups/alerts and tests. Acceptance: duplicates, broker outage, worker restart and overdue schedule recovery preserve durable business results; concurrent claims and bounded catch-up are verified. Test publisher confirm/return handling, lost-confirm retries, independent subscriber delivery, competing workers, crash-before-ack deduplication, poison-message review and recovery after broker storage loss from retained events/dispatch state.  
-**M1 Control plane:** authenticated minimal web chat, agent registry, configuration and event activity. Acceptance: inspect agent health and converse with test agent.  
-**M2 Gmail bridge:** watch, renewal, history cursor, ingestion and reconciliation. Acceptance: test mail appears once in durable source store and event history.  
-**M3 Classification:** confidence-aware routing and manual review. Acceptance: test suite distinguishes bills, ordinary mail and ambiguous cases.  
-**M4 Electricity:** extraction, validation, history and reporting. Acceptance: sample bills yield traceable figures and anomaly explanations.  
-**M5 Knowledge:** source-linked facts, retrieval, weekly consolidation. Acceptance: facts trace to sources and contradictions are surfaced.  
-**M6 Notifications:** push adapter and authenticated deep links. Acceptance: test alert reaches iPhone with appropriate privacy settings.  
-**M7 Operations:** CLI, replay, metrics, verified backup/restore, replacement-VM runbook and failure drills. Acceptance: operator recovers an interrupted workflow, measures approved RPO/RTO, verifies independent outage alerts and proves jobs continue with MacBook off. M7 validates and hardens the operational controls introduced in M0; baseline backups/monitoring must precede any production data.  
+**M0 Foundation:** cloud Compose service contracts, Supabase schemas, RabbitMQ contracts, outbox/inbox, worker runtime, persistent scheduling/leases, ACLs, restart/health policies, baseline backups/alerts and tests. Acceptance: duplicates, broker outage, worker restart and overdue schedule recovery preserve durable business results; concurrent claims and bounded catch-up are verified. Test publisher confirm/return handling, lost-confirm retries, independent subscriber delivery, competing workers, crash-before-ack deduplication, poison-message review and recovery after broker storage loss from retained events/dispatch state.
+**M1 Control plane:** authenticated minimal web chat, agent registry, configuration and event activity. Acceptance: inspect agent health and converse with test agent.
+**M2 Gmail bridge:** watch, renewal, history cursor, ingestion and reconciliation. Acceptance: test mail appears once in durable source store and event history.
+**M3 Classification:** confidence-aware routing and manual review. Acceptance: test suite distinguishes bills, ordinary mail and ambiguous cases.
+**M4 Electricity:** extraction, validation, history and reporting. Acceptance: sample bills yield traceable figures and anomaly explanations.
+**M5 Knowledge:** source-linked facts, retrieval, weekly consolidation. Acceptance: facts trace to sources and contradictions are surfaced.
+**M6 Notifications:** push adapter and authenticated deep links. Acceptance: test alert reaches iPhone with appropriate privacy settings.
+**M7 Operations:** CLI, replay, metrics, verified backup/restore, replacement-VM runbook and failure drills. Acceptance: operator recovers an interrupted workflow, measures approved RPO/RTO, verifies independent outage alerts and proves jobs continue with MacBook off. M7 validates and hardens the operational controls introduced in M0; baseline backups/monitoring must precede any production data.
 **M8 Expansion:** additional agents, integrations and optional messaging. Acceptance: new agent added without modifying existing producers.
 
 ## 15. Decisions awaiting review
 
-RabbitMQ is the proposed internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]. The proposed starting choices are RabbitMQ 4.4.0, aio-pika 10.2.3 and durable classic queues; a 4-vCPU/8-GiB/80-GiB SSD VM planning envelope; a 4-GiB broker memory cap with 2-GiB alarm; 10-GiB disk-free alarm; 64-KiB messages; per-queue 10,000 ready messages/32 MiB with reject-publish; prefetch 10; and 30-day routine replay with a 90-day deduplication floor and holds for unfinished work. See ADR-003 for exact semantics and additional bounds. Before M0, approve these choices, exact topology/permissions, image digest/dependency lock, dead-letter safety and workload validation. Routine replay retention does not change backup RPO or authorize privacy retention. Keep the accepted single-VM hosting baseline; managed service or multi-node quorum availability requires a separate topology/cost decision.
+RabbitMQ is the selected internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]. The proposed starting choices are RabbitMQ 4.4.0, aio-pika 10.2.3 and durable classic queues; a 4-vCPU/8-GiB/80-GiB SSD VM planning envelope; a 4-GiB broker memory cap with 2-GiB alarm; 10-GiB disk-free alarm; 64-KiB messages; per-queue 10,000 ready messages/32 MiB with reject-publish; prefetch 10; and 30-day routine replay with a 90-day deduplication floor and holds for unfinished work. See ADR-003 for exact semantics and additional bounds. Before M0, approve these choices, exact topology/permissions, image digest/dependency lock, dead-letter safety and workload validation. Routine replay retention does not change backup RPO or authorize privacy retention. Keep the accepted single-VM hosting baseline; managed service or multi-node quorum availability requires a separate topology/cost decision.
 
 1. Hosting topology and durable operational database are resolved by [[ADR-002 Cloud-first Deployment]]: DigitalOcean VM, Docker Compose and Supabase PostgreSQL. Still review region, sizing, production plan/cost, network controls and recovery targets before provisioning.
 
@@ -202,6 +202,6 @@ RabbitMQ is the proposed internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]
 
 ## 16. Implementation handoff rules
 
-[[MarkOS v0.3 M0 Implementation Plan]] records the inspected Python 3.13 markos baseline, history-preserving import, required paths/schema changes, ordered PR slices and A01–A20 acceptance tests. It is a proposal; no import or runtime implementation has been performed by this documentation review.
+[[MarkOS v0.3 M0 Implementation Plan]] defines an independent runtime, its own dependency/test boundaries, ordered M0-A–M0-F slices and A01–A20 acceptance cases. No history-preserving import or legacy regression gate is a prerequisite for the new architecture. Prior imports remain archival evidence; prior contracts require fit review before adaptation.
 
-Do not begin implementation until review and milestone approval. Treat the runtime specification as a proposal except for the accepted ADR-002 hosting baseline. This documentation update authorizes no provisioning, spending, deployment or merge. Generate ADRs for unresolved architecture choices, executable acceptance tests for each milestone, API/event contracts before coding, and a migration plan that preserves prior MarkOS design artifacts. Do not touch the Obsidian vault. Keep implementation-ready specifications version-controlled in markos-design.
+Review each implementation slice with contracts, automated tests and docs. Keep source-grounded knowledge, approvals, domain isolation and recovery requirements explicit. This correction authorizes no merge, provisioning, spending, deployment or personal-data migration. Preserve the old repositories and histories without building the new system on their code. Keep project artifacts in `markos-design`; use [[Documentation Authority Index]] for superseded documents.

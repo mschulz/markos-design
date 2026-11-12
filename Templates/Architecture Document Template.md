@@ -43,7 +43,7 @@ usually means the costs weren't looked for.
 
 ## Related
 
-- [[MarkOS Specification]]
+- [[MarkOS v0.3 Specification]]
 - Other documents this one depends on or is depended on by.
 
 ---
@@ -52,11 +52,15 @@ Notes on using this template:
 
 - Match the frontmatter fields exactly — `type`, `status` (`draft` /
   `accepted` / `evaluated`, matching what's actually true), and `tags` are
-  read by other documents and by anyone scanning the vault, not decoration.
+  read by other documents and by anyone scanning the repository, not decoration.
 - Prefer one focused document per decision over one document covering
   several unrelated decisions — this repo's practice has been to consolidate
-  *related* decisions into `MarkOS Specification.md` rather than spawn many
+  *related* decisions into `MarkOS v0.3 Specification.md` rather than spawn many
   small files, but a genuinely new, separable decision still gets its own
   document.
 - Delete this notes section before publishing the document you create from
   this template.
+
+## Authority and supersession
+
+State how this document follows the event-driven baseline in [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]]. Identify superseded assumptions and distinguish accepted selection from proposed profile and measured evidence. No PARA or legacy-code foundation is implied.

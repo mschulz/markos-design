@@ -14,6 +14,8 @@ tags:
 
 # ADR-002 Cloud-first Deployment
 
+> Transport amendment: RabbitMQ replaces the provisional MQTT references in this historical hosting decision. [[ADR-003 RabbitMQ Internal Event Bus]] selects the bus; [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] selects the independent event-driven product baseline. DigitalOcean / Compose / Supabase placement remains accepted. Exact operational profiles still require review.
+
 ## Decision
 
 Run MarkOS production on a DigitalOcean VM using Docker Compose, with Supabase PostgreSQL for durable state. The VM hosts the MQTT broker, Gmail ingestion bridge, agent workers, persistent scheduler, notification gateway and web API/control plane. The MacBook is a development and administration client only. Shutting it down, losing its network connection or closing its terminal must not interrupt production processing or scheduled jobs.

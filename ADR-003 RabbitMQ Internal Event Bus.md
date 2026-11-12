@@ -1,8 +1,8 @@
 ---
 title: ADR-003 RabbitMQ Internal Event Bus
 type: architecture-decision
-status: proposed
-version: 1.2
+status: accepted
+version: 1.3
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -17,9 +17,9 @@ tags:
 
 ## Decision
 
-Propose RabbitMQ over AMQP 0-9-1 for MarkOS internal events and durable work handoff, replacing the provisional Mosquitto/MQTT baseline. The owner requested this proposal on 12 November 2026. It remains subject to PR review and bounded M0 approval; no infrastructure or application is deployed by this record.
+RabbitMQ over AMQP 0-9-1 is the selected internal event transport, replacing provisional Mosquitto/MQTT. The owner's subsequent direction and architecture reset are recorded in [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]]. Selection is accepted; exact versions, queue/resource/flow limits and replay-retention values below remain proposed and require revalidation and measured acceptance. No deployment is performed by this record.
 
-Preserve accepted [[ADR-002 Cloud-first Deployment]]: a DigitalOcean VM runs Docker Compose services and Supabase PostgreSQL holds durable operational state. The MQTT references in that earlier ADR describe the previous provisional transport, not a requirement to retain it. This proposal changes that transport only; managed RabbitMQ or a multi-node cluster would require a separate placement/cost review.
+Preserve accepted [[ADR-002 Cloud-first Deployment]]: a DigitalOcean VM runs Docker Compose services and Supabase PostgreSQL holds durable operational state. The MQTT references in that earlier ADR describe the previous provisional transport, not a requirement to retain it. This ADR scopes transport; ADR-004 separately supersedes the legacy product/storage design; managed RabbitMQ or a multi-node cluster would require a separate placement/cost review.
 
 MQTT may later serve device/Home Assistant adapters with explicit topic-to-event mapping. Google Cloud Pub/Sub still supplies Gmail mailbox-change notifications to the ingestion bridge; it is a separate ingress service.
 
@@ -60,7 +60,7 @@ These are MarkOS engineering starting values for low-volume mail/agent workflows
 | Choice | Proposed value | Reason and qualification |
 |---|---|---|
 | Broker | RabbitMQ **4.4.0**, official `rabbitmq:4.4.0-management` image, pinned by digest before use | Current stable release checked 12 November 2026; 4.4 community support is listed through 31 July 2027. Recheck supported patches/security notices at implementation and monthly; update through tested PRs, never floating `latest` |
-| Python client | **aio-pika 10.2.3**, exact lock including transitive dependencies | Async API, robust reconnection, confirms and mandatory returns suit async ingestion/API services. Requires Python 3.11+; inspected markos requires >=3.13 and pins 3.13. Preserve Python 3.13 and verify the locked client there during migration |
+| Python client | **aio-pika 10.2.3**, exact lock including transitive dependencies | Async API, robust reconnection, confirms and mandatory returns suit async ingestion/API services. Requires Python 3.11+ according to the earlier review; choose and test the independent runtime interpreter/library set in M0-A/M0-C rather than inherit the archived project |
 | Queue type | Explicit `x-queue-type=classic`, durable, non-exclusive, no auto-delete; persistent messages; durable exchanges | Classic storage v2 is built into RabbitMQ 4.x. This node has no replica to benefit from quorum availability; retain database replay. Changing type later requires a reviewed drain/redeclare migration |
 | VM planning envelope | **4 vCPU, 8 GiB RAM, at least 80 GiB usable SSD-backed storage** | Keep Supabase and source objects remote; no local model inference or heavy bulk extraction. This is shared compute, not four dedicated broker cores |
 | Broker container | At most **4 CPUs**, **4 GiB hard memory cap**; absolute memory alarm **2 GiB** | Cap is a ceiling, not a reservation. Budget the other 4 GiB for OS/cache and bounded MarkOS services; load-test contention. Memory alarm applies backpressure before the hard cap; it is not an OOM guarantee |
@@ -100,7 +100,7 @@ M0 must test the 30/90-day boundaries with a controlled clock, pending-work hold
 - Use RabbitMQ as the event archive or business database: rejected; retained PostgreSQL events, dispatch and task records remain required for recovery.
 - Add RabbitMQ Streams, a managed broker or a cluster immediately: deferred pending replay/availability requirements, topology and cost review.
 
-## Acceptance before implementation and launch
+## Acceptance before foundation completion and launch
 
 Approve the M0 contract, then implement synthetic tests for confirm/return handling, unknown publish outcomes, independent subscribers and competing workers, domain/owner denial, database commit before ack, bounded poison review, restart persistence and complete broker-storage-loss replay. Prove no lost durable work or double-applied business effects within the approved retention window. Include side-effect suppression and expired-approval tests. M7 rehearses recovery and operational targets. None of these runtime tests has been executed in this documentation change.
 
@@ -132,7 +132,7 @@ RabbitMQ adds memory/disk planning, permissions, topology management, upgrades a
 - [aio-pika 10.2.3](https://pypi.org/project/aio-pika/10.2.3/) and [client API](https://docs.aio-pika.com/apidoc.html).
 - [Classic queue storage](https://www.rabbitmq.com/docs/classic-queues), [queue limits and overflow](https://www.rabbitmq.com/docs/maxlength), [memory threshold](https://www.rabbitmq.com/docs/memory), [disk alarms](https://www.rabbitmq.com/docs/disk-alarms), [configuration](https://www.rabbitmq.com/docs/configure) and [production sizing guidance](https://www.rabbitmq.com/docs/production-checklist).
 
-Official documentation checked on 12 November 2026. MarkOS topology, lifecycle and acceptance requirements above are proposed design choices.
+The prior profile review recorded these references on 12 November 2026. This architecture correction does not recheck vendor release/support claims. Revalidate versions, security, image digest and client compatibility before implementation; the numbers remain proposals. Internal RabbitMQ selection is accepted.
 
 - [RabbitMQ exchanges](https://www.rabbitmq.com/docs/exchanges): exchange-to-queue routing.
 - [Publisher confirms and consumer acknowledgements](https://www.rabbitmq.com/docs/confirms): separate publisher/broker and consumer/broker confirmations.

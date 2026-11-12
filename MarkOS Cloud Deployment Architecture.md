@@ -2,7 +2,7 @@
 title: MarkOS Cloud Deployment Architecture
 type: architecture
 status: draft
-version: 1.3
+version: 1.4
 owner: Mark Schulz
 created: 2026-11-11
 updated: 2026-11-12
@@ -19,7 +19,7 @@ tags:
 
 Apply accepted [[ADR-002 Cloud-first Deployment]]: a DigitalOcean VM runs the always-on Docker Compose services; Supabase PostgreSQL holds durable state. The placement is accepted. The operational details and targets below are implementation requirements/proposals for review, not evidence of deployed infrastructure.
 
-[[ADR-003 RabbitMQ Internal Event Bus]] proposes replacing the earlier MQTT broker with RabbitMQ over AMQP. The broker-specific details below reflect that proposal; accepted ADR-002 hosting and database placement remain unchanged.
+[[ADR-003 RabbitMQ Internal Event Bus]] selects RabbitMQ over AMQP, replacing provisional MQTT. [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] replaces the old PARA/Markdown/DuckDB product baseline. Exact broker profile and operational targets remain proposals. Cloud placement is unchanged; the new runtime is independent of imported legacy code.
 
 ## Motivation
 
@@ -29,15 +29,19 @@ Jobs must continue without a MacBook, logged-in operator, local tunnel, local OA
 
 | Location | Components and responsibilities |
 |---|---|
-| DigitalOcean VM / Compose | RabbitMQ internal broker (proposed); Gmail ingestion and watch renewal; outbox publisher/reconciler; bounded agent workers; persistent scheduler; notification gateway; authenticated web API/control plane and HTTPS entry point |
+| DigitalOcean VM / Compose | RabbitMQ internal broker; Gmail ingestion and watch renewal; outbox publisher/reconciler; bounded agent workers; persistent scheduler; notification gateway; authenticated web API/control plane and HTTPS entry point |
 | Supabase PostgreSQL | Operational events, outbox/inbox deduplication, tasks, schedules and run history, leases, Gmail history cursor, agent/configuration metadata, approvals, conversations, notification attempts, audit and approved knowledge schemas |
 | Cloud source-object storage (provider open) | Immutable email/attachment originals, checksums and access policy; database stores references. No MacBook-only originals |
 | MacBook / iPhone | Authenticated browser/CLI clients; MacBook development and administration. Local development uses isolated synthetic data and credentials |
-| External providers | Gmail / Google Cloud Pub/Sub mailbox-change notifications, model APIs and selected push adapter. Google Pub/Sub is distinct from the proposed MarkOS RabbitMQ broker |
+| External providers | Gmail / Google Cloud Pub/Sub mailbox-change notifications, model APIs and selected push adapter. Google Pub/Sub is distinct from the MarkOS RabbitMQ broker |
 
 Clients reach the HTTPS API; the API and workers use TLS to Supabase and provider APIs. Compose service traffic stays on a private network; restrict AMQP and broker management endpoints to authorized private/admin access, and do not expose unauthenticated broker or database ports to the public internet. Broker identities use TLS, per-service credentials and least-privilege exchange/queue permissions; workers cannot bind arbitrary domains or provision unrestricted queues. Application checks still enforce owner/domain access. Administrative access is restricted and authenticated. Validate Pub/Sub push identity at a cloud HTTPS endpoint if push is selected; a cloud pull subscriber is an alternative implementation choice. Neither path depends on a personal-device tunnel.
 
 Keep secrets outside Git and images, with least-privilege runtime roles and protected cloud-side injection. Store recoverable credential material encrypted, with recovery access independent of the VM and MacBook. Rotate credentials after suspected compromise. Supabase administrative credentials never reach browser clients. Select a production plan/capacity that avoids intentional inactivity suspension; verify connectivity, connection limits and backup entitlements before launch.
+
+## Knowledge and Markdown storage
+
+PostgreSQL holds structured facts, entities, relationships and provenance under owner/domain scope. Immutable originals live in protected cloud object storage with database references and checksums. Markdown summaries/exports are derived artifacts; an optional standard folder has no PARA hierarchy or Obsidian requirement. No production service depends on a mounted personal note directory, legacy DuckDB index or old filesystem watcher. Source/export access, deletion, retention and recovery contracts require explicit implementation.
 
 ## Persistent scheduling and missed-job recovery
 
@@ -59,7 +63,7 @@ If PostgreSQL is unavailable, stop claiming jobs and performing unrecorded side 
 
 ## Container and host lifecycle
 
-[[MarkOS v0.3 M0 Implementation Plan]] defines the code-import boundary, synthetic foundation slices and tests. Preserve Python 3.13 from the inspected implementation. Classic-queue consumers need a 10-second active handoff and 30-second total unacknowledged-age watchdog, dedicated consumer channels, and channel-close recovery after uncertain commits; health checks and heartbeats alone do not detect a stalled database handoff. Keep publishers separate and resolve retries by owner-scoped inbox identity.
+[[MarkOS v0.3 M0 Implementation Plan]] defines an independent runtime project, synthetic foundation slices and tests. Do not build on the old markos package or inherit its toolchain automatically. Classic-queue consumers need a 10-second active handoff and 30-second total unacknowledged-age watchdog, dedicated consumer channels, and channel-close recovery after uncertain commits; health checks and heartbeats alone do not detect a stalled database handoff. Keep publishers separate and resolve retries by owner-scoped inbox identity.
 
 Set `restart: unless-stopped` for every long-running Compose service, including scheduler and ingestion. Enable Docker at host boot and verify recovery after a VM reboot. An intentionally stopped container remains stopped with this policy; maintenance recovery must explicitly start it. One-shot migrations and restore tasks need deliberate invocation and failure handling rather than an unlimited restart loop.
 
@@ -123,7 +127,7 @@ The cloud can process jobs while clients are off. Durable scheduling, bounded re
 
 ### Costs
 
-Single-VM downtime remains unavoidable without a later availability design. Operators need budget, independent alert delivery, backup access and rehearsed recovery. Detailed product contracts and knowledge-authority questions remain open.
+Single-VM downtime remains unavoidable without a later availability design. Operators need budget, independent alert delivery, backup access and rehearsed recovery. Detailed contracts and providers remain open; structured knowledge authority and replacement of the legacy design are settled by ADR-004.
 
 ## Related
 

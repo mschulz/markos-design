@@ -14,6 +14,9 @@ tags:
   - provenance
 ---
 
+> **Historical evidence, not the new implementation baseline.** This record preserves earlier work/results. It does not authorize PARA, Markdown/DuckDB authority or reuse of the imported application. [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] supersedes those assumptions; see [[Documentation Authority Index]].
+
+
 # Graphify Evaluation
 
 ## Decision

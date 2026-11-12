@@ -2,11 +2,11 @@
 title: ADR-0002 GitHub as Canonical Project Record
 type: architecture-decision
 status: accepted
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-10
-updated: 2026-11-10
-reviewed: 2026-11-10
+updated: 2026-11-12
+reviewed: 2026-11-12
 tags:
   - architecture
   - governance
@@ -26,9 +26,9 @@ A versioned project record keeps design, implementation and verification changes
 
 ## Canonical scope
 
-GitHub holds project artifacts. Runtime email, bills, attachments, personal knowledge, databases, credentials, tokens and live secrets do not belong in the repository. The runtime data authority proposed in v0.3 (PostgreSQL and source storage) is a different concern from project source control. The older Markdown knowledge policy remains an explicit architecture question in [[MarkOS v0.3 Roadmap]].
+GitHub holds project artifacts. Runtime email, bills, attachments, personal knowledge, databases, credentials, tokens and live secrets do not belong in the repository. Runtime authority (PostgreSQL structured/durable state and immutable source-object storage) is distinct from project source control. [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] supersedes the old Markdown-canonical/PARA design; generated Markdown is a view/export.
 
-The existing separate `markos` implementation and its history remain intact. Bringing that implementation into `markos-design` requires an inventory and a reviewed migration plan; this decision does not claim the migration has happened or authorize deleting its repository.
+The separate `markos` repository remains intact. Its v0.2 history was imported into `markos-design` through PR #5 as archived work. That preservation does not authorize reuse as the new foundation. Build the independent runtime in `markos-design`; neither deletion nor pushing a second active implementation into `markos` is part of this correction.
 
 ## Change and approval workflow
 
@@ -42,12 +42,12 @@ Every implementation milestone includes updated documentation and automated test
 
 ## Repository organization
 
-Keep existing Title Case documents flat at the root and retain `Templates/`. Add only directories with a concrete purpose: `src/markos/`, `tests/`, `config/`, `infrastructure/` and `.github/`. Their initial README files define boundaries without pretending services are implemented. Defer `docs/` and category folders until a reviewed move plan addresses links and history.
+Keep existing Title Case documents flat at the root and retain `Templates/`. Add only directories with a concrete purpose: `config/`, `infrastructure/` and `.github/`, plus proposed independent `services/runtime/`. Existing `src/markos/` and root tests preserve the archive. Boundary READMEs distinguish historical implementation from planned services. Defer `docs/` and category folders until a reviewed move plan addresses links and history.
 
 ## Alternatives considered
 
 - Space as the authoritative specification: rejected because code review and the versioned project record would diverge.
-- Continue separate design and implementation repositories indefinitely: superseded by the owner's decision to keep them together initially; the existing implementation still needs an explicit migration.
+- Continue separate design and implementation repositories indefinitely: superseded by the owner's decision to keep them together initially; the archived implementation does not become the new foundation.
 - Move all existing documents immediately into category folders: deferred because the flat layout is established and moving them adds churn without helping this increment.
 
 ## Consequences
@@ -58,7 +58,7 @@ Design and implementation can evolve in reviewable increments with durable histo
 
 ### Costs
 
-Drafts need deliberate reconciliation and status tracking. The separate implementation repository creates a temporary migration boundary. GitHub access and review are required to adopt changes.
+Drafts need deliberate reconciliation and status tracking. The separate legacy repository and imported archive require clear authority labels. GitHub access and review are required to adopt changes.
 
 ## Related
 
