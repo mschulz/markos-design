@@ -178,6 +178,10 @@ Configuration is centrally stored, validated, versioned and auditable. Admin UI 
 
 TLS and broker authentication, secrets management, encrypted backups, database migrations, access-control tests, audit logs, trace IDs, structured logs, metrics, alerts, rate limits, LLM prompt-injection defenses, untrusted document handling, data retention and deletion policies. Backups and restore drills cover PostgreSQL, source files and configuration. Provide replay tooling with side-effect suppression and sandbox test mode. Document threat model for email attachments, external links, malicious event payloads and agent tool permissions.
 
+### M0-D implementation boundary
+
+[[MarkOS v0.3 M0-D Execution and Scheduling]] implements the synthetic subset for review: inline no-op tasks, DB-clock leases/fences/global slots, durable attempts/review and versioned interval/daily schedules. Scans commit unique occurrences, events/outbox and cursor/audit together. Catch-up is bounded, coalesce/skip are audited and DST gap/fold behavior is explicit. Only fixed no-op work executes; real agents/tools, approvals, source-backed execution, daemon lifecycle and full replay/retention remain separate gates.
+
 ### Persistent scheduling
 
 Persist schedule definitions, timezone, next due time, missed-run policy and run history in Supabase. Atomically create uniquely keyed occurrences with tasks/outbox entries and advance schedule state. Claim runs with expiring leases and fencing; recover expired claims and overdue work on startup and periodic scans. Execution is at-least-once with business idempotency, bounded retries and dead-letter review. Select catch-up, coalesce or audited skip per job, with catch-up limits and alerts; never silently lose missed jobs or rely solely on local cron. See [[MarkOS Cloud Deployment Architecture]] for transaction, timezone, outage and external-side-effect recovery requirements.

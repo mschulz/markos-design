@@ -1,4 +1,4 @@
-# Independent MarkOS runtime — M0-A / M0-B / M0-C
+# Independent MarkOS runtime — M0-A / M0-B / M0-C / M0-D
 
 This standalone project provides strict synthetic contracts and validation-only
 preflight. The explicit PostgreSQL and M0-C RabbitMQ libraries connect only when called with DSNs.
@@ -42,3 +42,13 @@ Real RabbitMQ tests additionally need explicit disposable loopback
 the digest-pinned broker and PostgreSQL together. Without a local broker those
 cases skip explicitly. The root M0-C record documents topology/identity trust,
 API construction, durable review, timeouts and remaining readiness gates.
+
+M0-D adds explicitly invoked `Worker.run_once()` and `Scheduler.register()` /
+`scan_once()` libraries. They accept an explicitly connected non-admin store;
+there is no `run` daemon command or startup migration. Migration 0003 adds
+separately provisioned `can_execute`/`can_schedule` grants (default false),
+DB-clock claims/fences, two global valid leases and immutable schedule history.
+Only inline synthetic no-op work executes; source references enter review.
+The strict interval/daily example is `config/runtime/schedule.example.json` at
+repository root. See [[MarkOS v0.3 M0-D Execution and Scheduling]] for policies,
+DST, retry/deadline limits, explicit invocation and production gaps.

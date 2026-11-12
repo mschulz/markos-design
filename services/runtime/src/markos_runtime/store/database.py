@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import datetime
 from hashlib import sha256
 from typing import Any, Literal, Self, cast
 from uuid import UUID
@@ -58,6 +59,15 @@ class ReviewClaim:
     reference: ReviewReference
     fence: int
     attempts: int
+
+
+@dataclass(frozen=True)
+class TaskClaim:
+    task_id: UUID
+    event: EventEnvelope
+    fence: int
+    attempt: int
+    lease_until: datetime
 
 
 class _SafeConnection(psycopg.AsyncConnection[Row]):
@@ -121,6 +131,7 @@ class DurableStore:
             async with self._pool.connection() as connection:
                 try:
                     async with connection.transaction():
+                        await connection.execute("SET LOCAL TIME ZONE 'UTC'")
                         await connection.execute("SET LOCAL statement_timeout='5s'")
                         await connection.execute("SET LOCAL lock_timeout='1s'")
                         yield connection
@@ -265,6 +276,51 @@ class DurableStore:
                 await connection.execute(
                     "SELECT markos_runtime.hold_for_review(%s,%s,%s) AS ok",
                     (claim.event_id, claim.fence, reason),
+                )
+            ).fetchone()
+            assert row is not None
+            return bool(row["ok"])
+
+    async def claim_task(self, executor_id: UUID, *, lease_seconds: int = 30) -> TaskClaim | None:
+        if type(lease_seconds) is not int or not 1 <= lease_seconds <= 300:
+            raise StorageError("invalid task lease")
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute(
+                    "SELECT * FROM markos_runtime.claim_task(%s,%s)", (executor_id, lease_seconds)
+                )
+            ).fetchone()
+            if row is None:
+                return None
+            return TaskClaim(
+                row["task_id"],
+                EventEnvelope.from_wire(bytes(row["wire"])),
+                row["fence"],
+                row["attempt"],
+                row["lease_until"],
+            )
+
+    async def finish_task(
+        self, claim: TaskClaim, executor_id: UUID, *, failure: str | None = None, delay: int = 1
+    ) -> bool:
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute(
+                    "SELECT markos_runtime.finish_task(%s,%s,%s,%s,%s) AS ok",
+                    (claim.task_id, claim.fence, executor_id, failure, delay),
+                )
+            ).fetchone()
+            assert row is not None
+            return bool(row["ok"])
+
+    async def renew_task(self, claim: TaskClaim, executor_id: UUID, *, seconds: int = 30) -> bool:
+        if type(seconds) is not int or not 1 <= seconds <= 300:
+            raise StorageError("invalid task renewal")
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute(
+                    "SELECT markos_runtime.renew_task(%s,%s,%s,%s) AS ok",
+                    (claim.task_id, claim.fence, executor_id, seconds),
                 )
             ).fetchone()
             assert row is not None
