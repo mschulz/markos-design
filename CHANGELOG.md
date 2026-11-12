@@ -13,6 +13,7 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Reviewed PR #18 at `082f5d7`; no blocking consistency findings and documentation CI green. Preserved its unmerged planning commit as this review branch’s prerequisite.
 - Added strict human/membership, registry/config, chat/reference, activity, fixture-grant/intent/approval/audit and error descriptors, 18 new schemas/examples and connection-free control preflight. Frozen test configuration cannot enable gateway/chat/tools/real accounts.
 - Added [[ADR-006 Control Plane Identity and Trust Boundary]] and [[MarkOS v0.3 M1-A Contracts and Identity]]; separated structural validation from future authentication, DB authority, atomic dispatch and distributed enforcement.
+- Diagnosed post-daemon-restart CI readiness probes exceeding their two-second process budget under the disposable 0.25-CPU cap; allow five seconds for that test probe while preserving readiness/business assertions and application deadlines.
 - Locked a separate optional FastAPI/Uvicorn/PyJWT/Jinja profile and added an in-memory compatibility CI probe. Base dependencies, active M0 events/topology/SQL/execution, archive and source history remain intact. No merge, deployment, account connection or provider effects.
 
 
