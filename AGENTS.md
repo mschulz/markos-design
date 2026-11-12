@@ -9,9 +9,13 @@ secrets.
 - GitHub is the canonical record for all MarkOS code, tests, infrastructure,
   configuration schemas/examples and documentation. Space is for collaborative
   drafting; approved changes enter GitHub through pull requests.
-- Use this repository for code and docs together going forward. Application
-  code currently remains in the separate `markos` repository; inspect it and
-  preserve its history in a reviewed migration before importing implementation.
+- This import branch contains the existing markos v0.2 application and tests,
+  alongside the canonical design documents. Its two-parent import preserves
+  source history; the original markos repository remains unchanged. M0.0 still
+  needs owner review and merge before it becomes the main-branch baseline.
+- See [[MarkOS v0.3 M0.0 Import Record]] for source/design anchors, file mapping,
+  conflict resolutions and validation. [[MarkOS v0.2 Project Memory]] and
+  [[MarkOS v0.2 User Guide]] are historical source snapshots, not current policy.
 - See [[ADR-0002 GitHub as Canonical Project Record]] for accepted governance.
 
 ## Repository Layout
@@ -93,6 +97,24 @@ secrets.
 - Concrete implementation boundaries now exist in `src/markos/`, `tests/`,
   `config/`, `infrastructure/` and `.github/`. Keep architecture documents flat;
   do not create category folders or relocate prior artifacts in this increment.
+
+## Python and application boundaries
+
+- Preserve Python 3.13, uv and the source `uv.lock`; do not add runtime dependencies
+  in M0.0. Use the reviewed `.envrc` or explicitly set `UV_PROJECT_ENVIRONMENT`
+  to a non-hidden `venv` in an isolated checkout outside synced folders.
+- After code changes run `uv lock --check`, `uv run ruff check .`, `uv run mypy`
+  and `uv run pytest`. Strict mypy covers `src/markos` and `tests`.
+- The imported CLI, index, local API and watcher stay read-only. Index paths
+  remain outside vaults; failed rebuilds preserve the last valid index, current
+  sync is byte-identical, and rebuilds remain serialized.
+- Use synthetic temporary vaults and injected clocks. External LLM disclosure
+  remains a separate explicit permission; tests mock provider calls.
+- `pyproject.toml` selects no vault/index. Use explicit CLI/env settings or a
+  reviewed config copied from `config/legacy.example.toml`. Do not use a real
+  vault during development or tests. The local API is not a public cloud API.
+- M0.1 owns runtime settings/startup isolation. M0.0 tests import-time safety;
+  no RabbitMQ/PostgreSQL services or `markos-runtime` entry point exist yet.
 
 ## Working Agreements
 

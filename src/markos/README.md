@@ -1,10 +1,9 @@
 # MarkOS source boundary
 
-Approved service, worker, adapter and agent code will live here. This directory
-currently contains no executable application code.
+M0.0 imports the existing v0.2 modules here without changing their bytes. They
+provide the read-only Markdown/DuckDB application, CLI, local API and experiments.
+See [[MarkOS v0.3 M0.0 Import Record]] for provenance and validation.
 
-Before adding code, inventory the existing separate `markos` implementation,
-choose a history-preserving import and review the v0.3 architecture conflicts
-in [[MarkOS v0.3 Roadmap]]. The Python baseline is provisional; package names,
-dependency management and entry points must be settled in the migration PR.
-Do not overwrite or duplicate existing services without that review.
+Approved future runtime code will live in `markos.runtime` as described in
+[[MarkOS v0.3 M0 Implementation Plan]]. No cloud runtime or new dependencies are
+introduced by this import; preserve legacy behavior and settings boundaries.

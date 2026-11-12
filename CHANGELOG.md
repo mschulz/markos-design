@@ -10,6 +10,15 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ### Completed on 12 November 2026
 
+- Prepared M0.0 as a two-parent history-preserving import from markos d5d46cb,
+  stacked on PR #3. Source application/tests and uv.lock remain byte-identical;
+  source README/AGENTS are preserved as historical documents, active machine
+  paths removed, and canonical instructions/ignore rules reconciled.
+- Verified the original 143-test suite and the imported 145-test suite plus
+  lock, Ruff and strict mypy gates. Added import/config safety guards and a
+  source/destination hash manifest; see the M0.0 Import Record. Review/merge
+  remain pending; no real-vault access, runtime implementation or deployment.
+
 - Reviewed PR #3 and inspected markos main d5d46cb: Python 3.13/uv with a
   read-only knowledge stack and tests, but no event/task/PostgreSQL runtime.
 - Added the proposed v0.3 M0 implementation plan, history-preserving import,
