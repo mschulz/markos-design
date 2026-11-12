@@ -144,6 +144,9 @@ jobs:
         run: uv run --no-sync python -m tests.lifecycle_support bootstrap
       - name: Build only independent runtime
         run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m0-test.yml build publisher
+      - name: Verify strict test TLS before roles
+        run: |
+          docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m0-test.yml run --rm --no-deps --entrypoint /opt/runtime/.venv/bin/python publisher -c 'import ssl,socket; ctx=ssl.create_default_context(); [(ctx.wrap_socket(socket.create_connection(("rabbitmq",p),5),server_hostname="rabbitmq").close()) for p in (5671,15671)]; print("strict TLS verified")'
       - name: Start synthetic roles
         run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m0-test.yml up -d --no-build --wait --wait-timeout 120 publisher consumer worker review audit-consumer audit-worker audit-review scheduler recovery
       - name: Process, dependency, pressure, daemon and restore faults

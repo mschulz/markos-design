@@ -58,6 +58,7 @@ class Service:
         self.stop = asyncio.Event()
         self.epoch: UUID | None = None
         self.exit_code = 0
+        self.phase = "database"
         self._hard_stop: asyncio.TimerHandle | None = None
 
     def request_stop(self) -> None:
@@ -77,6 +78,7 @@ class Service:
 
     async def _session(self) -> None:
         cfg = self.config
+        self.phase = "database"
         from psycopg.conninfo import conninfo_to_dict
 
         dsn = secret(self.environ, cfg.database_secret_ref)
@@ -114,14 +116,17 @@ class Service:
             consumer: Consumer | None = None
             session: BrokerSession | None = None
             if cfg.component in {"publisher", "consumer", "review"}:
+                self.phase = "broker"
                 session = await stack.enter_async_context(
                     BrokerSession.connect(secret(self.environ, cfg.broker_secret_ref))
                 )
                 if cfg.component == "consumer":
+                    self.phase = "consumer"
                     consumer = Consumer(session, store, cfg.publisher_users)
                     await consumer.start()
                     stack.push_async_callback(consumer.stop)
                 else:
+                    self.phase = "audit"
                     audit = TopologyAudit(
                         cfg.audit_url,
                         secret(self.environ, cfg.audit_user_secret_ref),
@@ -145,6 +150,7 @@ class Service:
                     publisher = Publisher(
                         session, await session.channel(publisher=True), store, audit
                     )
+            self.phase = "operation"
             worker = SyntheticWorker(store, cfg.synthetic_work_seconds)
             self.health.reconnects += 1
             emit("connected")
@@ -250,7 +256,7 @@ class Service:
                     self.health.ready = False
                     self.health.faults += 1
                     self.health.touch()
-                    emit("dependency_unavailable")
+                    emit("dependency_unavailable_" + self.phase)
                     await self._pause(min(30, backoff(attempts)))
                     attempts += 1
                 finally:
