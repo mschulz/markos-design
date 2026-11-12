@@ -8,6 +8,13 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### Merged-main review and M1 control-plane plan — 12 November 2026
+
+- Reviewed main at `ec52a27` after owner-authorized merges of PRs #15–#17; no blocking finding within synthetic M0 scope. Post-merge CI passed 323 runtime cases and documentation checks. Verified original heads/history, exact reviewed tree and archive/migration preservation.
+- Added [[MarkOS v0.3 M1 Control Plane Implementation Plan]] with repository path changes, proposed trusted human/API/database boundary, versioned registry/configuration, typed durable chat, shared web/CLI, synthetic approvals/MCP and seven ordered PR slices. M1-01–M1-22 specify acceptance and faults; they are future requirements, not passing M1 tests.
+- Updated current instructions, README, specification, roadmap, M0 status and authority inventory to distinguish merged M0 evidence from proposed M1 work. Real provider/approval/backup/VM/monitoring gates remain open. Documentation only; no implementation, account connection, merge or deployment.
+
+
 ### M0-F synthetic lifecycle and closeout prepared for review — 12 November 2026
 
 - Reviewed PR #16 at `83c230f`: no blocking correctness/architecture findings within synthetic replay/retention scope; 294-case runtime CI and documentation CI green. Preserved PR #15 documentation reconciliation and both prerequisite histories.
