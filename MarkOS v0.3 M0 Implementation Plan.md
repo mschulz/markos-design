@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M0 Implementation Plan
 type: implementation-plan
 status: proposed
-version: 2.6
+version: 2.7
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -12,6 +12,10 @@ tags:
 ---
 
 # MarkOS v0.3 M0 Implementation Plan
+
+## Current merge status
+
+M0-A–M0-F are merged; the owner authorized merging PRs #15–#17 in order. The implementation/evidence sections below retain the scope when each slice was prepared. [[MarkOS v0.3 M1 Control Plane Implementation Plan]] reviews main at `ec52a27`, records green 323-case runtime CI and proposes the next control-plane slices. Production readiness remains false and no deployment has occurred.
 
 ## Scope and correction
 

@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.6
+version: 2.7
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -96,8 +96,8 @@ Proposed audit profile: 365-day minimal audit/approval metadata after the latest
 
 1. Retain the accepted architecture correction; PR #7 is closed unmerged and its reference branch/history is preserved.
 2. Preserve merged M0-A–M0-C and their independent contracts, isolation and database/broker evidence; no automatic promotion of old PR #6/#7.
-3. Review M0-D execution/scheduling, M0-E replay/retention and M0-F lifecycle/closeout as separate PRs. M0-F preserves both prerequisite histories; no automatic merge.
-4. Review the synthetic fault evidence and explicit remaining gates in [[MarkOS v0.3 M0-F Lifecycle and Closeout]], [[MarkOS v0.3 M0 Runbook]] and `config/runtime/m0-closeout.json` before advancing gateway/Gmail work. Production readiness remains false.
+3. PRs #15–#17 are merged in order by owner instruction. Main has green 323-case synthetic runtime CI; the historical slice sections below retain their original review evidence. Production readiness remains false.
+4. Review [[MarkOS v0.3 M1 Control Plane Implementation Plan]] and its M1-A contracts/identity decisions before authorizing implementation. Retain all M0 production gaps in [[MarkOS v0.3 M0-F Lifecycle and Closeout]], [[MarkOS v0.3 M0 Runbook]] and `config/runtime/m0-closeout.json`.
 5. Before provisioning, review provider plans, region, cost, network/security, retention, monitoring and recovery targets. Deployment requires separate authorization.
 
 ## Open implementation decisions
@@ -129,3 +129,7 @@ Open M3 decisions: agent/category taxonomy and multi-assignment policy; verified
 ## M0-F review and closeout status
 
 [[MarkOS v0.3 M0-F Lifecycle and Closeout]] adds explicit test-only role processes, private health/heartbeats, bounded shutdown/reconnect, a restricted independent image/Compose harness, restored-generation fencing and required lifecycle CI. A17–A19 have bounded synthetic evidence, not full production acceptance: daemon restart is not a VM reboot; fixture restore is not real cloud backup/erasure; test caps/alarms are not production sizing; loopback fallback tests are not independently hosted alerts. A13 real action approval and all provider/MCP enablement gates remain open. See [[MarkOS v0.3 M0 Runbook]]. Nothing is merged or deployed by this slice.
+
+## M1 control-plane implementation proposal
+
+[[MarkOS v0.3 M1 Control Plane Implementation Plan]] reviews merged main at `ec52a27` and proposes M1-A contracts/trust, M1-B scoped persistence, M1-C authenticated API, M1-D durable deterministic chat, M1-E web/CLI, M1-F synthetic governance/tools and M1-G CI/closeout. M1-01–M1-22 define concrete identity, isolation, concurrency, replay/restore, UI and bounded tool tests. The plan preserves governed MCP and rules-first M3 decisions. Its fixture-only MCP path does not complete real-provider MCP-01–MCP-10 or cloud-operation evidence, and native Gmail/Pub/Sub remains independent. Stack/auth/session/retention choices are proposed, not provisioned or enabled. This update contains documentation only; no M1 implementation, merge or deployment.
