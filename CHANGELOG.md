@@ -8,6 +8,12 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M3 rules-first routing specified for review — 12 November 2026
+
+- Updated [[MarkOS v0.3 Specification]] and [[MarkOS v0.3 Roadmap]] to apply reviewed email-routing rules before an interchangeable Jev or LLM classifier. Application code retains owner/domain permissions, agent selection, thresholds and approval control; uncertain/no-match/conflicting cases retain durable review state.
+- Added M3-A–M3-D gates for shared labelled fixtures, adapter contracts, held-out comparison against rules alone, measured accuracy/coverage/cost/latency, and atomic audited dispatch/corrections. No winning provider or numerical threshold is assumed; privacy, budgets and fallback policy require review.
+- Documentation only: no classifier calls, runtime changes, merge, deployment or personal-data access. M0 implementation remains separate.
+
 ### Completed on 12 November 2026
 
 - Corrected the architecture baseline after the owner's explicit abandonment of the original design. ADR-004 supersedes PARA/Markdown-canonical/DuckDB/desktop assumptions and legacy-code reuse; RabbitMQ is selected internally and PostgreSQL/source objects own durable state.
