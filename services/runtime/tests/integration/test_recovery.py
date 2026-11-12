@@ -106,7 +106,9 @@ def test_global_replay_budget_spaces_requests_across_replicas(database: dict[str
 
 def test_age_boundary_and_expiring_one_use_permit(database: dict[str, str]) -> None:
     async def scenario() -> None:
-        eid, start = await seed(database)
+        eid, _ = await seed(database)
+        # The 30-day window crosses New York's DST change; caller timezone must not alter it.
+        start = datetime(2026, 10, 13, 12, tzinfo=UTC)
         with psycopg.connect(database["admin"], autocommit=True) as conn:
             conn.execute("UPDATE markos_runtime.events SET occurred_at=%s", (start,))
         async with DurableStore.connect(database["publisher"]) as pub:
