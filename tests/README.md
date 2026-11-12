@@ -23,6 +23,12 @@ connection/channel quotas, memory/disk blocking and backlog recovery. Test
 payload deletion and backup-RPO limits with a controlled clock. These are future
 acceptance requirements, not tests run by this documentation PR.
 
+[[MarkOS v0.3 M0 Implementation Plan]] maps concrete source changes to A01–A20
+acceptance cases. Include classic-queue handoff watchdog/channel-close recovery
+under saturated prefetch and strict owner_id/source/domain rejection. Import and
+preserve the existing markos Python 3.13 legacy suite before new runtime tests.
+No existing suite or future runtime tests were executed in this plan-only review.
+
 Later milestones add the acceptance evidence in [[MarkOS v0.3 Roadmap]].
 
 There is no executable test suite in this repository yet. Choose the toolchain

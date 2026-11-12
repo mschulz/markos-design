@@ -2,7 +2,7 @@
 title: MarkOS Cloud Deployment Architecture
 type: architecture
 status: draft
-version: 1.2
+version: 1.3
 owner: Mark Schulz
 created: 2026-11-11
 updated: 2026-11-12
@@ -58,6 +58,8 @@ Execution is at-least-once. Deduplicate schedule occurrences and business operat
 If PostgreSQL is unavailable, stop claiming jobs and performing unrecorded side effects. Retry connections with backoff/jitter and report degradation. Acknowledge external ingress only after its recovery state is durable; reconcile Gmail changes after reconnection.
 
 ## Container and host lifecycle
+
+[[MarkOS v0.3 M0 Implementation Plan]] defines the code-import boundary, synthetic foundation slices and tests. Preserve Python 3.13 from the inspected implementation. Classic-queue consumers need a 10-second active handoff and 30-second total unacknowledged-age watchdog, dedicated consumer channels, and channel-close recovery after uncertain commits; health checks and heartbeats alone do not detect a stalled database handoff. Keep publishers separate and resolve retries by owner-scoped inbox identity.
 
 Set `restart: unless-stopped` for every long-running Compose service, including scheduler and ingestion. Enable Docker at host boot and verify recovery after a VM reboot. An intentionally stopped container remains stopped with this policy; maintenance recovery must explicitly start it. One-shot migrations and restore tasks need deliberate invocation and failure handling rather than an unlimited restart loop.
 
