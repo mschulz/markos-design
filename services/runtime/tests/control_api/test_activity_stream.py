@@ -226,3 +226,52 @@ def test_activity_cursor_requires_exact_current_resource_and_scope(fault: str) -
     with pytest.raises(ApiFault) as error:
         resume(api, api.codec.seal(json.dumps(value)), binding, UUID(OWNER), "personal", head)
     assert error.value.status == (409 if fault in {"expired", "epoch", "head", "legacy"} else 400)
+
+
+def test_stream_request_body_keeps_short_request_deadline() -> None:
+    from types import SimpleNamespace
+
+    from markos_runtime.api.application import create_app
+    from markos_runtime.api.identity import FixtureIssuer
+    from markos_runtime.control.api_config import SyntheticWebApiConfig
+
+    async def scenario() -> None:
+        store: Any = SimpleNamespace()
+        app = create_app(
+            SyntheticWebApiConfig(
+                schema_version=1,
+                api_origin="https://127.0.0.1:18443",
+                conversation_profile="deterministic-conversation-v1",
+                web_profile="synthetic-web-cli-v1",
+            ),
+            store,
+            FixtureIssuer(),
+            session_key=b"s" * 32,
+            confirm_synthetic=True,
+        )
+        messages = []
+
+        async def receive() -> dict[str, Any]:
+            await asyncio.sleep(60)
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def send(message: dict[str, Any]) -> None:
+            messages.append(message)
+
+        async with asyncio.timeout(12):
+            await app(
+                {
+                    "type": "http",
+                    "method": "GET",
+                    "scheme": "https",
+                    "path": "/api/v1/activity/stream",
+                    "query_string": b"",
+                    "headers": [(b"host", b"127.0.0.1:18443")],
+                },
+                receive,
+                send,
+            )
+        assert messages[0]["status"] == 503
+        assert b"unavailable" in messages[1]["body"]
+
+    asyncio.run(scenario())

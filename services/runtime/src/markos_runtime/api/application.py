@@ -754,16 +754,17 @@ def create_app(
                     if length is not None and (not length.isdigit() or int(length) > 65536):
                         raise ApiFault("too-large", 413)
                     body = bytearray()
-                    while True:
-                        message = await receive()
-                        if message["type"] == "http.disconnect":
-                            raise ApiFault("invalid", 400)
-                        chunk = message.get("body", b"")
-                        if len(body) + len(chunk) > 65536:
-                            raise ApiFault("too-large", 413)
-                        body.extend(chunk)
-                        if not message.get("more_body", False):
-                            break
+                    async with asyncio.timeout(10):
+                        while True:
+                            message = await receive()
+                            if message["type"] == "http.disconnect":
+                                raise ApiFault("invalid", 400)
+                            chunk = message.get("body", b"")
+                            if len(body) + len(chunk) > 65536:
+                                raise ApiFault("too-large", 413)
+                            body.extend(chunk)
+                            if not message.get("more_body", False):
+                                break
 
                     replayed = False
 
@@ -780,7 +781,10 @@ def create_app(
             except Exception as error:
                 if streaming:
                     with suppress(Exception):
-                        await send({"type": "http.response.body", "body": b"", "more_body": False})
+                        async with asyncio.timeout(2):
+                            await send(
+                                {"type": "http.response.body", "body": b"", "more_body": False}
+                            )
                     return
                 api.failures += 1
                 if isinstance(error, ApiFault):
