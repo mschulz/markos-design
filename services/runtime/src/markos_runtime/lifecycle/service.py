@@ -162,12 +162,10 @@ class Service:
                             raise FatalServiceError("restored generation")
                         ready = True
                         if cfg.component == "publisher":
-                            self.health.ready = False
                             assert publisher is not None
                             await publisher.publish_once()
                             ready = not publisher.last_pass_failed
                         elif cfg.component == "review":
-                            self.health.ready = False
                             assert publisher is not None
                             await publisher.publish_reviews_once()
                             ready = not publisher.last_pass_failed

@@ -1,12 +1,8 @@
-"""Validation-only command; no adapters, service loop, socket or secret resolution."""
+"""Connection-free preflight and separately confirmed synthetic service commands."""
 
 import argparse
 import sys
 from pathlib import Path
-
-from markos_runtime.config import load_config, read_bounded
-from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
-from markos_runtime.contracts.events import EventEnvelope
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -37,6 +33,10 @@ def main(argv: list[str] | None = None) -> int:
                 return 0 if response.status == 200 else 1
         except OSError:
             return 1
+    from markos_runtime.config import load_config, read_bounded
+    from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
+    from markos_runtime.contracts.events import EventEnvelope
+
     if args.command == "serve-synthetic":
         if not args.confirm_synthetic:
             print("Explicit synthetic confirmation required.", file=sys.stderr)

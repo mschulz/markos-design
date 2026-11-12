@@ -83,3 +83,7 @@ M0-F still owns startup/periodic loops, production Compose, private health, proc
 - [[MarkOS v0.3 M0 Implementation Plan]]
 - [[MarkOS v0.3 M0-D Execution and Scheduling]]
 - [Docker named-volume removal](https://docs.docker.com/reference/cli/docker/volume/rm/)
+
+## Subsequent lifecycle review
+
+[[MarkOS v0.3 M0-F Lifecycle and Closeout]] adds explicitly confirmed test-only process supervision, health and restored-generation fencing. This record retains the evidence/scope at its own slice boundary; later lifecycle work does not enable real agents/providers or production deployment.

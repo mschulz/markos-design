@@ -8,6 +8,14 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M0-F synthetic lifecycle and closeout prepared for review — 12 November 2026
+
+- Reviewed PR #16 at `83c230f`: no blocking correctness/architecture findings within synthetic replay/retention scope; 294-case runtime CI and documentation CI green. Preserved PR #15 documentation reconciliation and both prerequisite histories.
+- Added explicit synthetic role processes, private health/heartbeats, bounded graceful shutdown/reconnect, redacted telemetry, restricted independent image/Compose and required lifecycle/restore CI.
+- Added migration 0005 generation fencing and private restore rotation; earlier migration checksums, root source/tests/lock and snapshots remain unchanged. Old generations cannot finalize restored claims even after numeric fence collision.
+- Added [[MarkOS v0.3 M0-F Lifecycle and Closeout]], [[MarkOS v0.3 M0 Runbook]] and a machine-readable acceptance ledger. Production readiness remains false; real source/backup erasure, VM boot/capacity, independent monitoring and real approvals/MCP remain gates. No merge, deployment or personal data access.
+
+
 ### PR #15 documentation reconciliation — 12 November 2026
 
 - Reconciled AGENTS, authority-index, roadmap and README with main at `4d06339`, preserving the merged MCP safeguards, rules-first routing and ADR-002 correction alongside M0-D's synthetic execution/scheduling boundary.

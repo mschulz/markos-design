@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M0 Implementation Plan
 type: implementation-plan
 status: proposed
-version: 2.5
+version: 2.6
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -17,7 +17,7 @@ tags:
 
 Build an independent synthetic event-to-task foundation from [[MarkOS v0.3 Specification]], [[ADR-003 RabbitMQ Internal Event Bus]] and [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]]. The old import/reuse plan is superseded. No PARA note storage, Markdown database, DuckDB, legacy CLI/API/watcher or original dependency lock is a foundation requirement.
 
-This plan defines reviewable implementation slices. M0-A supplies contracts/configuration, M0-B explicit PostgreSQL storage and M0-C explicit RabbitMQ adapters and M0-D synthetic execution/scheduling and M0-E synthetic replay/retention for review. No runnable business worker service exists, and nothing is merged or deployed by this work. The M0.0 import remains archival evidence. The new slice numbering below replaces the prior import-first sequence; use these names to avoid transferring old completion claims.
+This plan defines reviewable implementation slices. M0-A supplies contracts/configuration, M0-B explicit PostgreSQL storage and M0-C explicit RabbitMQ adapters and M0-D synthetic execution/scheduling and M0-E synthetic replay/retention and M0-F synthetic lifecycle/closeout for review. No runnable business worker service exists, and nothing is merged or deployed by this work. The M0.0 import remains archival evidence. The new slice numbering below replaces the prior import-first sequence; use these names to avoid transferring old completion claims.
 
 ## M0-A implementation status
 
@@ -92,7 +92,7 @@ ADR-003 owns the proposed broker/client pins, resource/queue limits, retention a
 
 ## Acceptance matrix
 
-A01–A03 have M0-A evidence; A04–A05 have M0-B PostgreSQL evidence; A06–A10 have M0-C broker/handoff evidence. M0-D supplies A11/A12 synthetic evidence and the A13 database-failure portion. M0-E adds A14–A16 synthetic evidence. Actual provider/action approvals, erasure/restore and A17–A20 remain future requirements, even where a lower-level primitive has partial coverage. Unit fakes help prove decisions; real isolated PostgreSQL/RabbitMQ and process fault points must prove persistence, roles, locks and delivery behavior.
+A01–A03 have M0-A evidence; A04–A05 have M0-B PostgreSQL evidence; A06–A10 have M0-C broker/handoff evidence. M0-D supplies A11/A12 synthetic evidence and the A13 database-failure portion. M0-E adds A14–A16 synthetic evidence. M0-F adds A17–A20 synthetic evidence with partial operational gates. Actual provider/action approvals, erasure/off-host restore, VM boot/capacity and independent monitoring remain future requirements; see [[MarkOS v0.3 M0-F Lifecycle and Closeout]]. Unit fakes help prove decisions; real isolated PostgreSQL/RabbitMQ and process fault points must prove persistence, roles, locks and delivery behavior.
 
 | ID | Concrete test/fault | Acceptance |
 |---|---|---|
@@ -120,3 +120,7 @@ A01–A03 have M0-A evidence; A04–A05 have M0-B PostgreSQL evidence; A06–A10
 ## Readiness limits
 
 Passing contracts alone does not complete M0. Production needs separately reviewed cost/security, source retention/deletion, backup/monitoring ownership and measured recovery targets. Gmail/control-plane/provider actions remain later milestones. No real source migration, deployment or provisioning is part of this plan.
+
+## M0-F implementation status
+
+[[MarkOS v0.3 M0-F Lifecycle and Closeout]] records explicit synthetic role supervision, private health, strict test TLS, restricted container builds, generation-fenced restore and lifecycle CI. [[MarkOS v0.3 M0 Runbook]] supplies controlled startup/failure/restore steps. The JSON closeout ledger distinguishes synthetic evidence from partial A13/A17–A19 production gates. This prepares the synthetic foundation for review without asserting production readiness, enabling providers or merging/deploying.

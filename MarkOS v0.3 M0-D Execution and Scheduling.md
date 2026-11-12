@@ -79,3 +79,7 @@ The subsequent [[MarkOS v0.3 M0-E Replay and Retention]] supplies synthetic reta
 - [[MarkOS Cloud Deployment Architecture]]
 - [PostgreSQL row/advisory locks](https://www.postgresql.org/docs/17/explicit-locking.html)
 - [Python IANA zones and fold handling](https://docs.python.org/3.13/library/zoneinfo.html)
+
+## Subsequent lifecycle review
+
+[[MarkOS v0.3 M0-F Lifecycle and Closeout]] adds explicitly confirmed test-only process supervision, health and restored-generation fencing. This record retains the evidence/scope at its own slice boundary; later lifecycle work does not enable real agents/providers or production deployment.

@@ -156,7 +156,9 @@ jobs:
         run: cat infrastructure/.test-artifacts/measurements.json
       - name: Capture bounded diagnostics on failure
         if: failure()
-        run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m0-test.yml logs --tail 60
+        run: |
+          docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m0-test.yml logs --tail 60
+          for id in $(docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m0-test.yml ps -a -q); do docker inspect --format '{{json .State.Health}}' "$id"; done
       - name: Remove only owned synthetic project and volumes
         if: always()
         run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m0-test.yml down -v --remove-orphans

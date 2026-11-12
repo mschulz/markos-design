@@ -267,8 +267,16 @@ def test_lifecycle_restart_pressure_restore_and_clean_runtime() -> None:
         "exec", "-T", "postgres", "pg_dump", "-U", "postgres", "--no-owner", "-Fc", "markos_m0f"
     )
     assert len(backup) < 20 * 1024 * 1024
-    digest = sha256(backup).hexdigest()
-    assert digest == sha256(backup).hexdigest()
+    folder = h.ROOT / "infrastructure/.test-artifacts"
+    folder.mkdir(exist_ok=True)
+    backup_path = folder / "database.dump"
+    backup_path.write_bytes(backup)
+    manifest_path = folder / "backup-manifest.json"
+    manifest_path.write_text(json.dumps({"sha256": sha256(backup).hexdigest()}))
+    expected = json.loads(manifest_path.read_text())["sha256"]
+    backup = backup_path.read_bytes()
+    assert sha256(backup).hexdigest() == expected
+    assert sha256(backup + b"corruption").hexdigest() != expected
     objects = {str(source): h.SOURCE_BODY.decode() for source in h.SOURCES}
     override, database = restore_fixture(backup, objects, dispatch, task, executor, review)
     start = time.monotonic()
