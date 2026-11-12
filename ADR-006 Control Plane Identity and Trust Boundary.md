@@ -2,11 +2,11 @@
 title: ADR-006 Control Plane Identity and Trust Boundary
 type: architecture-decision
 status: proposed
-version: 1.2
+version: 1.3
 owner: Mark Schulz
 created: 2026-11-12
-updated: 2026-11-12
-reviewed: 2026-11-12
+updated: 2026-11-13
+reviewed: 2026-11-13
 tags:
   - architecture
   - security
@@ -18,7 +18,7 @@ tags:
 
 Use one trusted interaction gateway to authenticate humans and delegate narrowly scoped operations to PostgreSQL. Keep human identity separate from agent/service login identity. Implement the versioned synthetic contract profile in [[MarkOS v0.3 M1-A Contracts and Identity]] first; authentication, database authority, API routes, sessions and dispatch remain later slices. This ADR is proposed for review, not production enablement. It follows [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] and [[ADR-005 Governed MCP Access for Agents]] without changing RabbitMQ, PostgreSQL authority, source objects, derived Markdown or rules-first M3 routing.
 
-The owner authorized M1-A after review of PR #18. That M1-A authorization covered contracts, explicit inert configuration, tests and identity decisions. The owner has subsequently authorized M1-B persistence separately; see [[MarkOS v0.3 M1-B Control Plane Persistence]]. The owner separately authorized M1-C authentication/API; see the review record below. M1-D–M1-G, real accounts, tools, merging and deployment require separate authorization. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
+The owner authorized M1-A after review of PR #18. That M1-A authorization covered contracts, explicit inert configuration, tests and identity decisions. The owner has subsequently authorized M1-B persistence separately; see [[MarkOS v0.3 M1-B Control Plane Persistence]]. The owner separately authorized M1-C authentication/API; see the review record below. The owner has separately authorized M1-D synthetic conversations; see its review record below. M1-E–M1-G, real accounts, tools, merging and deployment require separate authorization. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
 
 ## Authentication and session profile
 
@@ -60,7 +60,7 @@ This concentrates trust: a compromised gateway holding its database credential c
 
 ## Contracts, routing and approval identity
 
-The M1-A contract namespace is separate from the active M0 event union. Future `control.chat.requested` uses producer `control-gateway`, route `v1.control.chat-requested` and intended consumer `control-test-agent`. Future `control.chat.completed` uses producer `control-test-agent`, route `v1.control.chat-completed` and consumer `control-activity`. Both carry owner/domain-bound typed message references and checksums, never full chat text or credentials. The current M0 parser, topology auditor, SQL intent checks and no-op worker continue to reject those types until M1-D deliberately extends them together.
+The M1-A contract namespace is separate from the active M0 event union. Future `control.chat.requested` uses producer `control-gateway`, route `v1.control.chat-requested` and intended consumer `control-test-agent`. Future `control.chat.completed` uses producer `control-test-agent`, route `v1.control.chat-completed` and consumer `control-activity`. Both carry owner/domain-bound typed message references and checksums, never full chat text or credentials. M1-D deliberately extends the active closed wire union, route audit, private SQL constructors and typed worker together. The original no-op envelope, append/schedule path and worker retain their distinct restrictions.
 
 The initial agent revision is disabled, deterministic, has zero retries, no model and no required tools. Configuration revisions are contiguous and scope bound; future state changes carry an expected revision and reason. Human HTTP chat/approval request bodies have no owner/actor/role/token/tool/endpoint fields. Authenticated context must supply those in later slices. Validation of a request to enable an agent is only a proposed state transition, not execution permission.
 
@@ -95,9 +95,14 @@ Checked 12 November 2026: [FastAPI](https://pypi.org/project/fastapi/), [Uvicorn
 
 ## M1-B persistence boundary
 
-[[MarkOS v0.3 M1-B Control Plane Persistence]] implements explicit gateway-role/session/membership checks, rotation/refresh, versioned registry/configuration and atomic staged conversations/messages/activity through additive migration 0006. The gateway remains trusted to bind a verified provider subject; no token verifier/API is supplied. Held proposals are not publishable until M1-D extends the existing event/outbox boundary. Runtime base-table access remains denied; scoped definer functions are the database delegation boundary. Production/provider/MCP enablement and full audit/retention/restore gates remain open.
+[[MarkOS v0.3 M1-B Control Plane Persistence]] implements explicit gateway-role/session/membership checks, rotation/refresh, versioned registry/configuration and atomic staged conversations/messages/activity through additive migration 0006. The gateway remains trusted to bind a verified provider subject; no token verifier/API is supplied. M1-D adds explicit current-authority promotion of held proposals into the existing event/outbox boundary; migration does not promote them. Runtime base-table access remains denied; scoped definer functions are the database delegation boundary. Production/provider/MCP enablement and full audit/retention/restore gates remain open.
 
 
 ## Merged M1-B and M1-C review status
 
 PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.
+
+
+## Merged M1-C and M1-D review status
+
+PR #21 is merged. [[MarkOS v0.3 M1-D Durable Test Agent Conversation]] records the `8311f01` main review, six green post-merge checks and a separately reviewable durable synthetic conversation. The explicit conversation API profile adds atomic message/event/outbox admission, fixed checksum acknowledgement, durable reply/completion/activity, scoped polling/cursors, cancellation and current-authority/epoch/fence checks. It shares PostgreSQL/RabbitMQ and the two global execution slots with the unchanged no-op path; migration 0008 is additive. M1-C/preflight configurations remain execution-disabled. Real identity adapters, interactive clients/SSE, governance/tools, scheduled cleanup and packaged process/restore/production gates remain separate work. No merge or deployment.

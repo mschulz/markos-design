@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "conversation_id": {
+      "format": "uuid",
+      "title": "Conversation Id",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "operation_key": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._:-]*$",
+      "title": "Operation Key",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "domain",
+    "conversation_id",
+    "operation_key"
+  ],
+  "title": "ConversationRequest",
+  "type": "object"
+}

@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 Domain = Literal["personal", "research", "work"]
-EventType = Literal["foundation.noop.requested"]
+EventType = Literal["foundation.noop.requested", "control.chat.requested", "control.chat.completed"]
 Name = Annotated[str, Field(pattern=r"^[a-z][a-z0-9]*(?:[-.][a-z0-9]+)*$", max_length=64)]
 OperationKey = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9._:-]*$", max_length=128)]
 MAX_EVENT_BYTES = 65_536

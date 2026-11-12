@@ -14,7 +14,8 @@ from markos_runtime.contracts.base import (
     ValueModel,
     parse_document,
 )
-from markos_runtime.contracts.events import EventEnvelope, TaskRequest
+from markos_runtime.contracts.events import TaskRequest
+from markos_runtime.contracts.wire import RuntimeEvent, routing_key
 
 
 class ServicePolicy(ValueModel):
@@ -47,7 +48,7 @@ class Subscription(ValueModel):
 
     @property
     def routing_key(self) -> str:
-        return "v1.foundation.noop-requested"
+        return routing_key(self.event_type)
 
 
 class Manifest(ValueModel):
@@ -86,7 +87,7 @@ class Manifest(ValueModel):
                 return policy
         raise ContractError("unknown service identity")
 
-    def authorize_publish(self, event: EventEnvelope, trusted_service_id: str) -> None:
+    def authorize_publish(self, event: RuntimeEvent, trusted_service_id: str) -> None:
         policy = self.policy(trusted_service_id)
         if (event.source, event.owner_id, event.domain) != (
             policy.service_id,
@@ -97,7 +98,7 @@ class Manifest(ValueModel):
 
     def task_request(
         self,
-        event: EventEnvelope,
+        event: RuntimeEvent,
         trusted_service_id: str,
         task_id: UUID,
         *,

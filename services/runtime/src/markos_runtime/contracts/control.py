@@ -210,7 +210,7 @@ class MessageReference(ScopedValue):
 
 
 class ChatEvent(ScopedValue):
-    """Future wire contract. M0 transport/store still reject these event types."""
+    """Typed conversation reference; admission and dispatch authority remain database decisions."""
 
     event_id: UUID
     event_type: Literal["control.chat.requested", "control.chat.completed"]
@@ -223,6 +223,14 @@ class ChatEvent(ScopedValue):
     operation_key: OperationKey
     message: MessageReference
     expires_at: Utc | None = None
+
+    def require_live(self, now: datetime) -> None:
+        from markos_runtime.contracts.base import ContractError
+
+        if now.utcoffset() != timedelta(0):
+            raise ContractError("UTC clock required")
+        if self.expires_at is not None and now >= self.expires_at:
+            raise ContractError("event expired")
 
     @model_validator(mode="after")
     def binding(self) -> Self:
@@ -423,3 +431,29 @@ class ApiError(ControlValue):
             "limited": 429,
             "unavailable": 503,
         }[self.code]
+
+
+class ConversationRequest(ControlValue):
+    domain: Domain
+    conversation_id: UUID
+    operation_key: OperationKey
+
+
+class ChatAdmission(ControlValue):
+    message_id: UUID
+    event_id: UUID
+    sequence: int = Field(ge=1)
+    state: Literal["queued"]
+    agent_revision: Revision
+    config_revision: Revision
+
+
+class ChatStatus(ControlValue):
+    message_id: UUID
+    event_id: UUID
+    state: Literal["queued", "working", "succeeded", "failed", "cancelled"]
+    reason: (
+        Literal["authority", "cancelled", "execution", "timeout", "dependency", "abandoned"] | None
+    )
+    reply_id: UUID | None
+    completion_id: UUID | None

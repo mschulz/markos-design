@@ -5,8 +5,8 @@ status: proposed
 version: 1.2
 owner: Mark Schulz
 created: 2026-11-12
-updated: 2026-11-12
-reviewed: 2026-11-12
+updated: 2026-11-13
+reviewed: 2026-11-13
 tags:
   - architecture
   - control-plane
@@ -168,3 +168,8 @@ PRs #18/#19 are merged and the owner authorized M1-B separately. [[MarkOS v0.3 M
 ## Merged M1-B and M1-C review status
 
 PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.
+
+
+## Merged M1-C and M1-D review status
+
+PR #21 is merged. [[MarkOS v0.3 M1-D Durable Test Agent Conversation]] records the `8311f01` main review, six green post-merge checks and a separately reviewable durable synthetic conversation. The explicit conversation API profile adds atomic message/event/outbox admission, fixed checksum acknowledgement, durable reply/completion/activity, scoped polling/cursors, cancellation and current-authority/epoch/fence checks. It shares PostgreSQL/RabbitMQ and the two global execution slots with the unchanged no-op path; migration 0008 is additive. M1-C/preflight configurations remain execution-disabled. Real identity adapters, interactive clients/SSE, governance/tools, scheduled cleanup and packaged process/restore/production gates remain separate work. No merge or deployment.

@@ -15,10 +15,13 @@ from markos_runtime.contracts.control import (
     ApprovalRecord,
     AuditRecord,
     CallIntent,
+    ChatAdmission,
     ChatEvent,
     ChatRequest,
+    ChatStatus,
     ConfigRevision,
     Conversation,
+    ConversationRequest,
     HumanPrincipal,
     Membership,
     Message,
@@ -29,7 +32,7 @@ from markos_runtime.contracts.policy import Manifest
 from markos_runtime.contracts.replay import ReplayRequest
 from markos_runtime.contracts.review import ReviewReference
 from markos_runtime.contracts.schedules import ScheduleDefinition
-from markos_runtime.control.api_config import SyntheticApiConfig
+from markos_runtime.control.api_config import SyntheticApiConfig, SyntheticConversationApiConfig
 from markos_runtime.control.config import ControlConfig, ControlLimits
 from markos_runtime.lifecycle.config import ServiceConfig
 
@@ -37,6 +40,10 @@ from markos_runtime.lifecycle.config import ServiceConfig
 def models() -> dict[str, type[ValueModel]]:
     return {
         "control-api": SyntheticApiConfig,
+        "control-conversation-api": SyntheticConversationApiConfig,
+        "control-conversation-request": ConversationRequest,
+        "control-chat-admission": ChatAdmission,
+        "control-chat-status": ChatStatus,
         "control-config": ControlConfig,
         "control-limits": ControlLimits,
         "control-principal": HumanPrincipal,

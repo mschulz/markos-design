@@ -599,22 +599,44 @@ def test_migration_upgrade_preserves_populated_m0_and_checksums(
     control: dict[str, Any], tmp_path: Path
 ) -> None:
     async def scenario() -> None:
-        async with DurableStore.connect(control["publisher"]) as runtime:
-            await runtime.append(event())
+        from tests.integration.conftest import ROLES
+
+        directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+        for file in sorted(directory.glob("*.sql"))[:5]:
+            (tmp_path / file.name).write_bytes(file.read_bytes())
+        # Reconstruct an actual M0-only database before admitting an old-wire event.
+        # This fixture database is unique/disposable; no shared schema is touched.
         with psycopg.connect(control["migration"], autocommit=True) as conn:
             conn.execute("DROP SCHEMA markos_control CASCADE")
-            conn.execute("DELETE FROM markos_runtime.schema_migrations WHERE version>=6")
-        directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+            conn.execute("DROP SCHEMA markos_runtime CASCADE")
+        async with await psycopg.AsyncConnection.connect(
+            control["migration"], autocommit=True, row_factory=dict_row
+        ) as conn:
+            await migrate(conn, tmp_path)
+            for role in ROLES.values():
+                await conn.execute(
+                    "INSERT INTO markos_runtime.service_identities "
+                    "(login_role,service_id,owner_id,domain,can_publish,can_consume) "
+                    "VALUES(%s,%s,%s,%s,%s,%s)",
+                    role,
+                )
+        async with DurableStore.connect(control["publisher"]) as runtime:
+            await runtime.append(event())
+        with psycopg.connect(control["migration"]) as conn:
+            original = conn.execute("SELECT wire,body_hash FROM markos_runtime.events").fetchone()
         async with await psycopg.AsyncConnection.connect(
             control["migration"], autocommit=True, row_factory=dict_row
         ) as conn:
             await migrate(conn, directory)
             await migrate(conn, directory)
         with psycopg.connect(control["migration"]) as conn:
-            assert conn.execute("SELECT count(*) FROM markos_runtime.events").fetchone() == (1,)
+            assert (
+                conn.execute("SELECT wire,body_hash FROM markos_runtime.events").fetchone()
+                == original
+            )
             assert conn.execute(
                 "SELECT count(*) FROM markos_runtime.schema_migrations"
-            ).fetchone() == (7,)
+            ).fetchone() == (8,)
 
     asyncio.run(scenario())
 
@@ -936,3 +958,63 @@ def test_gateway_cannot_hide_elevated_privileges_in_an_inherited_role(
         finally:
             conn.execute(sql.SQL("REVOKE {} FROM m1b_gateway").format(sql.Identifier(elevated)))
             conn.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(elevated)))
+
+
+def test_upgrade_populated_m1c_preserves_sessions_and_held_work(
+    control: dict[str, Any], tmp_path: Path
+) -> None:
+    from tests.integration.conftest import ROLES
+
+    async def scenario() -> None:
+        directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+        for file in sorted(directory.glob("*.sql"))[:7]:
+            (tmp_path / file.name).write_bytes(file.read_bytes())
+        with psycopg.connect(control["migration"], autocommit=True) as conn:
+            conn.execute("DROP SCHEMA markos_control CASCADE")
+            conn.execute("DROP SCHEMA markos_runtime CASCADE")
+        async with await psycopg.AsyncConnection.connect(
+            control["migration"], autocommit=True, row_factory=dict_row
+        ) as conn:
+            await migrate(conn, tmp_path)
+            for role in ROLES.values():
+                await conn.execute(
+                    "INSERT INTO markos_runtime.service_identities "
+                    "(login_role,service_id,owner_id,domain,can_publish,can_consume) "
+                    "VALUES(%s,%s,%s,%s,%s,%s)",
+                    role,
+                )
+            await conn.execute("INSERT INTO markos_control.gateway_logins VALUES('m1b_gateway')")
+            await conn.execute(
+                "INSERT INTO markos_control.principals VALUES(%s,'synthetic-issuer','both',false)",
+                (control["principals"]["both"],),
+            )
+            await conn.execute(
+                "INSERT INTO markos_control.memberships "
+                "VALUES(%s,%s,'personal',1,ARRAY['operator','administrator'])",
+                (control["principals"]["both"], OWN),
+            )
+        async with ControlStore.connect(control["gateway"]) as store:
+            ctx = await session(store)
+            conv = await prepare(store, ctx)
+            value = request(conv)
+            original = await store.stage_message(ctx, OWN, value)
+            messages = await store.read_messages(ctx, OWN, "personal", conv)
+            agents = await store.read_agents(ctx, OWN, "personal")
+            config = await store.read_configuration(ctx, OWN, "personal")
+            async with await psycopg.AsyncConnection.connect(
+                control["migration"], autocommit=True, row_factory=dict_row
+            ) as conn:
+                await migrate(conn, directory)
+                await migrate(conn, directory)
+            assert await store.read_messages(ctx, OWN, "personal", conv) == messages
+            assert await store.read_agents(ctx, OWN, "personal") == agents
+            assert await store.read_configuration(ctx, OWN, "personal") == config
+            assert await store.stage_message(ctx, OWN, value) == original
+        with psycopg.connect(control["migration"]) as conn:
+            assert conn.execute("SELECT count(*) FROM markos_runtime.events").fetchone() == (0,)
+            assert conn.execute("SELECT count(*) FROM markos_control.chat_runs").fetchone() == (0,)
+            assert conn.execute("SELECT state FROM markos_control.message_intents").fetchone() == (
+                "held",
+            )
+
+    asyncio.run(scenario())

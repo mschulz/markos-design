@@ -8,6 +8,15 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M1-D durable test agent conversation prepared for review — 13 November 2026
+
+- Reviewed merged main `8311f01` after PR #21; exact reviewed tree/history preserved, six post-merge checks green with 623 tests. No blocking issue in M1-C's synthetic API scope.
+- Added a separately constructed conversation profile, strict conversation/admission/status contracts, atomic message/request-event/consumer/outbox admission, version/current-authority checks, opaque polling cursors and durable scoped cancellation.
+- Added migration 0008 and a fixed checksum acknowledgement worker sharing the existing two execution slots, with transactional exactly-one reply/result/activity/completion outbox, current fixture session checks and epoch/fence/lease rejection. Existing no-op schedules and archived code remain intact.
+- Extended the closed wire/parser and exact RabbitMQ route audit, preserving committed bytes through publication/handoff. Added administrator-only topology examples, real HTTPS/RabbitMQ/competing-worker CI, rollback/redelivery/response-loss/authority/limit/upgrade tests and [[MarkOS v0.3 M1-D Durable Test Agent Conversation]].
+- Real providers, interactive clients/SSE, governance/tools, scheduled cleanup, packaged conversation processes/full restore and production gates remain open. No merge, deployment or personal data access.
+
+
 ### M1-C authenticated shared API prepared for review — 12 November 2026
 
 - Reviewed merged main at `6a87fb0` after PR #20; exact reviewed tree/history preserved and all five post-merge checks pass (533 runtime cases plus optional compatibility and docs). No blocking issue within M1-B persistence scope.

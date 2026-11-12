@@ -94,7 +94,7 @@ def test_schemas_and_examples_match() -> None:
     from markos_runtime.contracts.schedules import ScheduleDefinition
 
     ScheduleDefinition.model_validate_json((examples / "schedule.example.json").read_bytes())
-    assert len(artifacts()) == 27
+    assert len(artifacts()) == 31
     schema = json.loads(artifacts()["event.schema.json"])
     assert schema["additionalProperties"] is False
     assert "causation_id" in schema["required"]

@@ -183,8 +183,12 @@ class FixtureIssuer:
         key.update(kid=self.kid, alg="ES256", use="sig")
         return json.dumps({"keys": [key]}).encode()
 
+    async def session_active(self, subject: str, session_id: UUID) -> bool:
+        """Fixture-only current authority using non-secret subject/session metadata."""
+        return self._sessions.get(session_id) == (subject, True)
+
     async def valid_session(self, identity: VerifiedIdentity) -> bool:
-        return self._sessions.get(identity.provider_session_id) == (identity.subject, True)
+        return await self.session_active(identity.subject, identity.provider_session_id)
 
     async def refresh(self, token: str) -> tuple[str, str]:
         entry = self._refresh.pop(token, None)
