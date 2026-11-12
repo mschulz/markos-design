@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "owner_id": "00000001-1111-4111-8111-111111111111",
+  "domain": "personal",
+  "intent_id": "00000006-1111-4111-8111-111111111111",
+  "principal_id": "00000002-1111-4111-8111-111111111111",
+  "agent_id": "control-test-agent",
+  "agent_revision": 1,
+  "task_id": "00000007-1111-4111-8111-111111111111",
+  "run_id": "00000008-1111-4111-8111-111111111111",
+  "epoch": "00000009-1111-4111-8111-111111111111",
+  "task_fence": 1,
+  "operation_key": "m1a:fixture:1",
+  "server_id": "synthetic-mcp-fixture",
+  "tool": "fixture.read",
+  "tool_schema_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "grant_id": "0000000a-1111-4111-8111-111111111111",
+  "grant_revision": 1,
+  "policy_revision": 1,
+  "arguments": {
+    "schema_version": 1,
+    "label": "Synthetic read only"
+  },
+  "arguments_sha256": "5918bb3463e1f997c543dac5df9c14cdcbfa539c04f0844b7afb2dd609247811",
+  "preview": "Synthetic read: no private data or effects",
+  "preview_sha256": "db54c27d55c22590f449cd1bf6f5dff883c8f9a743efb1baddf9a24101398d1a",
+  "recipient": "synthetic-mcp-fixture",
+  "data_class": "synthetic",
+  "effect": "read",
+  "created_at": "2026-11-12T00:00:00Z",
+  "expires_at": "2026-11-12T00:15:00Z",
+  "max_attempts": 1
+}

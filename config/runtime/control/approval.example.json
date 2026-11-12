@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "owner_id": "00000001-1111-4111-8111-111111111111",
+  "domain": "personal",
+  "approval_id": "0000000f-1111-4111-8111-111111111111",
+  "intent_id": "00000006-1111-4111-8111-111111111111",
+  "intent_sha256": "309db74375339988de00f3ebaff2c2f726b2e902028755be25960d17c97cd2b6",
+  "revision": 1,
+  "status": "awaiting",
+  "approver_id": null,
+  "dispatch_id": null,
+  "expires_at": "2026-11-12T00:15:00Z"
+}

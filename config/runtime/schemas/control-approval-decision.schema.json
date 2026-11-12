@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Human/scope comes from future verified context, never this request body.",
+  "properties": {
+    "decision": {
+      "enum": [
+        "approve",
+        "reject",
+        "revoke"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "intent_id": {
+      "format": "uuid",
+      "title": "Intent Id",
+      "type": "string"
+    },
+    "intent_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Intent Sha256",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "intent_id",
+    "intent_sha256",
+    "expected_revision",
+    "decision"
+  ],
+  "title": "ApprovalDecisionRequest",
+  "type": "object"
+}

@@ -1,0 +1,178 @@
+{
+  "$defs": {
+    "MessageReference": {
+      "additionalProperties": false,
+      "properties": {
+        "conversation_id": {
+          "format": "uuid",
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "domain": {
+          "enum": [
+            "personal",
+            "research",
+            "work"
+          ],
+          "title": "Domain",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human-message",
+            "assistant-message"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "owner_id": {
+          "format": "uuid",
+          "title": "Owner Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "owner_id",
+        "domain",
+        "conversation_id",
+        "message_id",
+        "sha256",
+        "kind"
+      ],
+      "title": "MessageReference",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Future wire contract. M0 transport/store still reject these event types.",
+  "properties": {
+    "causation_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Causation Id"
+    },
+    "correlation_id": {
+      "format": "uuid",
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "event_id": {
+      "format": "uuid",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "enum": [
+        "control.chat.requested",
+        "control.chat.completed"
+      ],
+      "title": "Event Type",
+      "type": "string"
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expires At"
+    },
+    "message": {
+      "$ref": "#/$defs/MessageReference"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "operation_key": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._:-]*$",
+      "title": "Operation Key",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sensitivity": {
+      "const": "internal",
+      "default": "internal",
+      "title": "Sensitivity",
+      "type": "string"
+    },
+    "source": {
+      "enum": [
+        "control-gateway",
+        "control-test-agent"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "trace_id": {
+      "format": "uuid",
+      "title": "Trace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner_id",
+    "domain",
+    "event_id",
+    "event_type",
+    "source",
+    "occurred_at",
+    "correlation_id",
+    "causation_id",
+    "trace_id",
+    "operation_key",
+    "message"
+  ],
+  "title": "ChatEvent",
+  "type": "object"
+}

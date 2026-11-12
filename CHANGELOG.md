@@ -8,6 +8,14 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M1-A contracts and identity prepared for review — 12 November 2026
+
+- Reviewed PR #18 at `082f5d7`; no blocking consistency findings and documentation CI green. Preserved its unmerged planning commit as this review branch’s prerequisite.
+- Added strict human/membership, registry/config, chat/reference, activity, fixture-grant/intent/approval/audit and error descriptors, 18 new schemas/examples and connection-free control preflight. Frozen test configuration cannot enable gateway/chat/tools/real accounts.
+- Added [[ADR-006 Control Plane Identity and Trust Boundary]] and [[MarkOS v0.3 M1-A Contracts and Identity]]; separated structural validation from future authentication, DB authority, atomic dispatch and distributed enforcement.
+- Locked a separate optional FastAPI/Uvicorn/PyJWT/Jinja profile and added an in-memory compatibility CI probe. Base dependencies, active M0 events/topology/SQL/execution, archive and source history remain intact. No merge, deployment, account connection or provider effects.
+
+
 ### Merged-main review and M1 control-plane plan — 12 November 2026
 
 - Reviewed main at `ec52a27` after owner-authorized merges of PRs #15–#17; no blocking finding within synthetic M0 scope. Post-merge CI passed 323 runtime cases and documentation checks. Verified original heads/history, exact reviewed tree and archive/migration preservation.

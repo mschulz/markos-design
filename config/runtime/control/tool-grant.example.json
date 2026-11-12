@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "owner_id": "00000001-1111-4111-8111-111111111111",
+  "domain": "personal",
+  "grant_id": "0000000a-1111-4111-8111-111111111111",
+  "revision": 1,
+  "agent_id": "control-test-agent",
+  "server_id": "synthetic-mcp-fixture",
+  "tool": "fixture.read",
+  "tool_schema_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "data_class": "synthetic",
+  "recipient": "synthetic-mcp-fixture",
+  "effect": "read",
+  "enabled": false
+}

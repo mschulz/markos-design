@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent_id": {
+      "const": "control-test-agent",
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "data_class": {
+      "const": "synthetic",
+      "default": "synthetic",
+      "title": "Data Class",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "effect": {
+      "const": "read",
+      "default": "read",
+      "title": "Effect",
+      "type": "string"
+    },
+    "enabled": {
+      "const": false,
+      "default": false,
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "grant_id": {
+      "format": "uuid",
+      "title": "Grant Id",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "recipient": {
+      "const": "synthetic-mcp-fixture",
+      "default": "synthetic-mcp-fixture",
+      "title": "Recipient",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "server_id": {
+      "const": "synthetic-mcp-fixture",
+      "title": "Server Id",
+      "type": "string"
+    },
+    "tool": {
+      "const": "fixture.read",
+      "title": "Tool",
+      "type": "string"
+    },
+    "tool_schema_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Tool Schema Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner_id",
+    "domain",
+    "grant_id",
+    "revision",
+    "agent_id",
+    "server_id",
+    "tool",
+    "tool_schema_sha256"
+  ],
+  "title": "ToolGrant",
+  "type": "object"
+}

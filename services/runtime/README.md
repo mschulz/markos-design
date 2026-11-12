@@ -65,3 +65,9 @@ project and `MARKOS_REQUIRE_VOLUME_TEST=1`; it destroys only that broker volume.
 Use neither the acceptance harness nor its credentials for a real service.
 
 M0-F adds `serve-synthetic --confirm-synthetic --config <explicit service JSON>`; it runs only fixed test roles against isolated test targets, resolves named secrets, and exposes private loopback health/metrics. It does not replace connection-free preflight or enable production/provider execution. Migration 0005 requires generation tokens for lease operations and private migrator-only restore fencing. The dedicated GitHub-hosted lifecycle job proves process/dependency/pressure/daemon/fixture-restore behavior using a restricted independent image. See [[MarkOS v0.3 M0-F Lifecycle and Closeout]] and [[MarkOS v0.3 M0 Runbook]] for commands and open production gates. Never run the fault controller against a shared Docker host.
+
+## M1-A validation-only control contracts
+
+`markos-runtime preflight-control --config ../../config/runtime/control/config.example.json --event ../../config/runtime/control/chat-event.example.json` validates synthetic descriptors only. It resolves no secret or key and opens no connection. There is no control server/login, SQL migration, chat executor or MCP client. Existing M0 transport/store reject the planned chat types. A principal or intent digest is not authority. See [[MarkOS v0.3 M1-A Contracts and Identity]] and [[ADR-006 Control Plane Identity and Trust Boundary]].
+
+The optional `control` extra is a locked compatibility profile, not a base dependency. In a separate environment use `uv sync --locked --extra control --no-dev`, then `uv run --no-sync python scripts/check_control_profile.py`. It exercises in-memory ASGI, ES256 primitives and template escaping without starting a listener. Keep the base test environment separate; its isolation checks require optional packages absent. Schemas now total 26, including 18 new control artifacts.

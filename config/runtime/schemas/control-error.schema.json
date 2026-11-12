@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "code": {
+      "enum": [
+        "unauthenticated",
+        "forbidden",
+        "not-found",
+        "conflict",
+        "too-large",
+        "limited",
+        "unavailable"
+      ],
+      "title": "Code",
+      "type": "string"
+    },
+    "request_id": {
+      "format": "uuid",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "request_id",
+    "code"
+  ],
+  "title": "ApiError",
+  "type": "object"
+}

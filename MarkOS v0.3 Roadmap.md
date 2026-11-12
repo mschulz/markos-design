@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.7
+version: 2.8
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -133,3 +133,7 @@ Open M3 decisions: agent/category taxonomy and multi-assignment policy; verified
 ## M1 control-plane implementation proposal
 
 [[MarkOS v0.3 M1 Control Plane Implementation Plan]] reviews merged main at `ec52a27` and proposes M1-A contracts/trust, M1-B scoped persistence, M1-C authenticated API, M1-D durable deterministic chat, M1-E web/CLI, M1-F synthetic governance/tools and M1-G CI/closeout. M1-01–M1-22 define concrete identity, isolation, concurrency, replay/restore, UI and bounded tool tests. The plan preserves governed MCP and rules-first M3 decisions. Its fixture-only MCP path does not complete real-provider MCP-01–MCP-10 or cloud-operation evidence, and native Gmail/Pub/Sub remains independent. Stack/auth/session/retention choices are proposed, not provisioned or enabled. This update contains documentation only; no M1 implementation, merge or deployment.
+
+## M1-A contracts and identity review
+
+[[MarkOS v0.3 M1-A Contracts and Identity]] implements the first slice with validation-only descriptors and preflight, frozen synthetic settings, separate chat contract namespace and optional API stack compatibility evidence. [[ADR-006 Control Plane Identity and Trust Boundary]] records the proposed human/session/gateway/database boundary. No database migration, signature-verifying login service, browser/CLI gateway, chat executor or MCP access is added. M1-B scoped persistence is the next reviewable slice after these contracts/decisions; real production profiles remain gated.

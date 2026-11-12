@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M1 Control Plane Implementation Plan
 type: implementation-plan
 status: proposed
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -155,3 +155,7 @@ Recommended defaults above are proposals. The first implementation PR must resol
 The stack/auth recommendation is an engineering proposal informed by [FastAPI scoped authentication](https://fastapi.tiangolo.com/advanced/security/oauth2-scopes/), [Supabase signing keys](https://supabase.com/docs/guides/auth/signing-keys) and [Supabase session semantics](https://supabase.com/docs/guides/auth/sessions), checked 12 November 2026. Those sources describe facilities and token/session limits; MarkOS permissions, database delegation, approvals and resource bounds above are additional proposed controls, not guarantees supplied by those products.
 
 Related: [[MarkOS v0.3 M0 Implementation Plan]], [[MarkOS v0.3 M0-F Lifecycle and Closeout]], [[MarkOS v0.3 M0 Runbook]], [[MarkOS v0.3 Roadmap]], [[Documentation Authority Index]] and [[ADR-0002 GitHub as Canonical Project Record]].
+
+## M1-A implementation review status
+
+The owner subsequently authorized M1-A. [[MarkOS v0.3 M1-A Contracts and Identity]] records strict descriptors, inert test configuration/preflight, 18 new schemas/examples and an optional locked dependency compatibility profile. [[ADR-006 Control Plane Identity and Trust Boundary]] freezes the synthetic role/session/resource/retention profile and trusted delegation boundary for review. M1-01/02/03/18 coverage remains at the contract/isolation layer; actual authentication, current DB scopes, API, distributed limits and one-time consumption are later work. M0 event parsing/topology/SQL and no-op execution remain unchanged. M1-B–M1-G and deployment are not enabled.
