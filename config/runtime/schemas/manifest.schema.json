@@ -6,7 +6,11 @@
         "consumes": {
           "default": [],
           "items": {
-            "const": "foundation.noop.requested",
+            "enum": [
+              "foundation.noop.requested",
+              "control.chat.requested",
+              "control.chat.completed"
+            ],
             "type": "string"
           },
           "maxItems": 1,
@@ -30,7 +34,11 @@
         "publishes": {
           "default": [],
           "items": {
-            "const": "foundation.noop.requested",
+            "enum": [
+              "foundation.noop.requested",
+              "control.chat.requested",
+              "control.chat.completed"
+            ],
             "type": "string"
           },
           "maxItems": 1,
@@ -65,7 +73,11 @@
           "type": "string"
         },
         "event_type": {
-          "const": "foundation.noop.requested",
+          "enum": [
+            "foundation.noop.requested",
+            "control.chat.requested",
+            "control.chat.completed"
+          ],
           "title": "Event Type",
           "type": "string"
         },

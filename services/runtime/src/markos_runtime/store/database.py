@@ -15,8 +15,8 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool, PoolTimeout
 
 from markos_runtime.contracts.base import Domain
-from markos_runtime.contracts.events import EventEnvelope
 from markos_runtime.contracts.review import ReviewReference
+from markos_runtime.contracts.wire import RuntimeEvent, parse_event
 
 Row = dict[str, Any]
 Status = Literal["created", "duplicate", "conflict", "expired", "review"]
@@ -39,11 +39,12 @@ class Receipt:
 @dataclass(frozen=True)
 class OutboxClaim:
     event_id: UUID
-    event: EventEnvelope
+    event: RuntimeEvent
     fence: int
     attempts: int = 0
     consumers: tuple[str, ...] = ()
     epoch: UUID | None = None
+    wire: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -66,7 +67,7 @@ class ReviewClaim:
 @dataclass(frozen=True)
 class TaskClaim:
     task_id: UUID
-    event: EventEnvelope
+    event: RuntimeEvent
     fence: int
     attempt: int
     lease_until: datetime
@@ -147,7 +148,7 @@ class DurableStore:
                 raise StorageRejected("handoff not authorized or registered") from None
             raise StorageError("storage operation failed") from None
 
-    async def append(self, event: EventEnvelope) -> Receipt:
+    async def append(self, event: RuntimeEvent) -> Receipt:
         """Atomically register event, intended consumers and outbox, or record conflict."""
         body = event.to_wire()
         async with self._transaction() as connection:
@@ -158,9 +159,12 @@ class DurableStore:
             assert row is not None
             return Receipt(cast(Status, row["status"]))
 
-    async def handoff(self, event: EventEnvelope) -> Receipt:
+    async def handoff(self, event: RuntimeEvent, *, wire: bytes | None = None) -> Receipt:
         """A receipt is returned after commit; it is not a broker acknowledgement."""
-        digest = sha256(event.to_wire()).hexdigest()
+        body = event.to_wire() if wire is None else wire
+        if parse_event(body) != event:
+            raise StorageRejected("wire/event mismatch")
+        digest = sha256(body).hexdigest()
         async with self._transaction() as connection:
             cursor = await connection.execute(
                 "SELECT * FROM markos_runtime.handoff(%s,%s)", (event.event_id, digest)
@@ -182,11 +186,12 @@ class DurableStore:
             return tuple(
                 OutboxClaim(
                     row["event_id"],
-                    EventEnvelope.from_wire(bytes(row["wire"])),
+                    parse_event(bytes(row["wire"])),
                     row["fence"],
                     row["attempts"],
                     tuple(row["consumers"]),
                     row["epoch"],
+                    bytes(row["wire"]),
                 )
                 for row in rows
             )
@@ -301,7 +306,7 @@ class DurableStore:
                 return None
             return TaskClaim(
                 row["task_id"],
-                EventEnvelope.from_wire(bytes(row["wire"])),
+                parse_event(bytes(row["wire"])),
                 row["fence"],
                 row["attempt"],
                 row["lease_until"],

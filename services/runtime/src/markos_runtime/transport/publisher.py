@@ -6,6 +6,8 @@ from aio_pika.abc import AbstractRobustChannel
 
 from markos_runtime.backoff import backoff as backoff
 from markos_runtime.config import ProposedLimits
+from markos_runtime.contracts.control import ChatEvent
+from markos_runtime.contracts.wire import parse_event, routing_key
 from markos_runtime.store.database import DurableStore, OutboxClaim
 from markos_runtime.transport.broker import BrokerSession, TransportError
 from markos_runtime.transport.management import TopologyAudit
@@ -33,7 +35,12 @@ class Publisher:
         code = "topology"
         try:
             async with self._inflight, asyncio.timeout(25):
-                if len(claim.event.to_wire()) > self.limits.max_message_bytes:
+                if isinstance(claim.event, ChatEvent) and claim.consumers != claim.event.consumers:
+                    raise TransportError("typed consumer intent mismatch")
+                body = claim.wire if claim.wire is not None else claim.event.to_wire()
+                if parse_event(body) != claim.event:
+                    raise TransportError("outbox wire mismatch")
+                if len(body) > self.limits.max_message_bytes:
                     await self.store.review_delivery(claim.event.to_wire(), "oversize")
                     await self.store.hold_for_review(claim, "oversize")
                     return False
@@ -44,6 +51,7 @@ class Publisher:
                 await self.audit.verify(
                     claim.event.domain,
                     claim.consumers,
+                    event_type=claim.event.event_type,
                     max_messages=self.limits.queue_max_messages,
                     max_bytes=self.limits.queue_max_bytes,
                 )
@@ -51,8 +59,8 @@ class Publisher:
                 await self.session.send(
                     self.channel,
                     f"markos.{claim.event.domain}.events",
-                    "v1.foundation.noop-requested",
-                    claim.event.to_wire(),
+                    routing_key(claim.event.event_type),
+                    body,
                     str(claim.event_id),
                     claim.event.event_type,
                 )

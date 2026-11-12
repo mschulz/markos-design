@@ -8,12 +8,11 @@ from pydantic import field_validator
 from markos_runtime.contracts.control import ControlValue
 
 
-class SyntheticApiConfig(ControlValue):
+class _ApiProfile(ControlValue):
     environment: Literal["test"] = "test"
     identity_profile: Literal["synthetic-pkce"] = "synthetic-pkce"
     api_origin: str
     real_accounts_enabled: Literal[False] = False
-    chat_execution_enabled: Literal[False] = False
     tool_execution_enabled: Literal[False] = False
 
     @field_validator("api_origin")
@@ -34,11 +33,36 @@ class SyntheticApiConfig(ControlValue):
             raise ValueError("explicit loopback HTTPS origin required")
         return value
 
-    @field_validator(
-        "real_accounts_enabled", "chat_execution_enabled", "tool_execution_enabled", mode="before"
-    )
+    @field_validator("real_accounts_enabled", "tool_execution_enabled", mode="before")
     @classmethod
-    def exact_false(cls, value: object) -> object:
+    def disabled(cls, value: object) -> object:
         if type(value) is not bool or value is not False:
             raise ValueError("disabled boolean required")
+        return value
+
+
+class SyntheticApiConfig(_ApiProfile):
+    """M1-C remains execution-disabled."""
+
+    chat_execution_enabled: Literal[False] = False
+
+    @field_validator("chat_execution_enabled", mode="before")
+    @classmethod
+    def no_chat(cls, value: object) -> object:
+        if type(value) is not bool or value is not False:
+            raise ValueError("disabled boolean required")
+        return value
+
+
+class SyntheticConversationApiConfig(_ApiProfile):
+    """Separately constructed M1-D profile, never an HTTP-writable execution switch."""
+
+    conversation_profile: Literal["deterministic-conversation-v1"]
+    chat_execution_enabled: Literal[True] = True
+
+    @field_validator("chat_execution_enabled", mode="before")
+    @classmethod
+    def fixed_chat(cls, value: object) -> object:
+        if type(value) is not bool or value is not True:
+            raise ValueError("fixed synthetic conversation switch required")
         return value

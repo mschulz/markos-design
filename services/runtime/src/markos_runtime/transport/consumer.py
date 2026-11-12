@@ -7,7 +7,7 @@ from aio_pika.abc import AbstractIncomingMessage, AbstractRobustChannel
 
 from markos_runtime.config import ProposedLimits
 from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
-from markos_runtime.contracts.events import EventEnvelope
+from markos_runtime.contracts.wire import parse_event
 from markos_runtime.store.database import DurableStore, StorageRejected, StoreIdentity
 from markos_runtime.transport.broker import BrokerSession, TransportError
 
@@ -141,7 +141,7 @@ class Consumer:
         assert self.identity is not None
         body = message.body
         try:
-            event = EventEnvelope.from_wire(body)
+            event = parse_event(body)
         except ContractError:
             await self.store.review_delivery(
                 body, "oversize" if len(body) > MAX_EVENT_BYTES else "invalid"
@@ -158,7 +158,7 @@ class Consumer:
             await self.store.review_delivery(body, "unauthorized")
             return
         try:
-            result = await self.store.handoff(event)
+            result = await self.store.handoff(event, wire=body)
         except StorageRejected:
             await self.store.review_delivery(body, "unauthorized")
             return

@@ -113,7 +113,26 @@ jobs:
       MARKOS_TEST_ADMIN_DSN: host=127.0.0.1 port=5432 dbname=postgres user=postgres password=synthetic-test-only
       MARKOS_REQUIRE_DB_TESTS: '1'
       MARKOS_REQUIRE_API_TESTS: '1'
+      MARKOS_TEST_RABBIT_HTTP: http://127.0.0.1:15672
+      MARKOS_TEST_AMQP_BASE: amqp://127.0.0.1:5672
+      MARKOS_TEST_RABBIT_USER: m0c-admin
+      MARKOS_TEST_RABBIT_PASSWORD: synthetic-test-only
+      MARKOS_REQUIRE_RABBIT_TESTS: '1'
     services:
+      rabbitmq:
+        image: rabbitmq:4.4.0-management@sha256:7ddb7fd4630026bc84f72760f33629e8c1ef3bb106360fb385fae0dd4ef886f3
+        env:
+          RABBITMQ_DEFAULT_USER: m0c-admin
+          RABBITMQ_DEFAULT_PASS: synthetic-test-only
+          RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -rabbit channel_max 32 -rabbit max_message_size 65536
+        ports:
+          - 5672:5672
+          - 15672:15672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
       postgres:
         image: postgres:17.11
         env:

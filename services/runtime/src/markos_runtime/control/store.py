@@ -20,7 +20,9 @@ from markos_runtime.contracts.control import (
     Activity,
     AgentRevision,
     AgentStateRequest,
+    ChatAdmission,
     ChatRequest,
+    ChatStatus,
     ConfigRevision,
     Conversation,
     Message,
@@ -29,6 +31,10 @@ from markos_runtime.store.database import StorageError, _SafeConnection
 
 
 class ControlDenied(StorageError):
+    pass
+
+
+class ControlNotFound(ControlDenied):
     pass
 
 
@@ -132,7 +138,9 @@ class ControlStore:
                     raise
         except (psycopg.Error, PoolTimeout) as error:
             if isinstance(error, psycopg.Error):
-                if error.sqlstate in {"42501", "P0002"}:
+                if error.sqlstate == "P0002":
+                    raise ControlNotFound("control object unavailable") from None
+                if error.sqlstate == "42501":
                     raise ControlDenied("control context or object unavailable") from None
                 if error.sqlstate in {"40001", "23505"}:
                     raise ControlConflict("control revision or operation conflict") from None
@@ -359,3 +367,32 @@ class ControlStore:
             "read_activity", *self._context(context, owner, domain), after, limit
         )
         return tuple(Activity.model_validate_json(json.dumps(row)) for row in rows)
+
+    async def admit_message(
+        self, context: SessionContext, owner: UUID, request: ChatRequest
+    ) -> ChatAdmission:
+        checked = ChatRequest.from_wire(request.to_wire())
+        row = await self._call(
+            "admit_message",
+            *self._context(context, owner, checked.domain),
+            Jsonb(checked.model_dump(mode="json")),
+        )
+        return ChatAdmission.model_validate_json(json.dumps({"schema_version": 1, **row}))
+
+    async def chat_status(
+        self,
+        context: SessionContext,
+        owner: UUID,
+        domain: Domain,
+        conversation_id: UUID,
+        message_id: UUID,
+        *,
+        cancel: bool = False,
+    ) -> ChatStatus:
+        row = await self._call(
+            "cancel_chat" if cancel else "chat_status",
+            *self._context(context, owner, domain),
+            conversation_id,
+            message_id,
+        )
+        return ChatStatus.model_validate_json(json.dumps({"schema_version": 1, **row}))

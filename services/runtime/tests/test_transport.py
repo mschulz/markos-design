@@ -57,7 +57,7 @@ class FakeStore:
         self.delay = 0.0
         self.fail = False
 
-    async def handoff(self, event: EventEnvelope) -> Receipt:
+    async def handoff(self, event: EventEnvelope, *, wire: bytes | None = None) -> Receipt:
         self.trace.append("transaction")
         if self.fail:
             from markos_runtime.store import StorageError
@@ -282,7 +282,7 @@ def test_watchdog_signals_even_if_handoff_delays_cancellation(
             super().__init__()
             self.release = asyncio.Event()
 
-        async def handoff(self, event: EventEnvelope) -> Receipt:
+        async def handoff(self, event: EventEnvelope, *, wire: bytes | None = None) -> Receipt:
             try:
                 await self.release.wait()
             except asyncio.CancelledError:

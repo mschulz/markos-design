@@ -31,14 +31,17 @@ from markos_runtime.contracts.base import ContractError, Domain
 from markos_runtime.contracts.control import (
     AgentRevision,
     AgentStateRequest,
+    ChatRequest,
     ConfigRevision,
     ControlValue,
+    ConversationRequest,
 )
-from markos_runtime.control.api_config import SyntheticApiConfig
+from markos_runtime.control.api_config import SyntheticApiConfig, SyntheticConversationApiConfig
 from markos_runtime.control.store import (
     ControlConflict,
     ControlDenied,
     ControlLimited,
+    ControlNotFound,
     ControlStore,
     SessionContext,
 )
@@ -81,7 +84,7 @@ class CliExchange(ControlValue):
 class SyntheticApi:
     def __init__(
         self,
-        config: SyntheticApiConfig,
+        config: SyntheticApiConfig | SyntheticConversationApiConfig,
         store: ControlStore,
         issuer: FixtureIssuer,
         key: bytes,
@@ -280,7 +283,7 @@ class SyntheticApi:
 
 
 def create_app(
-    config: SyntheticApiConfig,
+    config: SyntheticApiConfig | SyntheticConversationApiConfig,
     store: ControlStore,
     issuer: FixtureIssuer,
     *,
@@ -293,6 +296,53 @@ def create_app(
     from fastapi.responses import JSONResponse, PlainTextResponse  # type: ignore[import-not-found]
 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False)
+
+    def page(
+        params: dict[str, str], binding: dict[str, Any], owner: UUID, domain: Domain, resource: str
+    ) -> tuple[int, int]:
+        if not re.fullmatch(r"[0-9]{1,3}", params.get("limit", "50")):
+            raise ApiFault("invalid", 400)
+        limit = int(params.get("limit", "50"))
+        after = 0
+        if not 1 <= limit <= 100:
+            raise ApiFault("invalid", 400)
+        if "cursor" in params:
+            try:
+                cursor = json.loads(api.codec.open(params["cursor"]))
+                if (
+                    set(cursor)
+                    != {"principal_id", "owner_id", "domain", "resource", "after", "expires"}
+                    or cursor["principal_id"] != binding["principal_id"]
+                    or cursor["owner_id"] != str(owner)
+                    or cursor["domain"] != domain
+                    or cursor["resource"] != resource
+                    or cursor["expires"] <= time.time()
+                    or type(cursor["after"]) is not int
+                    or not 0 <= cursor["after"] <= 9223372036854775807
+                ):
+                    raise ValueError
+                after = cursor["after"]
+            except Exception:
+                raise ApiFault("invalid", 400) from None
+        return after, limit
+
+    def encode_page_cursor(
+        after: int | None, binding: dict[str, Any], owner: UUID, domain: Domain, resource: str
+    ) -> str | None:
+        if after is None:
+            return None
+        return api.codec.seal(
+            json.dumps(
+                {
+                    "principal_id": binding["principal_id"],
+                    "owner_id": str(owner),
+                    "domain": domain,
+                    "resource": resource,
+                    "after": after,
+                    "expires": int(time.time()) + 600,
+                }
+            )
+        )
 
     async def dispatch(request: Request) -> Any:
         response: Any
@@ -361,6 +411,98 @@ def create_app(
                 "cli", value.state, value.binding, value.code, value.verifier, None
             )
             return JSONResponse({"access_token": raw, "token_type": "Bearer", "expires_in": 300})
+        if path == "/api/v1/conversations" or path.startswith("/api/v1/conversations/"):
+            if not isinstance(config, SyntheticConversationApiConfig):
+                raise ApiFault("not-found", 404)
+            ctx, binding, raw = await api.authenticate(request)
+            params = api.query(request, {"owner_id", "domain", "cursor", "limit"})
+            owner, domain = api.scope(params)
+            if method == "POST":
+                api.query(request, {"owner_id", "domain"})
+                await api.write(request, ctx, binding, raw)
+            parts = path.removeprefix("/api/v1/conversations").strip("/").split("/")
+            if path == "/api/v1/conversations":
+                if method == "POST":
+                    conversation_request = ConversationRequest.from_wire(data)
+                    if conversation_request.domain != domain:
+                        raise ApiFault("invalid", 400)
+                    conversation_result = await store.create_conversation(
+                        ctx,
+                        owner,
+                        domain,
+                        conversation_request.conversation_id,
+                        conversation_request.operation_key,
+                    )
+                    return JSONResponse(wire(conversation_result), status_code=201)
+                after, limit = page(params, binding, owner, domain, "conversations")
+                conversation_rows = await store.read_conversations(
+                    ctx, owner, domain, after=after, limit=limit
+                )
+                return JSONResponse(
+                    {
+                        "items": wire(conversation_rows),
+                        "next_cursor": encode_page_cursor(
+                            conversation_rows[-1].cursor if conversation_rows else None,
+                            binding,
+                            owner,
+                            domain,
+                            "conversations",
+                        ),
+                    }
+                )
+            try:
+                conversation_id = UUID(parts[0])
+                if not conversation_id.int:
+                    raise ValueError
+            except ValueError:
+                raise ApiFault("not-found", 404) from None
+            if len(parts) == 2 and parts[1] == "messages":
+                if method == "POST":
+                    request_value = ChatRequest.from_wire(data)
+                    if (
+                        request_value.domain != domain
+                        or request_value.conversation_id != conversation_id
+                    ):
+                        raise ApiFault("invalid", 400)
+                    receipt = await store.admit_message(ctx, owner, request_value)
+                    return JSONResponse(wire(receipt), status_code=202)
+                after, limit = page(
+                    params, binding, owner, domain, "messages:" + str(conversation_id)
+                )
+                message_rows = await store.read_messages(
+                    ctx, owner, domain, conversation_id, after=after, limit=limit
+                )
+                return JSONResponse(
+                    {
+                        "items": wire(message_rows),
+                        "next_cursor": encode_page_cursor(
+                            message_rows[-1].sequence if message_rows else None,
+                            binding,
+                            owner,
+                            domain,
+                            "messages:" + str(conversation_id),
+                        ),
+                    }
+                )
+            if len(parts) == 4 and parts[1] == "messages" and parts[3] in {"status", "cancel"}:
+                api.query(request, {"owner_id", "domain"})
+                try:
+                    message_id = UUID(parts[2])
+                except ValueError:
+                    raise ApiFault("not-found", 404) from None
+                cancel = parts[3] == "cancel"
+                if (cancel and method != "POST") or (not cancel and method != "GET"):
+                    raise ApiFault("not-found", 404)
+                if cancel:
+                    ControlValue.from_wire(data)
+                return JSONResponse(
+                    wire(
+                        await store.chat_status(
+                            ctx, owner, domain, conversation_id, message_id, cancel=cancel
+                        )
+                    )
+                )
+            raise ApiFault("not-found", 404)
         known = {
             "/api/v1/me",
             "/api/v1/agents",
@@ -587,6 +729,8 @@ def create_app(
                     code, status = "conflict", 409
                 elif isinstance(error, ControlLimited):
                     code, status = "limited", 429
+                elif isinstance(error, ControlNotFound):
+                    code, status = "not-found", 404
                 elif isinstance(error, ControlDenied):
                     code, status = "forbidden", 403
                 elif isinstance(error, (IdentityDenied,)):

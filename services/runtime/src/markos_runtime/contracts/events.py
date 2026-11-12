@@ -50,7 +50,7 @@ class EventEnvelope(ValueModel):
     }
     schema_version: Literal[1]
     event_id: UUID
-    event_type: EventType
+    event_type: Literal["foundation.noop.requested"]
     owner_id: UUID
     domain: Domain
     source: Name

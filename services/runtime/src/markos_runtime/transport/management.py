@@ -7,6 +7,8 @@ from typing import Any
 from urllib.parse import quote, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from markos_runtime.contracts.base import EventType
+from markos_runtime.contracts.wire import routing_key
 from markos_runtime.transport.broker import TransportError
 
 
@@ -87,11 +89,12 @@ class TopologyAudit:
         consumers: tuple[str, ...],
         *,
         review: bool = False,
+        event_type: EventType = "foundation.noop.requested",
         max_messages: int = 10000,
         max_bytes: int = 33554432,
     ) -> None:
         exchange = f"markos.{domain}.review" if review else f"markos.{domain}.events"
-        key = "v1.review.requested" if review else "v1.foundation.noop-requested"
+        key = "v1.review.requested" if review else routing_key(event_type)
         queues = (
             {f"markos.{domain}.operator-review"}
             if review
@@ -111,10 +114,36 @@ class TopologyAudit:
         ):
             raise TransportError("exchange safety profile mismatch")
         bindings = await self.get("exchanges", self.vhost, exchange, "bindings", "source")
-        actual = {
-            (b.get("destination"), b.get("routing_key"), b.get("destination_type"))
-            for b in bindings
+        actual: set[tuple[str, str, str]] = set()
+        chat = {
+            "v1.control.chat-requested": f"markos.{domain}.control-test-agent",
+            "v1.control.chat-completed": f"markos.{domain}.control-activity",
         }
+        for binding in bindings:
+            route, destination = binding.get("routing_key"), binding.get("destination")
+            if binding.get("destination_type") != "queue" or binding.get("arguments") not in (
+                {},
+                None,
+            ):
+                raise TransportError("unapproved subscriber binding")
+            if route == key:
+                actual.add((destination, route, "queue"))
+            elif (
+                not review
+                and route in chat
+                and destination == chat[route]
+                or (
+                    not review
+                    and key in chat
+                    and route == "v1.foundation.noop-requested"
+                    and isinstance(destination, str)
+                    and destination.startswith(f"markos.{domain}.")
+                    and destination not in chat.values()
+                )
+            ):
+                continue
+            else:
+                raise TransportError("unapproved subscriber route")
         if actual != {(q, key, "queue") for q in queues}:
             raise TransportError("intended subscriber bindings mismatch")
         for queue in queues:

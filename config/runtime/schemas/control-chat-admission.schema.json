@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent_revision": {
+      "minimum": 1,
+      "title": "Agent Revision",
+      "type": "integer"
+    },
+    "config_revision": {
+      "minimum": 1,
+      "title": "Config Revision",
+      "type": "integer"
+    },
+    "event_id": {
+      "format": "uuid",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "message_id": {
+      "format": "uuid",
+      "title": "Message Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sequence": {
+      "minimum": 1,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "state": {
+      "const": "queued",
+      "title": "State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "message_id",
+    "event_id",
+    "sequence",
+    "state",
+    "agent_revision",
+    "config_revision"
+  ],
+  "title": "ChatAdmission",
+  "type": "object"
+}
