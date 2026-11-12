@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.13
+version: 0.3.14
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -258,3 +258,7 @@ M0-A–M0-F are merged in main through PRs #10–#12 and #15–#17. The merged-m
 [[MarkOS v0.3 M0 Implementation Plan]] defines an independent runtime, its own dependency/test boundaries, ordered M0-A–M0-F slices and A01–A20 acceptance cases. No history-preserving import or legacy regression gate is a prerequisite for the new architecture. Prior imports remain archival evidence; prior contracts require fit review before adaptation.
 
 Review each implementation slice with contracts, automated tests and docs. Keep source-grounded knowledge, approvals, domain isolation and recovery requirements explicit. This correction authorizes no merge, provisioning, spending, deployment or personal-data migration. Preserve the old repositories and histories without building the new system on their code. Keep project artifacts in `markos-design`; use [[Documentation Authority Index]] for superseded documents.
+
+## M1-A implementation boundary
+
+[[MarkOS v0.3 M1-A Contracts and Identity]] and [[ADR-006 Control Plane Identity and Trust Boundary]] add strict synthetic descriptors, explicit inert control preflight, role/session/delegation decisions and optional stack compatibility tests. These contracts are not authentication or durable approval evidence. The active M0 event parser, broker topology, SQL migrations and no-op worker do not accept chat events; M1-D must extend them together. Actual identity verification, scoped control-plane storage/API, tool dispatch and distributed enforcement remain later M1 slices. RabbitMQ/PostgreSQL authority, governed MCP and rules-first M3 decisions remain unchanged.

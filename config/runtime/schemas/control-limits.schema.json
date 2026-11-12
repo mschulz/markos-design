@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approval_pending_global": {
+      "const": 100,
+      "default": 100,
+      "title": "Approval Pending Global",
+      "type": "integer"
+    },
+    "approval_pending_scope": {
+      "const": 10,
+      "default": 10,
+      "title": "Approval Pending Scope",
+      "type": "integer"
+    },
+    "approval_seconds": {
+      "const": 900,
+      "default": 900,
+      "title": "Approval Seconds",
+      "type": "integer"
+    },
+    "audit_days": {
+      "const": 365,
+      "default": 365,
+      "title": "Audit Days",
+      "type": "integer"
+    },
+    "chat_bytes": {
+      "const": 16384,
+      "default": 16384,
+      "title": "Chat Bytes",
+      "type": "integer"
+    },
+    "chat_pending_global": {
+      "const": 100,
+      "default": 100,
+      "title": "Chat Pending Global",
+      "type": "integer"
+    },
+    "chat_pending_scope": {
+      "const": 10,
+      "default": 10,
+      "title": "Chat Pending Scope",
+      "type": "integer"
+    },
+    "chat_terminal_days": {
+      "const": 30,
+      "default": 30,
+      "title": "Chat Terminal Days",
+      "type": "integer"
+    },
+    "cleanup_seconds": {
+      "const": 86400,
+      "default": 86400,
+      "title": "Cleanup Seconds",
+      "type": "integer"
+    },
+    "cli_access_seconds": {
+      "const": 300,
+      "default": 300,
+      "title": "Cli Access Seconds",
+      "type": "integer"
+    },
+    "cpu_millicores": {
+      "const": 500,
+      "default": 500,
+      "title": "Cpu Millicores",
+      "type": "integer"
+    },
+    "http_bytes": {
+      "const": 65536,
+      "default": 65536,
+      "title": "Http Bytes",
+      "type": "integer"
+    },
+    "list_rows": {
+      "const": 100,
+      "default": 100,
+      "title": "List Rows",
+      "type": "integer"
+    },
+    "lock_seconds": {
+      "const": 1,
+      "default": 1,
+      "title": "Lock Seconds",
+      "type": "integer"
+    },
+    "log_days": {
+      "const": 14,
+      "default": 14,
+      "title": "Log Days",
+      "type": "integer"
+    },
+    "memory_mib": {
+      "const": 256,
+      "default": 256,
+      "title": "Memory Mib",
+      "type": "integer"
+    },
+    "pool_connections": {
+      "const": 4,
+      "default": 4,
+      "title": "Pool Connections",
+      "type": "integer"
+    },
+    "reauthorize_seconds": {
+      "const": 15,
+      "default": 15,
+      "title": "Reauthorize Seconds",
+      "type": "integer"
+    },
+    "request_seconds": {
+      "const": 10,
+      "default": 10,
+      "title": "Request Seconds",
+      "type": "integer"
+    },
+    "response_bytes": {
+      "const": 262144,
+      "default": 262144,
+      "title": "Response Bytes",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sensitive_copy_days": {
+      "const": 7,
+      "default": 7,
+      "title": "Sensitive Copy Days",
+      "type": "integer"
+    },
+    "session_absolute_seconds": {
+      "const": 28800,
+      "default": 28800,
+      "title": "Session Absolute Seconds",
+      "type": "integer"
+    },
+    "session_idle_seconds": {
+      "const": 1800,
+      "default": 1800,
+      "title": "Session Idle Seconds",
+      "type": "integer"
+    },
+    "session_secret_purge_seconds": {
+      "const": 86400,
+      "default": 86400,
+      "title": "Session Secret Purge Seconds",
+      "type": "integer"
+    },
+    "sessions_global": {
+      "const": 100,
+      "default": 100,
+      "title": "Sessions Global",
+      "type": "integer"
+    },
+    "sessions_principal": {
+      "const": 10,
+      "default": 10,
+      "title": "Sessions Principal",
+      "type": "integer"
+    },
+    "sse_frame_bytes": {
+      "const": 8192,
+      "default": 8192,
+      "title": "Sse Frame Bytes",
+      "type": "integer"
+    },
+    "statement_seconds": {
+      "const": 5,
+      "default": 5,
+      "title": "Statement Seconds",
+      "type": "integer"
+    },
+    "stream_seconds": {
+      "const": 600,
+      "default": 600,
+      "title": "Stream Seconds",
+      "type": "integer"
+    },
+    "streams_global": {
+      "const": 20,
+      "default": 20,
+      "title": "Streams Global",
+      "type": "integer"
+    },
+    "streams_per_principal": {
+      "const": 4,
+      "default": 4,
+      "title": "Streams Per Principal",
+      "type": "integer"
+    },
+    "streams_per_session": {
+      "const": 1,
+      "default": 1,
+      "title": "Streams Per Session",
+      "type": "integer"
+    },
+    "unresolved_alert_seconds": {
+      "const": 86400,
+      "default": 86400,
+      "title": "Unresolved Alert Seconds",
+      "type": "integer"
+    },
+    "unresolved_reserved_global": {
+      "const": 100,
+      "default": 100,
+      "title": "Unresolved Reserved Global",
+      "type": "integer"
+    },
+    "unresolved_reserved_scope": {
+      "const": 20,
+      "default": 20,
+      "title": "Unresolved Reserved Scope",
+      "type": "integer"
+    },
+    "write_burst": {
+      "const": 5,
+      "default": 5,
+      "title": "Write Burst",
+      "type": "integer"
+    },
+    "writes_per_minute": {
+      "const": 30,
+      "default": 30,
+      "title": "Writes Per Minute",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version"
+  ],
+  "title": "ControlLimits",
+  "type": "object"
+}

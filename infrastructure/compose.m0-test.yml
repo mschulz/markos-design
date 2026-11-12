@@ -25,7 +25,8 @@ x-runtime: &runtime
   healthcheck:
     test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health']
     interval: 3s
-    timeout: 2s
+    # Allow Python probe startup under the 0.25-CPU cap after daemon restart.
+    timeout: 5s
     retries: 3
     start_period: 15s
   depends_on:

@@ -13,6 +13,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     preflight.add_argument("--config", type=Path)
     preflight.add_argument("--event", type=Path)
+    control = subcommands.add_parser(
+        "preflight-control", help="Validate inert M1-A contracts/config"
+    )
+    control.add_argument("--config", type=Path, required=True)
+    control.add_argument("--event", type=Path)
     service = subcommands.add_parser(
         "serve-synthetic", help="Run one explicitly configured test-only service"
     )
@@ -37,6 +42,19 @@ def main(argv: list[str] | None = None) -> int:
     from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
     from markos_runtime.contracts.events import EventEnvelope
 
+    if args.command == "preflight-control":
+        from markos_runtime.contracts.control import ChatEvent
+        from markos_runtime.control.config import load_control
+
+        try:
+            load_control(args.config)
+            if args.event:
+                ChatEvent.from_wire(read_bounded(args.event, MAX_EVENT_BYTES))
+        except ContractError:
+            print("Invalid explicit control documents.", file=sys.stderr)
+            return 2
+        print("Control preflight passed (validation only; no authentication or connections).")
+        return 0
     if args.command == "serve-synthetic":
         if not args.confirm_synthetic:
             print("Explicit synthetic confirmation required.", file=sys.stderr)

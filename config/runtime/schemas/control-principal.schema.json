@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Future verifier output descriptor, never evidence that a JWT was verified.",
+  "properties": {
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "issuer_id": {
+      "const": "synthetic-issuer",
+      "title": "Issuer Id",
+      "type": "string"
+    },
+    "principal_id": {
+      "format": "uuid",
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "subject": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Subject",
+      "type": "string"
+    },
+    "token_kind": {
+      "const": "human-access",
+      "title": "Token Kind",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "principal_id",
+    "issuer_id",
+    "subject",
+    "session_id",
+    "token_kind",
+    "expires_at"
+  ],
+  "title": "HumanPrincipal",
+  "type": "object"
+}

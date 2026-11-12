@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "owner_id": "00000001-1111-4111-8111-111111111111",
+  "domain": "personal",
+  "revision": 1,
+  "previous_revision": 0,
+  "agent": {
+    "schema_version": 1,
+    "owner_id": "00000001-1111-4111-8111-111111111111",
+    "domain": "personal",
+    "agent_id": "control-test-agent",
+    "revision": 1,
+    "description": "Deterministic synthetic agent only",
+    "input_events": [
+      "control.chat.requested"
+    ],
+    "output_events": [
+      "control.chat.completed"
+    ],
+    "required_tools": [],
+    "model_policy": "deterministic-no-model",
+    "initially_enabled": false,
+    "timeout_seconds": 10,
+    "retries": 0
+  },
+  "reason": "Initial synthetic revision"
+}

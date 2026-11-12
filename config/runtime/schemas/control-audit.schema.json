@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "audit_id": {
+      "format": "uuid",
+      "title": "Audit Id",
+      "type": "string"
+    },
+    "correlation_id": {
+      "format": "uuid",
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "intent_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Intent Sha256"
+    },
+    "object_id": {
+      "format": "uuid",
+      "title": "Object Id",
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "requested",
+        "denied",
+        "awaiting",
+        "approved",
+        "rejected",
+        "expired",
+        "revoked",
+        "dispatched",
+        "succeeded",
+        "failed",
+        "unknown"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "principal_id": {
+      "format": "uuid",
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "reason": {
+      "enum": [
+        "policy",
+        "scope",
+        "expired",
+        "revoked",
+        "budget",
+        "accepted",
+        "dependency",
+        "unknown"
+      ],
+      "title": "Reason",
+      "type": "string"
+    },
+    "recorded_at": {
+      "format": "date-time",
+      "title": "Recorded At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner_id",
+    "domain",
+    "audit_id",
+    "principal_id",
+    "correlation_id",
+    "object_id",
+    "intent_sha256",
+    "recorded_at",
+    "outcome",
+    "reason"
+  ],
+  "title": "AuditRecord",
+  "type": "object"
+}

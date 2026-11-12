@@ -1,0 +1,207 @@
+{
+  "$defs": {
+    "FixtureArguments": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "label"
+      ],
+      "title": "FixtureArguments",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Synthetic data only; digest does not replace authorization/atomic DB consumption.",
+  "properties": {
+    "agent_id": {
+      "const": "control-test-agent",
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "agent_revision": {
+      "minimum": 1,
+      "title": "Agent Revision",
+      "type": "integer"
+    },
+    "arguments": {
+      "$ref": "#/$defs/FixtureArguments"
+    },
+    "arguments_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Arguments Sha256",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "data_class": {
+      "const": "synthetic",
+      "title": "Data Class",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "effect": {
+      "const": "read",
+      "title": "Effect",
+      "type": "string"
+    },
+    "epoch": {
+      "format": "uuid",
+      "title": "Epoch",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "grant_id": {
+      "format": "uuid",
+      "title": "Grant Id",
+      "type": "string"
+    },
+    "grant_revision": {
+      "minimum": 1,
+      "title": "Grant Revision",
+      "type": "integer"
+    },
+    "intent_id": {
+      "format": "uuid",
+      "title": "Intent Id",
+      "type": "string"
+    },
+    "max_attempts": {
+      "const": 1,
+      "default": 1,
+      "title": "Max Attempts",
+      "type": "integer"
+    },
+    "operation_key": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._:-]*$",
+      "title": "Operation Key",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "policy_revision": {
+      "minimum": 1,
+      "title": "Policy Revision",
+      "type": "integer"
+    },
+    "preview": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "title": "Preview",
+      "type": "string"
+    },
+    "preview_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Preview Sha256",
+      "type": "string"
+    },
+    "principal_id": {
+      "format": "uuid",
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "recipient": {
+      "const": "synthetic-mcp-fixture",
+      "title": "Recipient",
+      "type": "string"
+    },
+    "run_id": {
+      "format": "uuid",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "server_id": {
+      "const": "synthetic-mcp-fixture",
+      "title": "Server Id",
+      "type": "string"
+    },
+    "task_fence": {
+      "minimum": 1,
+      "title": "Task Fence",
+      "type": "integer"
+    },
+    "task_id": {
+      "format": "uuid",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "tool": {
+      "const": "fixture.read",
+      "title": "Tool",
+      "type": "string"
+    },
+    "tool_schema_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Tool Schema Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner_id",
+    "domain",
+    "intent_id",
+    "principal_id",
+    "agent_id",
+    "agent_revision",
+    "task_id",
+    "run_id",
+    "epoch",
+    "task_fence",
+    "operation_key",
+    "server_id",
+    "tool",
+    "tool_schema_sha256",
+    "grant_id",
+    "grant_revision",
+    "policy_revision",
+    "arguments",
+    "arguments_sha256",
+    "preview",
+    "preview_sha256",
+    "recipient",
+    "data_class",
+    "effect",
+    "created_at",
+    "expires_at"
+  ],
+  "title": "CallIntent",
+  "type": "object"
+}

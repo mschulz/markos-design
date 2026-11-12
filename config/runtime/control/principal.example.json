@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "principal_id": "00000002-1111-4111-8111-111111111111",
+  "issuer_id": "synthetic-issuer",
+  "subject": "synthetic-user",
+  "session_id": "00000003-1111-4111-8111-111111111111",
+  "token_kind": "human-access",
+  "expires_at": "2026-11-12T00:05:00Z"
+}

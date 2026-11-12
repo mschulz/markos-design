@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "owner_id": "00000001-1111-4111-8111-111111111111",
+  "domain": "personal",
+  "principal_id": "00000002-1111-4111-8111-111111111111",
+  "revision": 1,
+  "roles": [
+    "operator"
+  ]
+}

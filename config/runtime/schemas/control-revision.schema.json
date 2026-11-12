@@ -1,0 +1,164 @@
+{
+  "$defs": {
+    "AgentRevision": {
+      "additionalProperties": false,
+      "properties": {
+        "agent_id": {
+          "const": "control-test-agent",
+          "title": "Agent Id",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "domain": {
+          "enum": [
+            "personal",
+            "research",
+            "work"
+          ],
+          "title": "Domain",
+          "type": "string"
+        },
+        "initially_enabled": {
+          "const": false,
+          "default": false,
+          "title": "Initially Enabled",
+          "type": "boolean"
+        },
+        "input_events": {
+          "default": [
+            "control.chat.requested"
+          ],
+          "items": {
+            "const": "control.chat.requested",
+            "type": "string"
+          },
+          "title": "Input Events",
+          "type": "array"
+        },
+        "model_policy": {
+          "const": "deterministic-no-model",
+          "default": "deterministic-no-model",
+          "title": "Model Policy",
+          "type": "string"
+        },
+        "output_events": {
+          "default": [
+            "control.chat.completed"
+          ],
+          "items": {
+            "const": "control.chat.completed",
+            "type": "string"
+          },
+          "title": "Output Events",
+          "type": "array"
+        },
+        "owner_id": {
+          "format": "uuid",
+          "title": "Owner Id",
+          "type": "string"
+        },
+        "required_tools": {
+          "default": [],
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9]*(?:[-.][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "maxItems": 0,
+          "title": "Required Tools",
+          "type": "array"
+        },
+        "retries": {
+          "const": 0,
+          "default": 0,
+          "title": "Retries",
+          "type": "integer"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "timeout_seconds": {
+          "const": 10,
+          "default": 10,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "owner_id",
+        "domain",
+        "agent_id",
+        "revision",
+        "description"
+      ],
+      "title": "AgentRevision",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent": {
+      "$ref": "#/$defs/AgentRevision"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "previous_revision": {
+      "minimum": 0,
+      "title": "Previous Revision",
+      "type": "integer"
+    },
+    "reason": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner_id",
+    "domain",
+    "revision",
+    "previous_revision",
+    "agent",
+    "reason"
+  ],
+  "title": "ConfigRevision",
+  "type": "object"
+}

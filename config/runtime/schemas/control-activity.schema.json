@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "activity_id": {
+      "format": "uuid",
+      "title": "Activity Id",
+      "type": "string"
+    },
+    "conversation_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Conversation Id"
+    },
+    "correlation_id": {
+      "format": "uuid",
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "queued",
+        "working",
+        "awaiting-decision",
+        "succeeded",
+        "failed",
+        "unknown"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "object_id": {
+      "format": "uuid",
+      "title": "Object Id",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "recorded_at": {
+      "format": "date-time",
+      "title": "Recorded At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sequence": {
+      "minimum": 1,
+      "title": "Sequence",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner_id",
+    "domain",
+    "activity_id",
+    "sequence",
+    "correlation_id",
+    "conversation_id",
+    "recorded_at",
+    "kind",
+    "object_id"
+  ],
+  "title": "Activity",
+  "type": "object"
+}

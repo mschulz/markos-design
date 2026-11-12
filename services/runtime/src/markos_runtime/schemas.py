@@ -6,16 +6,53 @@ from pathlib import Path
 
 from markos_runtime.config import RuntimeConfig
 from markos_runtime.contracts.base import ValueModel
+from markos_runtime.contracts.control import (
+    Activity,
+    AgentRevision,
+    AgentStateRequest,
+    ApiError,
+    ApprovalDecisionRequest,
+    ApprovalRecord,
+    AuditRecord,
+    CallIntent,
+    ChatEvent,
+    ChatRequest,
+    ConfigRevision,
+    Conversation,
+    HumanPrincipal,
+    Membership,
+    Message,
+    ToolGrant,
+)
 from markos_runtime.contracts.events import EventEnvelope, TaskRequest
 from markos_runtime.contracts.policy import Manifest
 from markos_runtime.contracts.replay import ReplayRequest
 from markos_runtime.contracts.review import ReviewReference
 from markos_runtime.contracts.schedules import ScheduleDefinition
+from markos_runtime.control.config import ControlConfig, ControlLimits
 from markos_runtime.lifecycle.config import ServiceConfig
 
 
-def artifacts() -> dict[str, str]:
-    models: dict[str, type[ValueModel]] = {
+def models() -> dict[str, type[ValueModel]]:
+    return {
+        "control-config": ControlConfig,
+        "control-limits": ControlLimits,
+        "control-principal": HumanPrincipal,
+        "control-membership": Membership,
+        "control-agent": AgentRevision,
+        "control-agent-state": AgentStateRequest,
+        "control-revision": ConfigRevision,
+        "control-conversation": Conversation,
+        "control-message": Message,
+        "control-chat-request": ChatRequest,
+        "control-chat-event": ChatEvent,
+        "control-activity": Activity,
+        "control-tool-grant": ToolGrant,
+        "control-intent": CallIntent,
+        "control-approval-decision": ApprovalDecisionRequest,
+        "control-approval": ApprovalRecord,
+        "control-audit": AuditRecord,
+        "control-error": ApiError,
         "service": ServiceConfig,
         "replay": ReplayRequest,
         "schedule": ScheduleDefinition,
@@ -25,6 +62,9 @@ def artifacts() -> dict[str, str]:
         "manifest": Manifest,
         "runtime-config": RuntimeConfig,
     }
+
+
+def artifacts() -> dict[str, str]:
     return {
         f"{name}.schema.json": json.dumps(
             {
@@ -35,7 +75,7 @@ def artifacts() -> dict[str, str]:
             sort_keys=True,
         )
         + "\n"
-        for name, model in models.items()
+        for name, model in models().items()
     }
 
 
