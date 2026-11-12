@@ -1,0 +1,190 @@
+{
+  "$defs": {
+    "NoopPayload": {
+      "additionalProperties": false,
+      "description": "M0's only inline payload; real agent payloads need separate reviewed schemas.",
+      "properties": {
+        "label": {
+          "default": "",
+          "maxLength": 65536,
+          "title": "Label",
+          "type": "string"
+        },
+        "operation_key": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._:-]*$",
+          "title": "Operation Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation_key"
+      ],
+      "title": "NoopPayload",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Strict JSON v1 envelope; parse untrusted deliveries with from_bytes().",
+  "oneOf": [
+    {
+      "properties": {
+        "payload": {
+          "not": {
+            "type": "null"
+          }
+        },
+        "payload_ref": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "payload"
+      ]
+    },
+    {
+      "properties": {
+        "payload": {
+          "type": "null"
+        },
+        "payload_ref": {
+          "not": {
+            "type": "null"
+          }
+        }
+      },
+      "required": [
+        "payload_ref"
+      ]
+    }
+  ],
+  "properties": {
+    "causation_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Causation Id"
+    },
+    "correlation_id": {
+      "format": "uuid",
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "event_id": {
+      "format": "uuid",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "const": "foundation.noop.requested",
+      "title": "Event Type",
+      "type": "string"
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expires At"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "payload": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NoopPayload"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "payload_ref": {
+      "anyOf": [
+        {
+          "pattern": "^source:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Payload Ref"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sensitivity": {
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ],
+      "title": "Sensitivity",
+      "type": "string"
+    },
+    "source": {
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+      "title": "Source",
+      "type": "string"
+    },
+    "trace_id": {
+      "format": "uuid",
+      "title": "Trace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_id",
+    "schema_version",
+    "event_type",
+    "owner_id",
+    "domain",
+    "source",
+    "occurred_at",
+    "correlation_id",
+    "causation_id",
+    "trace_id",
+    "sensitivity"
+  ],
+  "title": "EventEnvelope",
+  "type": "object",
+  "x-max-wire-bytes": 65536
+}

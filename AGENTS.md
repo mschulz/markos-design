@@ -113,8 +113,12 @@ secrets.
 - `pyproject.toml` selects no vault/index. Use explicit CLI/env settings or a
   reviewed config copied from `config/legacy.example.toml`. Do not use a real
   vault during development or tests. The local API is not a public cloud API.
-- M0.1 owns runtime settings/startup isolation. M0.0 tests import-time safety;
-  no RabbitMQ/PostgreSQL services or `markos-runtime` entry point exist yet.
+- M0.1 adds strict synthetic contracts and explicit validation-only preflight
+  under `markos.runtime`. Runtime settings never discover legacy config or vaults.
+  No RabbitMQ/PostgreSQL adapter, service loop or `markos-runtime` entry point
+  exists yet. See [[MarkOS v0.3 M0.1 Contracts and Configuration]].
+- Check generated schema drift with
+  `uv run python -m markos.runtime.schemas --check` after contract changes.
 
 ## Working Agreements
 

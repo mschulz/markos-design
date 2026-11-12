@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 1.5
+version: 1.6
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -50,6 +50,11 @@ Governance and [[ADR-002 Cloud-first Deployment]]'s DigitalOcean/Docker Compose/
 | `.github/` | Pull request template | Validation workflows once executable checks and toolchain are selected |
 
 ## Repository transition
+
+M0.1 contracts/configuration are prepared in a separate review branch, stacked
+on the import promotion. [[MarkOS v0.3 M0.1 Contracts and Configuration]] records
+the pure validation boundary and 224-test evidence. Adapters/durability remain
+M0.2/M0.3 work; no merge or deployment occurs in this slice.
 
 M0.0 is prepared for review on a dedicated import branch, stacked on PR #3 while
 that plan remains unmerged. [[MarkOS v0.3 M0.0 Import Record]] records the exact

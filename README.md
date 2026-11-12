@@ -4,11 +4,14 @@ MarkOS augments human thinking through source-grounded knowledge and human-contr
 
 This M0.0 branch imports the existing markos v0.2 application and tests while
 preserving both repositories' Git histories. The original markos repository is
-unchanged. The import is pending owner review; no v0.3 runtime is implemented.
+unchanged. The import is reviewed but not yet on main; promotion is pending.
+No v0.3 runtime services are implemented.
 See [the import record](MarkOS%20v0.3%20M0.0%20Import%20Record.md) for provenance,
 file mapping and regression evidence.
 
 ## Start here
+
+- [M0.1 contracts and configuration](MarkOS%20v0.3%20M0.1%20Contracts%20and%20Configuration.md): strict synthetic contracts, explicit runtime preflight and validation evidence.
 
 - [Vision](Vision.md): the existing governing principles.
 - [MarkOS v0.3 Specification](MarkOS%20v0.3%20Specification.md): complete Gmail-first event-system **review draft**, not approved for runtime implementation.
