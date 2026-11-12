@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.0
+version: 2.1
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -41,6 +41,20 @@ Propose `services/runtime/` as a separate project with its own lock and tests. T
 
 [[MarkOS v0.3 M0 Implementation Plan]] breaks M0 into reviewable slices and acceptance cases. Old M0–M16 completion records do not transfer to this sequence. Baseline backup/monitoring design belongs in M0 before real data; M7 proves and hardens it.
 
+## Governed MCP access proposal
+
+[[ADR-005 Governed MCP Access for Agents]] adds a tool/data integration boundary, not a replacement event bus. RabbitMQ, PostgreSQL authority, source objects, derived Markdown and the independent runtime remain unchanged. This documentation adds no M0 dependency, implements no MCP client and enables no personal account, credential or server. Open M0 implementation PRs remain separate review units.
+
+| Stage | MCP increment | Gate before advancing |
+|---|---|---|
+| M1 Control plane | Versioned server/grant registry, trusted owner/domain identity, tool gateway contracts, disclosure/effect policy, immutable approval intents and durable audit; synthetic read-only server only | MCP-01–MCP-09: deny by default, scope isolation, safe discovery, disclosure checks, expiry/revocation/one-use approval, egress and credential protections, bounded execution and audit/crash recovery |
+| M2–M4 Integrations and agents | Add a connector only where MCP meets the source permission and recovery contract; classifiers/electricity agents reuse the gateway | Separate reviewed PR per connector; synthetic fixtures and provider compatibility evidence before real-data enablement; Gmail watch/Pub/Sub remains native ingestion |
+| M5 Knowledge | Optional scoped resource retrieval through the same policy gate; resource feature remains disabled until reviewed | Verify provenance, source access, domain separation and disclosure; resource URLs/handles grant no implicit fetch rights |
+| M7 Operations | Scoped credential rotation/revocation, audit backup/deletion/holds and unknown-effect reconciliation drills | MCP-07–MCP-10 with restore/replay/idempotency evidence and MacBook-off cloud operation; approve audit retention independently of event replay windows |
+| M8 Expansion | Additional approved servers/tools/features | Explicit grant/schema/version review and connector-specific acceptance; no wildcard access or automatic discovery enablement |
+
+MCP-01–MCP-10 are future acceptance cases in ADR-005, not passing tests in this documentation PR. Start with bounded synthetic reads. Consequential effects and new private-data disclosures require exact human approval; incomplete policy or unavailable approval/audit storage blocks calls. Do not introduce a second approval inbox, agent-owned credential store or per-agent bypass client.
+
 ## Immediate plan
 
 1. Review this architecture correction and retire PR #7 as a foundation path; preserve all history.
@@ -53,6 +67,7 @@ Propose `services/runtime/` as a separate project with its own lock and tests. T
 
 - Independent runtime Python version and exact dependency lock; use a supported interpreter tested with selected libraries, rather than inherit the old project automatically.
 - Revalidate RabbitMQ/aio-pika pins and image digest; measure ADR-003's proposed classic queue and resource/flow profile. Review 30/90-day replay/dedup and final source/privacy retention separately.
+- MCP SDK/protocol allowlist and first server, gateway identity/credential placement, tool/data/recipient grants and measured limits, connector reconciliation, audit retention/access/erasure and operational ownership (ADR-005).
 - Object-storage provider, schema/export/recovery/deletion contracts and backup-erasure handling.
 - Retrieval algorithms/indexes and shared knowledge-service API. Structured knowledge is selected; a specific embedding/vector technology is not implied.
 - Push adapter, model/privacy/budget policy, optional messaging priority, first-workflow details and operational ownership/cost.

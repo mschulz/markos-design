@@ -8,6 +8,12 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### Agent MCP access proposed on 12 November 2026
+
+- Added ADR-005 and specification/roadmap gates for governed agent MCP tools: explicit grants, owner/domain isolation, scoped disclosure/effect approvals, durable audit and unknown-outcome reconciliation. RabbitMQ remains the internal bus.
+- Added future MCP-01–MCP-10 acceptance cases and phased synthetic-first delivery from M1; existing M0 scope is unchanged. SDK/server selection, measured limits and audit retention remain review decisions.
+- Updated navigation, contributor guidance and the documentation inventory. Documentation-only validation; no runtime feature, dependency, credential, server, merge or deployment is enabled.
+
 ### Completed on 12 November 2026
 
 - Corrected the architecture baseline after the owner's explicit abandonment of the original design. ADR-004 supersedes PARA/Markdown-canonical/DuckDB/desktop assumptions and legacy-code reuse; RabbitMQ is selected internally and PostgreSQL/source objects own durable state.

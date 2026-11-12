@@ -7,6 +7,8 @@
 - DigitalOcean / Docker Compose and Supabase are the accepted hosting baseline. Production scheduling and agents must survive the MacBook being off.
 - Use [[Documentation Authority Index]] to distinguish current decisions, proposals, historical evidence and exact archived snapshots. Superseded instructions never override this file or the owner's latest decisions.
 
+- Follow [[ADR-005 Governed MCP Access for Agents]] for the proposed MCP boundary: event subscriptions grant no tools; deny by default, isolate owner/domain credentials/data, require scoped disclosure/effect approval and durable pre-dispatch audit. This documentation enables no MCP access and adds no M0 dependency.
+
 ## Project source and implementation boundaries
 
 - GitHub `markos-design` is canonical for all project artifacts. Space is drafting material. Keep runtime data, personal notes and secrets outside GitHub.

@@ -2,7 +2,7 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -30,6 +30,7 @@ This table covers every Markdown file in this PR's repository tree, including hi
 | [ADR-002 Cloud-first Deployment](ADR-002%20Cloud-first%20Deployment.md) | Accepted placement; earlier MQTT wording amended by ADR-003 |
 | [ADR-003 RabbitMQ Internal Event Bus](ADR-003%20RabbitMQ%20Internal%20Event%20Bus.md) | Selected RabbitMQ transport; exact operating profile remains proposed |
 | [ADR-004 Event-driven Architecture Supersedes Legacy MarkOS](ADR-004%20Event-driven%20Architecture%20Supersedes%20Legacy%20MarkOS.md) | Accepted owner decision: replacement architecture and independent runtime |
+| [ADR-005 Governed MCP Access for Agents](ADR-005%20Governed%20MCP%20Access%20for%20Agents.md) | Proposed agent tool integration boundary, permissions/isolation/approvals/audit and future MCP acceptance gates; no runtime enablement |
 | [AGENTS](AGENTS.md) | Current agent instructions; overrides historical project memory |
 | [CHANGELOG](CHANGELOG.md) | Chronological evidence; earlier accepted plans may now be superseded |
 | [CLAUDE](CLAUDE.md) | Current pointer to shared instructions |
@@ -67,6 +68,10 @@ The accessible Agent PubSub chat returned five recent turns and no older cursor.
 
 Unsettled implementation choices include source provider/retention, detailed retrieval algorithms, model/push providers, runtime dependency choices and operating cost/recovery evidence. Do not reintroduce the abandoned architecture to fill those gaps.
 
-## Validation of this correction
+## Validation of the architecture correction (prior evidence)
 
 All 29 Markdown documents are classified. Local links in the 19 current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. The independent A01–A20 runtime acceptance suite remains unimplemented.
+
+## MCP documentation update
+
+ADR-005 adds a proposed MCP access boundary, leaving the accepted event/data architecture and existing M0 scope intact. The inventory now classifies all 30 Markdown documents. Local links in the 20 current/template documents resolve. This update changes documentation only; source, tests, locks, import manifest and exact archived snapshots are unchanged. Runtime and MCP acceptance tests were not run or implemented by this update. Earlier regression counts above remain historical evidence, not new results.

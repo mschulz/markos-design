@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.6
+version: 0.3.7
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -34,9 +34,9 @@ No autonomous switching of energy retailers, sending emails, making purchases, o
 
 Three planes:
 
-- **Control plane:** authenticated API, conversation gateway, agent registry/configuration, approval inbox, notification preferences, web UI and CLI.
+- **Control plane:** authenticated API, conversation gateway, agent registry/configuration, approval inbox, MCP server/grant registry and policy, notification preferences, web UI and CLI.
 
-- **Execution plane:** Gmail ingestion bridge, RabbitMQ broker, durable event outbox, task workers, specialist agents, schedulers and notification gateway.
+- **Execution plane:** Gmail ingestion bridge, RabbitMQ broker, durable event outbox, task workers, specialist agents, governed MCP client access gateway, schedulers and notification gateway.
 
 - **Data plane:** PostgreSQL operational records and structured knowledge, source document/object store, full-text/semantic retrieval, provenance and audit.
 
@@ -55,6 +55,8 @@ See [[ADR-002 Cloud-first Deployment]] and [[MarkOS Cloud Deployment Architectur
 - RabbitMQ over AMQP 0-9-1 (selected), durable exchanges/queues, persistent messages, publisher confirms, manual consumer acknowledgements, TLS and per-service permissions. Proposed profile: RabbitMQ 4.4.0, aio-pika 10.2.3 (Python 3.11+), durable classic queues. [[ADR-003 RabbitMQ Internal Event Bus]] defines limits and retention; validate pins/digest and resource sizing in M0. A single VM provides no broker high availability.
 
 - Supabase PostgreSQL (accepted durable operational storage) for users, domains, messages, events, outbox, inbox deduplication, tasks, schedules, run history, leases, Gmail cursors, agents, approvals, conversations, notification attempts, knowledge metadata and audit.
+
+- Governed MCP access for agent tools/data is proposed in [[ADR-005 Governed MCP Access for Agents]]. RabbitMQ remains the event bus; MCP does not replace native ingestion adapters. SDK, supported protocol versions and first server require compatibility/security review before implementation.
 
 - Versioned JSON event payloads; object storage for original attachments.
 
@@ -103,6 +105,16 @@ Database-backed retries use bounded exponential backoff/jitter and preserve oper
 
 Agent manifest: ID/version, description, owner/domain, capabilities, input subscriptions, output event types, required tools, data permissions, model policy, resource budget, timeout, retry policy, health check and human approval requirements. Lifecycle: registered → enabled → healthy/degraded/disabled. Agent execution is bounded, cancellable, observable and restartable. An agent cannot create or enable another agent without approval.
 
+### Governed MCP access (proposed)
+
+Agents access approved MCP servers through a logical tool gateway in the independent runtime. Grants are distinct from event subscriptions and bind trusted owner/domain/principal, server identity, exact tool/schema, constrained arguments and sources, disclosure destinations, effect class and budgets. Deny by default; discovery, server annotations and existing ChatGPT/Codex connectors grant no runtime access. Resolve credentials only at the gateway, require authenticated HTTPS for remote servers and reauthorize every dispatch/retry. Stdio support and additional protocol features are deferred for separate review.
+
+Partition credentials, calls, results, caches and any connection state by owner/domain/principal. Validate source permissions before retrieval; cross-domain transfers require explicit approved audited workflows. Treat descriptions/results as untrusted data, bound requests/results and prevent implicit nested tool calls, arbitrary egress or permission expansion.
+
+A read-only call may disclose private data. Standing grants permit only reviewed bounded reads with defined data classes and recipients; new disclosure or consequential effects require human approval bound to an immutable, expiring, one-use call intent. Approval cannot override permissions. Persist authorization/approval consumption and dispatch audit before calls; unavailable policy/audit storage blocks dispatch. Unknown external outcomes require reconciliation, with no blind retries or exactly-once claim. Replay suppresses external effects by default.
+
+PostgreSQL stores scoped intent, approval, dispatch and result/unknown records with redacted provenance and correlation. Agents cannot rewrite audit history. [[ADR-005 Governed MCP Access for Agents]] defines transport/security controls, approval/revocation/retry semantics, audit fields and future MCP-01–MCP-10 acceptance tests. This proposal enables no MCP access and changes no M0 implementation scope.
+
 ### Initial agents
 
 **Email classification agent:** classify incoming mail, produce confidence and rationale, detect bills and attachments, route events, and send uncertain classifications to review.
@@ -131,7 +143,7 @@ Notification Gateway consumes notification-request events and checks domain, sev
 
 ## 11. Configuration and approvals
 
-Configuration is centrally stored, validated, versioned and auditable. Admin UI covers agent manifests, exchanges/queues and routing policies, integrations, model selection, budgets, notification rules, credentials references and domain permissions. Secrets never appear in broker messages or logs. Consequential actions (send email, purchase, modify devices, alter financial accounts, external publication) require explicit scoped human approval, with expiry, one-time tokens and complete audit. Default permissions are read-only.
+Configuration is centrally stored, validated, versioned and auditable. Admin UI covers agent manifests, exchanges/queues and routing policies, integrations, model selection, budgets, notification rules, credentials references and domain permissions. Secrets never appear in broker messages or logs. Consequential actions (send email, purchase, modify devices, alter financial accounts, external publication) require explicit scoped human approval, with expiry, one-time tokens and complete audit. Default permissions are read-only within explicit grants; this does not authorize private-data disclosure to new recipients. MCP approvals bind server/tool/schema, arguments, data/recipient, policy/grant versions and expiry as defined in [[ADR-005 Governed MCP Access for Agents]].
 
 ## 12. Reliability, security and observability
 
@@ -173,14 +185,14 @@ All stages must survive duplicate notifications and service restarts.
 ## 14. Milestones and acceptance criteria
 
 **M0 Foundation:** cloud Compose service contracts, Supabase schemas, RabbitMQ contracts, outbox/inbox, worker runtime, persistent scheduling/leases, ACLs, restart/health policies, baseline backups/alerts and tests. Acceptance: duplicates, broker outage, worker restart and overdue schedule recovery preserve durable business results; concurrent claims and bounded catch-up are verified. Test publisher confirm/return handling, lost-confirm retries, independent subscriber delivery, competing workers, crash-before-ack deduplication, poison-message review and recovery after broker storage loss from retained events/dispatch state.
-**M1 Control plane:** authenticated minimal web chat, agent registry, configuration and event activity. Acceptance: inspect agent health and converse with test agent.
+**M1 Control plane:** authenticated minimal web chat, agent registry, configuration and event activity. Acceptance: inspect agent health and converse with test agent. Add MCP registry, least-privilege policy, immutable approvals and durable audit contracts with a synthetic read-only server; pass MCP-01–MCP-09 before enabling any real connector.
 **M2 Gmail bridge:** watch, renewal, history cursor, ingestion and reconciliation. Acceptance: test mail appears once in durable source store and event history.
 **M3 Classification:** confidence-aware routing and manual review. Acceptance: test suite distinguishes bills, ordinary mail and ambiguous cases.
 **M4 Electricity:** extraction, validation, history and reporting. Acceptance: sample bills yield traceable figures and anomaly explanations.
 **M5 Knowledge:** source-linked facts, retrieval, weekly consolidation. Acceptance: facts trace to sources and contradictions are surfaced.
 **M6 Notifications:** push adapter and authenticated deep links. Acceptance: test alert reaches iPhone with appropriate privacy settings.
 **M7 Operations:** CLI, replay, metrics, verified backup/restore, replacement-VM runbook and failure drills. Acceptance: operator recovers an interrupted workflow, measures approved RPO/RTO, verifies independent outage alerts and proves jobs continue with MacBook off. M7 validates and hardens the operational controls introduced in M0; baseline backups/monitoring must precede any production data.
-**M8 Expansion:** additional agents, integrations and optional messaging. Acceptance: new agent added without modifying existing producers.
+**M8 Expansion:** additional agents, integrations and optional messaging. Acceptance: new agent added without modifying existing producers. MCP-enabled agents reuse the governed boundary; each real connector needs scope, disclosure and recovery acceptance, including MCP-10, before enablement.
 
 ## 15. Decisions awaiting review
 
@@ -199,6 +211,8 @@ RabbitMQ is the selected internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]
 6. Source document storage and retention.
 
 7. Whether electricity is the first specialist vertical slice or whether another category should precede it.
+
+8. MCP SDK/protocol compatibility, first server/tool grants, gateway identity/credential placement, measured limits, connector reconciliation and audit retention/erasure remain proposed in [[ADR-005 Governed MCP Access for Agents]].
 
 ## 16. Implementation handoff rules
 
