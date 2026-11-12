@@ -1,4 +1,4 @@
-"""Deterministic resolution of document link targets within a vault."""
+"""Deterministic resolution of document link targets within a Markdown root."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ def resolve_internal_link(
     target: str,
     known_paths: Iterable[str],
 ) -> str | None:
-    """Resolve ``target`` to one known vault path, or return ``None``.
+    """Resolve ``target`` to one known Markdown root path, or return ``None``.
 
     Ambiguous basename matches are deliberately left unresolved. Paths are
     compared case-insensitively while the canonical stored casing is returned.
@@ -40,8 +40,10 @@ def resolve_internal_link(
     rooted = target_path.startswith("/")
     raw = target_path.lstrip("/")
     suffix = PurePosixPath(raw).suffix.casefold()
-    path_forms = (raw,) if suffix in _MARKDOWN_SUFFIXES else tuple(
-        f"{raw}{extension}" for extension in _MARKDOWN_SUFFIXES
+    path_forms = (
+        (raw,)
+        if suffix in _MARKDOWN_SUFFIXES
+        else tuple(f"{raw}{extension}" for extension in _MARKDOWN_SUFFIXES)
     )
 
     candidates: list[str] = []

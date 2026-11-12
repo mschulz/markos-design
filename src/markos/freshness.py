@@ -1,4 +1,4 @@
-"""Read-only comparison of vault sources with indexed fingerprints."""
+"""Read-only comparison of Markdown root sources with indexed fingerprints."""
 
 from __future__ import annotations
 
@@ -6,17 +6,18 @@ from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 
+from markos._compat import legacy_keywords
 from markos.markdown import discover_markdown
 from markos.query import source_fingerprints
 
 
 class FreshnessError(ValueError):
-    """Raised when current vault content cannot be fingerprinted."""
+    """Raised when current Markdown root content cannot be fingerprinted."""
 
 
 @dataclass(frozen=True)
 class FreshnessReport:
-    """Vault-relative changes since the latest successful rebuild."""
+    """Markdown root-relative changes since the latest successful rebuild."""
 
     added: tuple[str, ...]
     modified: tuple[str, ...]
@@ -27,13 +28,14 @@ class FreshnessReport:
         return not (self.added or self.modified or self.deleted)
 
 
-def check_freshness(vault_path: Path, index_path: Path) -> FreshnessReport:
+@legacy_keywords
+def check_freshness(markdown_root: Path, index_path: Path) -> FreshnessReport:
     """Compare current Markdown bytes with schema-versioned index hashes."""
 
     try:
-        root = vault_path.expanduser().resolve(strict=True)
+        root = markdown_root.expanduser().resolve(strict=True)
     except OSError as error:
-        raise FreshnessError(f"vault cannot be resolved: {vault_path}") from error
+        raise FreshnessError(f"markdown_root cannot be resolved: {markdown_root}") from error
     indexed = {item.path: item.source_hash for item in source_fingerprints(index_path)}
     current: dict[str, str] = {}
     for relative_path in discover_markdown(root):

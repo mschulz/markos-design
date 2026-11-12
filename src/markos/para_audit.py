@@ -1,4 +1,4 @@
-"""Read-only assessment of existing vault folders for PARA migration."""
+"""Read-only assessment of existing Markdown root folders for PARA migration."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import Literal
 
+from markos._compat import legacy_keywords, warn_renamed
 from markos.markdown import MARKDOWN_SUFFIXES
 from markos.query import GraphSnapshot, graph_snapshot
 
@@ -19,7 +20,7 @@ class ParaAuditError(ValueError):
 
 @dataclass(frozen=True)
 class FolderAudit:
-    """Read-only inventory and migration guidance for one vault folder."""
+    """Read-only inventory and migration guidance for one Markdown root folder."""
 
     source: str
     suggested_destination: str
@@ -39,27 +40,51 @@ class FolderAudit:
     reasons: tuple[str, ...]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class ParaAuditReport:
-    """A migration assessment that never changes the vault."""
+    """A migration assessment that never changes the Markdown root."""
 
-    vault_path: Path
+    markdown_root: Path
     folders: tuple[FolderAudit, ...]
 
+    def __init__(
+        self,
+        markdown_root: Path | None = None,
+        folders: tuple[FolderAudit, ...] | None = None,
+        *,
+        vault_path: Path | None = None,
+    ) -> None:
+        if vault_path is not None:
+            if markdown_root is not None:
+                raise TypeError("provide markdown_root only, not both root names")
+            warn_renamed("vault_path", "markdown_root")
+            markdown_root = vault_path
+        if markdown_root is None or folders is None:
+            raise TypeError("markdown_root and folders are required")
+        object.__setattr__(self, "markdown_root", markdown_root)
+        object.__setattr__(self, "folders", folders)
 
+    @property
+    def vault_path(self) -> Path:
+        """Deprecated read-only field spelling for existing Python clients."""
+        warn_renamed("vault_path", "markdown_root")
+        return self.markdown_root
+
+
+@legacy_keywords
 def audit_para_migration(
-    vault_path: Path,
+    markdown_root: Path,
     index_path: Path,
     sources: tuple[str, ...],
 ) -> ParaAuditReport:
-    """Assess selected vault folders using filesystem and indexed link facts."""
+    """Assess selected Markdown root folders using filesystem and indexed link facts."""
 
     if not sources:
         raise ParaAuditError("at least one source folder is required")
-    root = _resolved_directory(vault_path, label="vault")
+    root = _resolved_directory(markdown_root, label="markdown_root")
     snapshot = graph_snapshot(index_path)
     audits = tuple(_audit_folder(root, source, snapshot) for source in sources)
-    return ParaAuditReport(vault_path=root, folders=audits)
+    return ParaAuditReport(markdown_root=root, folders=audits)
 
 
 def render_para_audit(report: ParaAuditReport) -> str:
@@ -68,9 +93,9 @@ def render_para_audit(report: ParaAuditReport) -> str:
     lines = [
         "# MarkOS PARA Migration Audit",
         "",
-        f"Vault: `{report.vault_path}`",
+        f"Markdown root: `{report.markdown_root}`",
         "",
-        "> Read-only assessment. No vault files or folders were changed.",
+        "> Read-only assessment. No Markdown files or folders were changed.",
         "",
         "## Summary",
         "",
@@ -133,11 +158,11 @@ def render_para_audit(report: ParaAuditReport) -> str:
 
 
 def write_para_audit(report: ParaAuditReport, output_path: Path) -> Path:
-    """Write a report outside the vault, never into the source-of-truth tree."""
+    """Write a report outside the Markdown root, never into the source-of-truth tree."""
 
     destination = output_path.expanduser().resolve(strict=False)
-    if _is_within(destination, report.vault_path):
-        raise ParaAuditError("audit report path must be outside the Markdown vault")
+    if _is_within(destination, report.markdown_root):
+        raise ParaAuditError("audit report path must be outside the Markdown root")
     try:
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(render_para_audit(report), encoding="utf-8")
@@ -149,7 +174,7 @@ def write_para_audit(report: ParaAuditReport, output_path: Path) -> Path:
 def _audit_folder(root: Path, source: str, snapshot: GraphSnapshot) -> FolderAudit:
     relative = PurePath(source)
     if relative.is_absolute() or ".." in relative.parts or not relative.parts:
-        raise ParaAuditError(f"source folder must be vault-relative: {source}")
+        raise ParaAuditError(f"source folder must be root-relative: {source}")
     source_path = root.joinpath(*relative.parts)
     resolved = _resolved_directory(source_path, label="source folder")
     if not _is_within(resolved, root) or source_path.absolute() != resolved:

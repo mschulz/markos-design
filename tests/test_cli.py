@@ -20,26 +20,26 @@ def test_version() -> None:
     assert f"MarkOS {__version__}" in result.stdout
 
 
-def test_doctor_accepts_readable_vault(tmp_path: Path) -> None:
-    vault = tmp_path / "vault"
-    vault.mkdir()
+def test_doctor_accepts_readable_markdown_root(tmp_path: Path) -> None:
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
 
-    result = runner.invoke(app, ["doctor", "--vault", str(vault)])
+    result = runner.invoke(app, ["doctor", "--markdown-root", str(markdown_root)])
 
     assert result.exit_code == 0
     assert "Readable" in result.stdout
-    assert list(vault.iterdir()) == []
+    assert list(markdown_root.iterdir()) == []
 
 
 def test_doctor_reads_environment_configuration(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["doctor"], env={"MARKOS_VAULT_PATH": str(tmp_path)})
+    result = runner.invoke(app, ["doctor"], env={"MARKOS_MARKDOWN_ROOT": str(tmp_path)})
 
     assert result.exit_code == 0
     assert "Readable" in result.stdout
 
 
-def test_doctor_rejects_missing_vault(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["doctor", "--vault", str(tmp_path / "missing")])
+def test_doctor_rejects_missing_markdown_root(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["doctor", "--markdown-root", str(tmp_path / "missing")])
 
     assert result.exit_code == 1
     assert "Not found" in result.stdout
@@ -52,17 +52,17 @@ def test_doctor_reports_missing_configuration() -> None:
     assert "Configuration error" in result.stderr
 
 
-def test_rebuild_creates_external_index_without_modifying_vault(tmp_path: Path) -> None:
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    note = vault / "Note.md"
+def test_rebuild_creates_external_index_without_modifying_markdown_root(tmp_path: Path) -> None:
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    note = markdown_root / "Note.md"
     note.write_text("# Note\n\nSee [[Other]].\n", encoding="utf-8")
     before = note.read_bytes()
     index_path = tmp_path / "data" / "index.duckdb"
 
     result = runner.invoke(
         app,
-        ["rebuild", "--vault", str(vault), "--index", str(index_path)],
+        ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)],
     )
 
     assert result.exit_code == 0
@@ -74,27 +74,29 @@ def test_rebuild_creates_external_index_without_modifying_vault(tmp_path: Path) 
 
 
 def test_rebuild_requires_index_configuration(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["rebuild", "--vault", str(tmp_path)])
+    result = runner.invoke(app, ["rebuild", "--markdown-root", str(tmp_path)])
 
     assert result.exit_code == 2
     assert "index path is required" in result.stderr
 
 
-def test_search_reads_index_without_vault_configuration(tmp_path: Path) -> None:
+def test_search_reads_index_without_markdown_root_configuration(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    (vault / "Vision.md").write_text("# Vision\n\nKnowledge outlives tools.\n", encoding="utf-8")
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    (markdown_root / "Vision.md").write_text(
+        "# Vision\n\nKnowledge outlives tools.\n", encoding="utf-8"
+    )
     rebuild_result = runner.invoke(
         app,
-        ["rebuild", "--vault", str(vault), "--index", str(index_path)],
+        ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)],
     )
     assert rebuild_result.exit_code == 0
 
     result = runner.invoke(
         app,
         ["search", "knowledge", "--index", str(index_path)],
-        env={"MARKOS_VAULT_PATH": ""},
+        env={"MARKOS_MARKDOWN_ROOT": ""},
     )
 
     assert result.exit_code == 0
@@ -104,10 +106,12 @@ def test_search_reads_index_without_vault_configuration(tmp_path: Path) -> None:
 
 def test_search_reports_no_matches(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    (vault / "Note.md").write_text("# Note", encoding="utf-8")
-    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    (markdown_root / "Note.md").write_text("# Note", encoding="utf-8")
+    runner.invoke(
+        app, ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)]
+    )
 
     result = runner.invoke(app, ["search", "absent", "--index", str(index_path)])
 
@@ -117,11 +121,13 @@ def test_search_reports_no_matches(tmp_path: Path) -> None:
 
 def test_links_shows_outgoing_and_incoming_links(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    (vault / "One.md").write_text("# One\n\nSee [[Two]] and [[Missing]].", encoding="utf-8")
-    (vault / "Two.md").write_text("# Two", encoding="utf-8")
-    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    (markdown_root / "One.md").write_text("# One\n\nSee [[Two]] and [[Missing]].", encoding="utf-8")
+    (markdown_root / "Two.md").write_text("# Two", encoding="utf-8")
+    runner.invoke(
+        app, ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)]
+    )
 
     outgoing = runner.invoke(app, ["links", "One.md", "--index", str(index_path)])
     incoming = runner.invoke(
@@ -136,7 +142,7 @@ def test_links_shows_outgoing_and_incoming_links(tmp_path: Path) -> None:
     assert "One.md" in incoming.stdout
 
 
-def test_serve_starts_read_only_api_without_vault(
+def test_serve_starts_read_only_api_without_markdown_root(
     tmp_path: Path,
     monkeypatch: object,
 ) -> None:
@@ -150,7 +156,7 @@ def test_serve_starts_read_only_api_without_vault(
     result = runner.invoke(
         app,
         ["serve", "--index", str(tmp_path / "index.duckdb"), "--port", "9000"],
-        env={"MARKOS_VAULT_PATH": ""},
+        env={"MARKOS_MARKDOWN_ROOT": ""},
     )
 
     assert result.exit_code == 0
@@ -160,11 +166,13 @@ def test_serve_starts_read_only_api_without_vault(
 
 def test_graph_shows_health_and_shortest_path(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    (vault / "One.md").write_text("# One\n\n[[Two]]", encoding="utf-8")
-    (vault / "Two.md").write_text("# Two", encoding="utf-8")
-    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    (markdown_root / "One.md").write_text("# One\n\n[[Two]]", encoding="utf-8")
+    (markdown_root / "Two.md").write_text("# Two", encoding="utf-8")
+    runner.invoke(
+        app, ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)]
+    )
 
     health = runner.invoke(app, ["graph", "--index", str(index_path)])
     path = runner.invoke(
@@ -180,17 +188,17 @@ def test_graph_shows_health_and_shortest_path(tmp_path: Path) -> None:
 
 def test_rebuild_reports_and_lists_ingestion_issues(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    (vault / "Valid.md").write_text("# Valid", encoding="utf-8")
-    (vault / "Broken.md").write_text(
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    (markdown_root / "Valid.md").write_text("# Valid", encoding="utf-8")
+    (markdown_root / "Broken.md").write_text(
         "---\npublication: Make:\n---\n# Broken",
         encoding="utf-8",
     )
 
     rebuilt = runner.invoke(
         app,
-        ["rebuild", "--vault", str(vault), "--index", str(index_path)],
+        ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)],
     )
     listed = runner.invoke(app, ["issues", "--index", str(index_path)])
 
@@ -203,11 +211,13 @@ def test_rebuild_reports_and_lists_ingestion_issues(tmp_path: Path) -> None:
 
 def test_graph_caps_isolated_document_preview(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
-    vault = tmp_path / "vault"
-    vault.mkdir()
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
     for number in range(25):
-        (vault / f"Note-{number:02}.md").write_text(f"# Note {number}", encoding="utf-8")
-    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+        (markdown_root / f"Note-{number:02}.md").write_text(f"# Note {number}", encoding="utf-8")
+    runner.invoke(
+        app, ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)]
+    )
 
     result = runner.invoke(app, ["graph", "--index", str(index_path)])
 
@@ -259,9 +269,7 @@ def test_prepare_remap_and_validate_graph_workflow(tmp_path: Path) -> None:
     graph.write_text(
         json.dumps(
             {
-                "nodes": [
-                    {"id": "note", "label": "Note", "source_file": chunk_path}
-                ],
+                "nodes": [{"id": "note", "label": "Note", "source_file": chunk_path}],
                 "edges": [],
             }
         ),
@@ -352,20 +360,22 @@ def test_semantic_extraction_cli_requires_consent_and_reports_summary(
 
 def test_freshness_exits_zero_when_current_and_one_when_stale(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    note = vault / "Note.md"
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    note = markdown_root / "Note.md"
     note.write_text("# Before", encoding="utf-8")
-    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+    runner.invoke(
+        app, ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)]
+    )
 
     current = runner.invoke(
         app,
-        ["freshness", "--vault", str(vault), "--index", str(index_path)],
+        ["freshness", "--markdown-root", str(markdown_root), "--index", str(index_path)],
     )
     note.write_text("# After", encoding="utf-8")
     stale = runner.invoke(
         app,
-        ["freshness", "--vault", str(vault), "--index", str(index_path)],
+        ["freshness", "--markdown-root", str(markdown_root), "--index", str(index_path)],
     )
 
     assert current.exit_code == 0
@@ -377,15 +387,21 @@ def test_freshness_exits_zero_when_current_and_one_when_stale(tmp_path: Path) ->
 
 def test_sync_skips_current_index_and_rebuilds_stale_index(tmp_path: Path) -> None:
     index_path = tmp_path / "index.duckdb"
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    note = vault / "Note.md"
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    note = markdown_root / "Note.md"
     note.write_text("# Before", encoding="utf-8")
-    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+    runner.invoke(
+        app, ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)]
+    )
 
-    current = runner.invoke(app, ["sync", "--vault", str(vault), "--index", str(index_path)])
+    current = runner.invoke(
+        app, ["sync", "--markdown-root", str(markdown_root), "--index", str(index_path)]
+    )
     note.write_text("# After", encoding="utf-8")
-    stale = runner.invoke(app, ["sync", "--vault", str(vault), "--index", str(index_path)])
+    stale = runner.invoke(
+        app, ["sync", "--markdown-root", str(markdown_root), "--index", str(index_path)]
+    )
 
     assert current.exit_code == 0
     assert "already current" in current.stdout
@@ -398,8 +414,8 @@ def test_watch_passes_configuration_and_timing_options(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    vault = tmp_path / "vault"
-    vault.mkdir()
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
     index_path = tmp_path / "index.duckdb"
     calls: list[tuple[Path, Path, float, float]] = []
 
@@ -413,13 +429,13 @@ def test_watch_passes_configuration_and_timing_options(
         calls.append((source, destination, poll_interval, debounce))
         return WatchSummary(sync_attempts=2, rebuilds=1, errors=0)
 
-    monkeypatch.setattr("markos.cli.watch_vault_index", fake_watch)
+    monkeypatch.setattr("markos.cli.watch_markdown_index", fake_watch)
     result = runner.invoke(
         app,
         [
             "watch",
-            "--vault",
-            str(vault),
+            "--markdown-root",
+            str(markdown_root),
             "--index",
             str(index_path),
             "--poll-interval",
@@ -430,27 +446,29 @@ def test_watch_passes_configuration_and_timing_options(
     )
 
     assert result.exit_code == 0
-    assert calls == [(vault, index_path, 2.0, 0.75)]
+    assert calls == [(markdown_root, index_path, 2.0, 0.75)]
     assert "2 synchronization attempts" in result.stdout
     assert "1 rebuild" in result.stdout
 
 
-def test_para_audit_prints_preview_without_modifying_vault(tmp_path: Path) -> None:
-    vault = tmp_path / "vault"
-    source = vault / "Synthetic Biology"
+def test_para_audit_prints_preview_without_modifying_markdown_root(tmp_path: Path) -> None:
+    markdown_root = tmp_path / "markdown_root"
+    source = markdown_root / "Synthetic Biology"
     source.mkdir(parents=True)
     paper = source / "study.pdf"
     paper.write_bytes(b"%PDF study")
     index_path = tmp_path / "index.duckdb"
-    runner.invoke(app, ["rebuild", "--vault", str(vault), "--index", str(index_path)])
+    runner.invoke(
+        app, ["rebuild", "--markdown-root", str(markdown_root), "--index", str(index_path)]
+    )
 
     result = runner.invoke(
         app,
         [
             "para-audit",
             "Synthetic Biology",
-            "--vault",
-            str(vault),
+            "--markdown-root",
+            str(markdown_root),
             "--index",
             str(index_path),
         ],

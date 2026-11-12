@@ -13,6 +13,7 @@ import frontmatter
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 
+from markos._compat import legacy_keywords
 from markos.domain import KnowledgeDocument
 
 MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
@@ -20,7 +21,7 @@ _WIKILINK = re.compile(r"(?<!!)\[\[([^\[\]\n]+?)\]\]")
 
 
 class MarkdownDiscoveryError(ValueError):
-    """Raised when a vault cannot be safely searched for Markdown files."""
+    """Raised when a Markdown root cannot be safely searched for Markdown files."""
 
 
 class MarkdownParseError(ValueError):
@@ -29,7 +30,7 @@ class MarkdownParseError(ValueError):
 
 @dataclass(frozen=True)
 class IngestionIssue:
-    """One document rejected during a resilient vault load."""
+    """One document rejected during a resilient Markdown root load."""
 
     path: str
     error: str
@@ -44,21 +45,24 @@ class MarkdownLoadReport:
     issues: tuple[IngestionIssue, ...]
 
 
-def discover_markdown(vault_path: Path) -> tuple[Path, ...]:
-    """Return Markdown paths relative to ``vault_path`` in stable order.
+@legacy_keywords
+def discover_markdown(markdown_root: Path) -> tuple[Path, ...]:
+    """Return Markdown paths relative to ``markdown_root`` in stable order.
 
     Directory symlinks and file symlinks are deliberately excluded so discovery
-    cannot escape the configured vault. The operation never creates or modifies
+    cannot escape the configured Markdown root. The operation never creates or modifies
     files.
     """
 
     try:
-        root = vault_path.expanduser().resolve(strict=True)
+        root = markdown_root.expanduser().resolve(strict=True)
     except OSError as error:
-        raise MarkdownDiscoveryError(f"vault cannot be resolved: {vault_path}") from error
+        raise MarkdownDiscoveryError(
+            f"markdown_root cannot be resolved: {markdown_root}"
+        ) from error
 
     if not root.is_dir():
-        raise MarkdownDiscoveryError(f"vault is not a directory: {vault_path}")
+        raise MarkdownDiscoveryError(f"markdown_root is not a directory: {markdown_root}")
 
     discovered: list[Path] = []
     try:
@@ -78,18 +82,21 @@ def discover_markdown(vault_path: Path) -> tuple[Path, ...]:
                     continue
                 discovered.append(candidate.relative_to(root))
     except OSError as error:
-        raise MarkdownDiscoveryError(f"could not search vault {vault_path}: {error}") from error
+        raise MarkdownDiscoveryError(
+            f"could not search markdown_root {markdown_root}: {error}"
+        ) from error
 
     return tuple(sorted(discovered, key=lambda path: (path.as_posix().casefold(), path.as_posix())))
 
 
-def parse_markdown(vault_path: Path, relative_path: PurePath) -> KnowledgeDocument:
-    """Parse one vault-relative Markdown file without modifying the vault."""
+@legacy_keywords
+def parse_markdown(markdown_root: Path, relative_path: PurePath) -> KnowledgeDocument:
+    """Parse one root-relative Markdown file without modifying the Markdown root."""
 
-    root = _resolved_vault(vault_path)
+    root = _resolved_markdown_root(markdown_root)
     path = Path(relative_path)
     if path.is_absolute() or ".." in path.parts:
-        raise MarkdownParseError("document path must be relative to the vault")
+        raise MarkdownParseError("document path must be relative to the Markdown root")
     if path.suffix.casefold() not in MARKDOWN_SUFFIXES:
         raise MarkdownParseError("document path must identify a Markdown file")
 
@@ -98,11 +105,11 @@ def parse_markdown(vault_path: Path, relative_path: PurePath) -> KnowledgeDocume
         resolved_source = source_path.resolve(strict=True)
         resolved_source.relative_to(root)
     except (OSError, ValueError) as error:
-        message = f"document is not a readable vault file: {path.as_posix()}"
+        message = f"document is not a readable Markdown file: {path.as_posix()}"
         raise MarkdownParseError(message) from error
 
     if source_path.absolute() != resolved_source or not resolved_source.is_file():
-        raise MarkdownParseError(f"document is not a regular vault file: {path.as_posix()}")
+        raise MarkdownParseError(f"document is not a regular Markdown file: {path.as_posix()}")
 
     try:
         source_bytes = resolved_source.read_bytes()
@@ -130,44 +137,46 @@ def parse_markdown(vault_path: Path, relative_path: PurePath) -> KnowledgeDocume
     )
 
 
-def load_markdown(vault_path: Path) -> tuple[KnowledgeDocument, ...]:
-    """Discover and parse every Markdown document in a vault."""
+@legacy_keywords
+def load_markdown(markdown_root: Path) -> tuple[KnowledgeDocument, ...]:
+    """Discover and parse every Markdown document in a Markdown root."""
 
-    return tuple(parse_markdown(vault_path, path) for path in discover_markdown(vault_path))
+    return tuple(parse_markdown(markdown_root, path) for path in discover_markdown(markdown_root))
 
 
-def load_markdown_report(vault_path: Path) -> MarkdownLoadReport:
+@legacy_keywords
+def load_markdown_report(markdown_root: Path) -> MarkdownLoadReport:
     """Parse all discoverable documents while recording per-file failures."""
 
     documents: list[KnowledgeDocument] = []
     issues: list[IngestionIssue] = []
-    for path in discover_markdown(vault_path):
+    for path in discover_markdown(markdown_root):
         try:
-            documents.append(parse_markdown(vault_path, path))
+            documents.append(parse_markdown(markdown_root, path))
         except MarkdownParseError as error:
             issues.append(
                 IngestionIssue(
                     path=path.as_posix(),
                     error=str(error),
-                    source_hash=_source_hash(vault_path, path),
+                    source_hash=_source_hash(markdown_root, path),
                 )
             )
     return MarkdownLoadReport(documents=tuple(documents), issues=tuple(issues))
 
 
-def _resolved_vault(vault_path: Path) -> Path:
+def _resolved_markdown_root(markdown_root: Path) -> Path:
     try:
-        root = vault_path.expanduser().resolve(strict=True)
+        root = markdown_root.expanduser().resolve(strict=True)
     except OSError as error:
-        raise MarkdownParseError(f"vault cannot be resolved: {vault_path}") from error
+        raise MarkdownParseError(f"markdown_root cannot be resolved: {markdown_root}") from error
     if not root.is_dir():
-        raise MarkdownParseError(f"vault is not a directory: {vault_path}")
+        raise MarkdownParseError(f"markdown_root is not a directory: {markdown_root}")
     return root
 
 
-def _source_hash(vault_path: Path, relative_path: Path) -> str | None:
+def _source_hash(markdown_root: Path, relative_path: Path) -> str | None:
     try:
-        content = (vault_path.expanduser().resolve(strict=True) / relative_path).read_bytes()
+        content = (markdown_root.expanduser().resolve(strict=True) / relative_path).read_bytes()
     except OSError:
         return None
     return sha256(content).hexdigest()

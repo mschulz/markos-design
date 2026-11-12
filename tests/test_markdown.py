@@ -97,11 +97,11 @@ def test_parse_rejects_invalid_document_path(tmp_path: Path, path: PurePath) -> 
         parse_markdown(tmp_path, path)
 
 
-def test_parse_rejects_symlink_even_when_target_is_in_vault(tmp_path: Path) -> None:
+def test_parse_rejects_symlink_even_when_target_is_in_markdown_root(tmp_path: Path) -> None:
     (tmp_path / "target.md").write_text("# Target", encoding="utf-8")
     (tmp_path / "link.md").symlink_to(tmp_path / "target.md")
 
-    with pytest.raises(MarkdownParseError, match="regular vault file"):
+    with pytest.raises(MarkdownParseError, match="regular Markdown file"):
         parse_markdown(tmp_path, PurePath("link.md"))
 
 
@@ -111,7 +111,7 @@ def test_parse_rejects_symlinked_parent_directory(tmp_path: Path) -> None:
     (target / "note.md").write_text("# Target", encoding="utf-8")
     (tmp_path / "linked-directory").symlink_to(target, target_is_directory=True)
 
-    with pytest.raises(MarkdownParseError, match="regular vault file"):
+    with pytest.raises(MarkdownParseError, match="regular Markdown file"):
         parse_markdown(tmp_path, PurePath("linked-directory/note.md"))
 
 

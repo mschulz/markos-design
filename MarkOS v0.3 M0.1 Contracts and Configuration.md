@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M0.1 Contracts and Configuration
 type: implementation-record
 status: proposed
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -16,6 +16,10 @@ tags:
 # MarkOS v0.3 M0.1 Contracts and Configuration
 
 ## Result and review boundary
+
+This records the M0.1 baseline at a1643ea. The subsequent terminology update
+uses `markdown_root`; see [[Markdown Root Usage]] for compatibility and new test
+evidence. The original M0.1 regression counts below remain historical.
 
 M0.1 prepares strict synthetic event contracts, independent runtime configuration,
 publisher/subscription definitions, typed adapter ports and a validation-only
@@ -79,7 +83,7 @@ because an event claims it.
 
 `validate_startup` loads only an explicitly supplied Path or MARKOS_RUNTIME_CONFIG.
 It does not discover pyproject, `.env`, a home config or legacy MARKOS_CONFIG,
-MARKOS_VAULT_PATH or MARKOS_INDEX_PATH. The only file reads are the selected TOML
+MARKOS_MARKDOWN_ROOT or MARKOS_INDEX_PATH. The only file reads are the selected TOML
 (at most 64 KiB) and its named sibling manifest (at most 256 KiB). Traversal and
 absolute topology filenames, unknown tables/settings and malformed input fail.
 
@@ -123,7 +127,7 @@ an injected clock, forged publication/delivery identities, consumer-to-publisher
 escalation, duplicate/unregistered grants, role/environment mismatch, budgets,
 missing/invalid secrets and masked representations. A subprocess audit hook
 proves preflight can run with malicious synthetic legacy environment values
-without loading legacy settings, accessing their files/vault/index or opening
+without loading legacy settings, accessing their files/Markdown root/index or opening
 a network connection.
 
 Run the standard gate, then check generated contracts:

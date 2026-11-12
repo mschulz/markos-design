@@ -14,7 +14,7 @@ from markos.analysis import GraphAnalysisError, analyze_graph, shortest_path
 from markos.api import create_app
 from markos.freshness import FreshnessError, check_freshness
 from markos.graph_validation import GraphValidationError, validate_graph_file
-from markos.index import KnowledgeIndexError, rebuild_vault_index
+from markos.index import KnowledgeIndexError, rebuild_markdown_index
 from markos.logging import configure_logging
 from markos.markdown import MarkdownDiscoveryError, MarkdownParseError
 from markos.para_audit import (
@@ -37,8 +37,8 @@ from markos.semantic_corpus import (
 )
 from markos.semantic_extraction import ClaudeEffort, SemanticExtractionError, extract_semantic_graph
 from markos.settings import LogLevel, Settings, SettingsError
-from markos.sync import SyncError, sync_vault_index
-from markos.watch import WatchError, watch_vault_index
+from markos.sync import SyncError, sync_markdown_index
+from markos.watch import WatchError, watch_markdown_index
 
 app = typer.Typer(
     name="markos",
@@ -51,15 +51,15 @@ error_console = Console(stderr=True)
 
 def _load_settings(
     config: Path | None,
-    vault: Path | None,
+    markdown_root: Path | None,
     index: Path | None,
     log_level: LogLevel | None,
     *,
-    require_vault: bool = True,
+    require_markdown_root: bool = True,
 ) -> Settings:
     environment = dict(os.environ)
-    if vault is not None:
-        environment["MARKOS_VAULT_PATH"] = str(vault)
+    if markdown_root is not None:
+        environment["MARKOS_MARKDOWN_ROOT"] = str(markdown_root)
     if index is not None:
         environment["MARKOS_INDEX_PATH"] = str(index)
     if log_level is not None:
@@ -69,7 +69,7 @@ def _load_settings(
         settings = Settings.load(
             environ=environment,
             config_path=config,
-            require_vault=require_vault,
+            require_markdown_root=require_markdown_root,
         )
     except SettingsError as error:
         error_console.print(f"[bold red]Configuration error:[/bold red] {error}")
@@ -92,42 +92,44 @@ def doctor(
         Path | None,
         typer.Option("--config", help="Path to a TOML configuration file."),
     ] = None,
-    vault: Annotated[
+    markdown_root: Annotated[
         Path | None,
-        typer.Option("--vault", help="Vault path; overrides configuration."),
+        typer.Option(
+            "--markdown-root", "--vault", help="Markdown root path; overrides configuration."
+        ),
     ] = None,
     log_level: Annotated[
         LogLevel | None,
         typer.Option("--log-level", help="Logging level; overrides configuration."),
     ] = None,
 ) -> None:
-    """Validate configuration and confirm that the vault can be read."""
+    """Validate configuration and confirm that the Markdown root can be read."""
 
-    settings = _load_settings(config, vault, None, log_level)
-    vault_path = _required_vault_path(settings)
+    settings = _load_settings(config, markdown_root, None, log_level)
+    markdown_root = _required_markdown_root(settings)
 
     checks = Table(title="MarkOS diagnostics")
     checks.add_column("Check")
     checks.add_column("Result")
     checks.add_row("Configuration", "[green]OK[/green]")
 
-    if not vault_path.exists():
-        checks.add_row("Vault", "[red]Not found[/red]")
+    if not markdown_root.exists():
+        checks.add_row("Markdown root", "[red]Not found[/red]")
         console.print(checks)
         raise typer.Exit(code=1)
-    if not vault_path.is_dir():
-        checks.add_row("Vault", "[red]Not a directory[/red]")
+    if not markdown_root.is_dir():
+        checks.add_row("Markdown root", "[red]Not a directory[/red]")
         console.print(checks)
         raise typer.Exit(code=1)
 
     try:
-        next(vault_path.iterdir(), None)
+        next(markdown_root.iterdir(), None)
     except OSError:
-        checks.add_row("Vault", "[red]Not readable[/red]")
+        checks.add_row("Markdown root", "[red]Not readable[/red]")
         console.print(checks)
         raise typer.Exit(code=1) from None
 
-    checks.add_row("Vault", "[green]Readable[/green]")
+    checks.add_row("Markdown root", "[green]Readable[/green]")
     checks.add_row("Write policy", "Read-only until explicitly approved")
     console.print(checks)
 
@@ -138,9 +140,11 @@ def rebuild(
         Path | None,
         typer.Option("--config", help="Path to a TOML configuration file."),
     ] = None,
-    vault: Annotated[
+    markdown_root: Annotated[
         Path | None,
-        typer.Option("--vault", help="Vault path; overrides configuration."),
+        typer.Option(
+            "--markdown-root", "--vault", help="Markdown root path; overrides configuration."
+        ),
     ] = None,
     index: Annotated[
         Path | None,
@@ -153,7 +157,7 @@ def rebuild(
 ) -> None:
     """Rebuild the external DuckDB index from Markdown."""
 
-    settings = _load_settings(config, vault, index, log_level)
+    settings = _load_settings(config, markdown_root, index, log_level)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -162,7 +166,7 @@ def rebuild(
         raise typer.Exit(code=2)
 
     try:
-        summary = rebuild_vault_index(_required_vault_path(settings), settings.index_path)
+        summary = rebuild_markdown_index(_required_markdown_root(settings), settings.index_path)
     except (KnowledgeIndexError, MarkdownDiscoveryError, MarkdownParseError) as error:
         error_console.print(f"[bold red]Index rebuild failed:[/bold red] {error}")
         raise typer.Exit(code=1) from error
@@ -190,9 +194,9 @@ def search(
         typer.Option("--limit", min=1, max=100, help="Maximum number of results."),
     ] = 20,
 ) -> None:
-    """Search the external DuckDB index without opening the vault."""
+    """Search the external DuckDB index without opening the Markdown root."""
 
-    settings = _load_settings(config, None, index, None, require_vault=False)
+    settings = _load_settings(config, None, index, None, require_markdown_root=False)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -232,7 +236,7 @@ def issues(
 ) -> None:
     """Show documents rejected during the latest index rebuild."""
 
-    settings = _load_settings(config, None, index, None, require_vault=False)
+    settings = _load_settings(config, None, index, None, require_markdown_root=False)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -264,9 +268,11 @@ def freshness(
         Path | None,
         typer.Option("--config", help="Path to a TOML configuration file."),
     ] = None,
-    vault: Annotated[
+    markdown_root: Annotated[
         Path | None,
-        typer.Option("--vault", help="Vault path; overrides configuration."),
+        typer.Option(
+            "--markdown-root", "--vault", help="Markdown root path; overrides configuration."
+        ),
     ] = None,
     index: Annotated[
         Path | None,
@@ -275,7 +281,7 @@ def freshness(
 ) -> None:
     """Report Markdown files changed since the latest index rebuild."""
 
-    settings = _load_settings(config, vault, index, None)
+    settings = _load_settings(config, markdown_root, index, None)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -284,7 +290,7 @@ def freshness(
         raise typer.Exit(code=2)
 
     try:
-        report = check_freshness(_required_vault_path(settings), settings.index_path)
+        report = check_freshness(_required_markdown_root(settings), settings.index_path)
     except (FreshnessError, KnowledgeQueryError, MarkdownDiscoveryError) as error:
         error_console.print(f"[bold red]Freshness check failed:[/bold red] {error}")
         raise typer.Exit(code=1) from error
@@ -313,9 +319,11 @@ def sync(
         Path | None,
         typer.Option("--config", help="Path to a TOML configuration file."),
     ] = None,
-    vault: Annotated[
+    markdown_root: Annotated[
         Path | None,
-        typer.Option("--vault", help="Vault path; overrides configuration."),
+        typer.Option(
+            "--markdown-root", "--vault", help="Markdown root path; overrides configuration."
+        ),
     ] = None,
     index: Annotated[
         Path | None,
@@ -328,7 +336,7 @@ def sync(
 ) -> None:
     """Synchronize the index only when source Markdown has changed."""
 
-    settings = _load_settings(config, vault, index, None)
+    settings = _load_settings(config, markdown_root, index, None)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -337,8 +345,8 @@ def sync(
         raise typer.Exit(code=2)
 
     try:
-        result = sync_vault_index(
-            _required_vault_path(settings),
+        result = sync_markdown_index(
+            _required_markdown_root(settings),
             settings.index_path,
             force=force,
         )
@@ -372,9 +380,11 @@ def watch(
         Path | None,
         typer.Option("--config", help="Path to a TOML configuration file."),
     ] = None,
-    vault: Annotated[
+    markdown_root: Annotated[
         Path | None,
-        typer.Option("--vault", help="Vault path; overrides configuration."),
+        typer.Option(
+            "--markdown-root", "--vault", help="Markdown root path; overrides configuration."
+        ),
     ] = None,
     index: Annotated[
         Path | None,
@@ -382,7 +392,7 @@ def watch(
     ] = None,
     poll_interval: Annotated[
         float,
-        typer.Option("--poll-interval", min=0.05, help="Seconds between vault scans."),
+        typer.Option("--poll-interval", min=0.05, help="Seconds between Markdown scans."),
     ] = 1.0,
     debounce: Annotated[
         float,
@@ -395,7 +405,7 @@ def watch(
 ) -> None:
     """Watch Markdown and keep the external index current until interrupted."""
 
-    settings = _load_settings(config, vault, index, log_level)
+    settings = _load_settings(config, markdown_root, index, log_level)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -405,8 +415,8 @@ def watch(
 
     console.print("Watching for Markdown changes. Press Ctrl-C to stop.")
     try:
-        summary = watch_vault_index(
-            _required_vault_path(settings),
+        summary = watch_markdown_index(
+            _required_markdown_root(settings),
             settings.index_path,
             poll_interval=poll_interval,
             debounce=debounce,
@@ -429,7 +439,7 @@ def watch(
 
 @app.command()
 def links(
-    identifier: Annotated[str, typer.Argument(help="Vault-relative document path.")],
+    identifier: Annotated[str, typer.Argument(help="Markdown root-relative document path.")],
     config: Annotated[
         Path | None,
         typer.Option("--config", help="Path to a TOML configuration file."),
@@ -445,7 +455,7 @@ def links(
 ) -> None:
     """Show outgoing links or backlinks using the read-only index."""
 
-    settings = _load_settings(config, None, index, None, require_vault=False)
+    settings = _load_settings(config, None, index, None, require_markdown_root=False)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -497,7 +507,7 @@ def serve(
 ) -> None:
     """Serve the read-only HTTP API using only the external index."""
 
-    settings = _load_settings(config, None, index, None, require_vault=False)
+    settings = _load_settings(config, None, index, None, require_markdown_root=False)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -534,7 +544,7 @@ def graph(
         )
         raise typer.Exit(code=2)
 
-    settings = _load_settings(config, None, index, None, require_vault=False)
+    settings = _load_settings(config, None, index, None, require_markdown_root=False)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -772,15 +782,17 @@ def extract_semantic_graph_command(
 def para_audit(
     sources: Annotated[
         list[str],
-        typer.Argument(help="One or more vault-relative folders to assess."),
+        typer.Argument(help="One or more root-relative folders to assess."),
     ],
     config: Annotated[
         Path | None,
         typer.Option("--config", help="Path to a TOML configuration file."),
     ] = None,
-    vault: Annotated[
+    markdown_root: Annotated[
         Path | None,
-        typer.Option("--vault", help="Vault path; overrides configuration."),
+        typer.Option(
+            "--markdown-root", "--vault", help="Markdown root path; overrides configuration."
+        ),
     ] = None,
     index: Annotated[
         Path | None,
@@ -788,12 +800,12 @@ def para_audit(
     ] = None,
     output: Annotated[
         Path | None,
-        typer.Option("--output", help="Optional Markdown report path outside the vault."),
+        typer.Option("--output", help="Optional Markdown report path outside the markdown_root."),
     ] = None,
 ) -> None:
     """Assess existing folders for a safe, preview-only PARA migration."""
 
-    settings = _load_settings(config, vault, index, None)
+    settings = _load_settings(config, markdown_root, index, None)
     if settings.index_path is None:
         error_console.print(
             "[bold red]Configuration error:[/bold red] index path is required; "
@@ -802,7 +814,7 @@ def para_audit(
         raise typer.Exit(code=2)
     try:
         report = audit_para_migration(
-            _required_vault_path(settings),
+            _required_markdown_root(settings),
             settings.index_path,
             tuple(sources),
         )
@@ -816,7 +828,7 @@ def para_audit(
     console.print(render_para_audit(report), markup=False)
 
 
-def _required_vault_path(settings: Settings) -> Path:
-    if settings.vault_path is None:  # guarded by Settings.load(require_vault=True)
-        raise RuntimeError("vault path was not validated")
-    return settings.vault_path
+def _required_markdown_root(settings: Settings) -> Path:
+    if settings.markdown_root is None:  # guarded by Settings.load(require_markdown_root=True)
+        raise RuntimeError("markdown_root path was not validated")
+    return settings.markdown_root

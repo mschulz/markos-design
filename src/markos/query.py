@@ -29,7 +29,7 @@ class SearchResult:
 
 @dataclass(frozen=True)
 class LinkResult:
-    """One stored link and its optional resolved vault path."""
+    """One stored link and its optional resolved Markdown root path."""
 
     source_path: str
     ordinal: int
@@ -58,7 +58,7 @@ class GraphSnapshot:
 
 @dataclass(frozen=True)
 class IngestionIssueResult:
-    """One rejected vault-relative document and its parse diagnostic."""
+    """One rejected root-relative document and its parse diagnostic."""
 
     path: str
     error: str
@@ -197,7 +197,7 @@ def search_index(index_path: Path, query: str, *, limit: int = 20) -> tuple[Sear
 
 
 def read_document(index_path: Path, identifier: str) -> KnowledgeDocument | None:
-    """Read one indexed document by its vault-relative identifier."""
+    """Read one indexed document by its root-relative identifier."""
 
     connection = _open_index(index_path)
     try:

@@ -14,6 +14,7 @@ from typing import Any
 
 import duckdb
 
+from markos._compat import legacy_keywords, renamed_alias
 from markos.domain import KnowledgeDocument
 from markos.links import resolve_internal_link
 from markos.markdown import IngestionIssue, load_markdown_report
@@ -36,13 +37,14 @@ class IndexSummary:
     rebuilt_at: datetime
 
 
-def rebuild_vault_index(vault_path: Path, index_path: Path) -> IndexSummary:
-    """Parse a vault read-only, then replace its external rebuildable index."""
+@legacy_keywords
+def rebuild_markdown_index(markdown_root: Path, index_path: Path) -> IndexSummary:
+    """Parse a Markdown root read-only, then replace its external rebuildable index."""
 
-    root = _resolved_directory(vault_path, label="vault")
+    root = _resolved_directory(markdown_root, label="markdown_root")
     destination = index_path.expanduser().resolve(strict=False)
     if _is_within(destination, root):
-        raise KnowledgeIndexError("index path must be outside the Markdown vault")
+        raise KnowledgeIndexError("index path must be outside the Markdown root")
 
     with _rebuild_lock(destination):
         report = load_markdown_report(root)
@@ -272,3 +274,7 @@ def _rebuild_lock(index_path: Path) -> Iterator[None]:
 
 def _json_default(value: Any) -> str:
     return str(value)
+
+
+# Deprecated Python name; application internals use the canonical function.
+rebuild_vault_index = renamed_alias(rebuild_markdown_index, "rebuild_vault_index")

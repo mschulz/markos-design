@@ -6,7 +6,7 @@ import duckdb
 import pytest
 
 from markos.domain import KnowledgeDocument
-from markos.index import KnowledgeIndexError, rebuild_index, rebuild_vault_index
+from markos.index import KnowledgeIndexError, rebuild_index, rebuild_markdown_index
 from markos.markdown import IngestionIssue, load_markdown_report
 
 
@@ -84,40 +84,42 @@ def test_rebuild_rejects_duplicate_document_paths_before_writing(tmp_path: Path)
     assert not index_path.exists()
 
 
-def test_vault_rebuild_keeps_index_outside_vault_and_vault_unchanged(tmp_path: Path) -> None:
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    note = vault / "Note.md"
+def test_markdown_root_rebuild_keeps_index_outside_markdown_root_and_markdown_root_unchanged(
+    tmp_path: Path,
+) -> None:
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    note = markdown_root / "Note.md"
     note.write_text("# Note\n\nSee [[Other]].\n", encoding="utf-8")
     before = note.read_bytes()
     index_path = tmp_path / "data" / "index.duckdb"
 
-    summary = rebuild_vault_index(vault, index_path)
+    summary = rebuild_markdown_index(markdown_root, index_path)
 
     assert summary.document_count == 1
     assert summary.link_count == 1
     assert note.read_bytes() == before
-    assert list(vault.iterdir()) == [note]
+    assert list(markdown_root.iterdir()) == [note]
 
 
-def test_vault_rebuild_rejects_index_inside_vault(tmp_path: Path) -> None:
-    vault = tmp_path / "vault"
-    vault.mkdir()
+def test_markdown_root_rebuild_rejects_index_inside_markdown_root(tmp_path: Path) -> None:
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
 
     with pytest.raises(KnowledgeIndexError, match="outside"):
-        rebuild_vault_index(vault, vault / "index.duckdb")
+        rebuild_markdown_index(markdown_root, markdown_root / "index.duckdb")
 
-    assert list(vault.iterdir()) == []
+    assert list(markdown_root.iterdir()) == []
 
 
 def test_parse_failure_is_recorded_while_valid_documents_are_indexed(tmp_path: Path) -> None:
-    vault = tmp_path / "vault"
-    vault.mkdir()
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
     index_path = tmp_path / "index.duckdb"
-    (vault / "valid.md").write_text("# Valid", encoding="utf-8")
-    (vault / "broken.md").write_bytes(b"\xff")
+    (markdown_root / "valid.md").write_text("# Valid", encoding="utf-8")
+    (markdown_root / "broken.md").write_bytes(b"\xff")
 
-    summary = rebuild_vault_index(vault, index_path)
+    summary = rebuild_markdown_index(markdown_root, index_path)
 
     with duckdb.connect(str(index_path), read_only=True) as connection:
         paths = connection.execute("SELECT path FROM documents").fetchall()
@@ -161,13 +163,13 @@ def test_rebuild_migrates_an_older_rebuildable_schema(tmp_path: Path) -> None:
     assert ("resolved_path",) in columns
 
 
-def test_vault_rebuilds_are_serialized_without_lock_files(
+def test_markdown_root_rebuilds_are_serialized_without_lock_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    (vault / "Note.md").write_text("# Note", encoding="utf-8")
+    markdown_root = tmp_path / "markdown_root"
+    markdown_root.mkdir()
+    (markdown_root / "Note.md").write_text("# Note", encoding="utf-8")
     index_path = tmp_path / "index.duckdb"
     first_entered = Event()
     release_first = Event()
@@ -193,7 +195,7 @@ def test_vault_rebuilds_are_serialized_without_lock_files(
 
     def rebuild() -> None:
         try:
-            rebuild_vault_index(vault, index_path)
+            rebuild_markdown_index(markdown_root, index_path)
         except BaseException as error:
             failures.append(error)
 
@@ -211,4 +213,4 @@ def test_vault_rebuilds_are_serialized_without_lock_files(
     assert not second.is_alive()
     assert second_entered.is_set()
     assert failures == []
-    assert sorted(path.name for path in tmp_path.iterdir()) == ["index.duckdb", "vault"]
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["index.duckdb", "markdown_root"]

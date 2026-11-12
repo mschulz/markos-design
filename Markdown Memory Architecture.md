@@ -2,11 +2,11 @@
 title: Markdown Memory Architecture
 type: architecture
 status: accepted
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-08-12
-updated: 2026-08-12
-reviewed: 2026-08-12
+updated: 2026-11-12
+reviewed: 2026-11-12
 tags:
   - architecture
   - memory
@@ -18,8 +18,12 @@ tags:
 
 ## Decision
 
+The standard folder is called `markdown_root`; no editor-specific API, metadata
+or directory convention is required. See [[Markdown Root Usage]]. This naming
+update changes no source/derived-knowledge policy.
+
 MarkOS will use Markdown as its durable semantic-memory layer. An LLM may
-research the vault through explicit filesystem, lexical and link-graph tools and
+research the Markdown root through explicit filesystem, lexical and link-graph tools and
 may propose new Markdown that records what it discovered. MarkOS will not require
 embeddings, semantic vector search or a vector database.
 
@@ -94,7 +98,7 @@ An LLM researches progressively through explicit tools:
 6. Collect claims and supporting evidence.
 7. Produce a reviewable Markdown synthesis.
 
-The entire vault is not copied into one prompt. Search and graph operations may
+The entire Markdown root is not copied into one prompt. Search and graph operations may
 use the rebuildable DuckDB index or direct filesystem tools, but neither path
 uses embeddings or vector similarity.
 
@@ -113,13 +117,13 @@ uses embeddings or vector similarity.
 These rules prevent generated-memory feedback loops in which one unsupported AI
 statement is repeatedly cited by other generated notes until it appears factual.
 
-## Controlled Vault Writes
+## Controlled Markdown Writes
 
-Vault writes are a new, explicit capability rather than an extension of the
+Markdown root writes are a new, explicit capability rather than an extension of the
 read-only indexer.
 
 - Writes are disabled by default.
-- The initial mutation source is a configured inbox inside the vault.
+- The initial mutation source is a configured inbox inside the Markdown root.
 - Destinations are restricted to configured PARA roots.
 - Every proposal shows folders, moves and generated files before application.
 - Initial operations require explicit human confirmation.
@@ -156,12 +160,12 @@ Inbox PDF
 ```
 
 Conversion to Markdown is an intermediate normalization step, not a replacement
-for the original. The extracted representation may be cached outside the vault
+for the original. The extracted representation may be cached outside the Markdown root
 and regenerated from the immutable source.
 
 ## LLM Providers and Disclosure
 
-Local and external LLMs share a provider boundary. Permission to write the vault
+Local and external LLMs share a provider boundary. Permission to write the Markdown root
 does not imply permission to send content to an external provider.
 
 - External disclosure is disabled by default.
@@ -203,7 +207,7 @@ or merged only with explicit approval.
 
 ## Milestone Mapping
 
-- M11 implements controlled PARA filing and the safe vault-write boundary.
+- M11 implements controlled PARA filing and the safe Markdown-write boundary.
 - M12 implements raw document ingestion and grounded source notes.
 - M13 implements filesystem-native research and Markdown concept memory.
 

@@ -1,4 +1,4 @@
-"""Foreground monitoring for automatic read-only vault synchronization."""
+"""Foreground monitoring for automatic read-only Markdown root synchronization."""
 
 from __future__ import annotations
 
@@ -10,15 +10,16 @@ from pathlib import Path
 from threading import Event
 from typing import Protocol
 
+from markos._compat import legacy_keywords, renamed_alias
 from markos.freshness import FreshnessError
 from markos.index import KnowledgeIndexError
 from markos.markdown import MarkdownDiscoveryError, discover_markdown
 from markos.query import KnowledgeQueryError
-from markos.sync import SyncError, SyncResult, sync_vault_index
+from markos.sync import SyncError, SyncResult, sync_markdown_index
 
 logger = logging.getLogger(__name__)
 
-VaultSnapshot = tuple[tuple[str, int, int, int, int], ...]
+MarkdownSnapshot = tuple[tuple[str, int, int, int, int], ...]
 SyncCallback = Callable[[SyncResult], None]
 ErrorCallback = Callable[[Exception], None]
 
@@ -31,7 +32,7 @@ class StopSignal(Protocol):
 
 
 class WatchError(ValueError):
-    """Raised when a vault cannot be monitored safely."""
+    """Raised when a Markdown root cannot be monitored safely."""
 
 
 @dataclass(frozen=True)
@@ -43,15 +44,16 @@ class WatchSummary:
     errors: int
 
 
-def snapshot_vault(vault_path: Path) -> VaultSnapshot:
+@legacy_keywords
+def snapshot_markdown_root(markdown_root: Path) -> MarkdownSnapshot:
     """Capture stable, read-only change markers for discoverable Markdown."""
 
     try:
-        root = vault_path.expanduser().resolve(strict=True)
+        root = markdown_root.expanduser().resolve(strict=True)
     except OSError as error:
-        raise WatchError(f"vault cannot be resolved: {vault_path}") from error
+        raise WatchError(f"markdown_root cannot be resolved: {markdown_root}") from error
     if not root.is_dir():
-        raise WatchError(f"vault is not a directory: {root}")
+        raise WatchError(f"markdown_root is not a directory: {root}")
 
     entries: list[tuple[str, int, int, int, int]] = []
     try:
@@ -67,19 +69,20 @@ def snapshot_vault(vault_path: Path) -> VaultSnapshot:
                 )
             )
     except (MarkdownDiscoveryError, OSError) as error:
-        raise WatchError(f"could not snapshot vault {root}: {error}") from error
+        raise WatchError(f"could not snapshot markdown_root {root}: {error}") from error
     return tuple(entries)
 
 
-def watch_vault_index(
-    vault_path: Path,
+@legacy_keywords
+def watch_markdown_index(
+    markdown_root: Path,
     index_path: Path,
     *,
     poll_interval: float = 1.0,
     debounce: float = 0.5,
     stop_signal: StopSignal | None = None,
-    scanner: Callable[[Path], VaultSnapshot] = snapshot_vault,
-    synchronizer: Callable[[Path, Path], SyncResult] = sync_vault_index,
+    scanner: Callable[[Path], MarkdownSnapshot] = snapshot_markdown_root,
+    synchronizer: Callable[[Path, Path], SyncResult] = sync_markdown_index,
     clock: Callable[[], float] = time.monotonic,
     on_sync: SyncCallback | None = None,
     on_error: ErrorCallback | None = None,
@@ -91,10 +94,10 @@ def watch_vault_index(
     if debounce < 0:
         raise WatchError("debounce must not be negative")
 
-    root = vault_path.expanduser().resolve(strict=False)
+    root = markdown_root.expanduser().resolve(strict=False)
     destination = index_path.expanduser().resolve(strict=False)
     if _is_within(destination, root):
-        raise WatchError("index path must be outside the Markdown vault")
+        raise WatchError("index path must be outside the Markdown root")
 
     stopper = Event() if stop_signal is None else stop_signal
     baseline = scanner(root)
@@ -124,7 +127,7 @@ def watch_vault_index(
     if not synchronize():
         pending_at = clock()
 
-    logger.info("watching Markdown vault: %s", root)
+    logger.info("watching Markdown root: %s", root)
     while not stopper.wait(poll_interval):
         try:
             current = scanner(root)
@@ -164,3 +167,14 @@ _RECOVERABLE_ERRORS = (
     MarkdownDiscoveryError,
     SyncError,
 )
+
+
+# Deprecated Python name; application internals use the canonical function.
+snapshot_vault = renamed_alias(snapshot_markdown_root, "snapshot_vault")
+
+
+# Deprecated Python name; application internals use the canonical function.
+watch_vault_index = renamed_alias(watch_markdown_index, "watch_vault_index")
+
+# Deprecated type spelling; new callers use MarkdownSnapshot.
+VaultSnapshot = MarkdownSnapshot

@@ -11,8 +11,9 @@ secrets.
   drafting; approved changes enter GitHub through pull requests.
 - This import branch contains the existing markos v0.2 application and tests,
   alongside the canonical design documents. Its two-parent import preserves
-  source history; the original markos repository remains unchanged. M0.0 still
-  needs owner review and merge before it becomes the main-branch baseline.
+  source history; the original markos repository remains unchanged. M0.0 has
+  been promoted to main; this branch retains reviewed M0.1 work and
+  canonical `markdown_root` naming for an ordinary Markdown folder.
 - See [[MarkOS v0.3 M0.0 Import Record]] for source/design anchors, file mapping,
   conflict resolutions and validation. [[MarkOS v0.2 Project Memory]] and
   [[MarkOS v0.2 User Guide]] are historical source snapshots, not current policy.
@@ -29,9 +30,8 @@ secrets.
   were removed on 2026-08-13. Do not recreate them without a concrete,
   identified reason; if a document doesn't fit at the top level, that's a
   signal to reconsider its scope, not to add a folder.
-- `Attachments/` holds pasted images or files a document references — kept
-  even though currently empty, since it's the standard Obsidian convention
-  for that purpose.
+- `Attachments/` is an optional plain folder for document attachments.
+  No editor-specific folder, metadata or API is required.
 - `Templates/` holds `Architecture Document Template.md`, the frontmatter and
   section skeleton for a new single-topic document. Use it rather than
   copying an arbitrary existing document and stripping its content.
@@ -62,7 +62,7 @@ secrets.
   and desktop direction require explicit review before superseding prior design.
 
 - `MarkOS Specification.md` is the preserved earlier consolidated document: purpose,
-  vault structure, the knowledge pipeline, where AI is used, the final
+  Markdown root structure, the knowledge pipeline, where AI is used, the final
   system, implementation milestones, agent/sub-agent usage, and evaluation
   strategy. It incorporates and supersedes the former `Milestones.md`,
   `Mac App Architecture.md`, and `PARA Migration Strategy.md`, all three
@@ -100,21 +100,26 @@ secrets.
 
 ## Python and application boundaries
 
+- Canonical folder naming is `markdown_root`, `--markdown-root` and
+  `MARKOS_MARKDOWN_ROOT`; see [[Markdown Root Usage]]. Deprecated legacy names
+  exist only for compatibility. No editor metadata, API or installation is
+  required. Preserve historical import/evaluation records as evidence.
+
 - Preserve Python 3.13, uv and the source `uv.lock`; do not add runtime dependencies
   in M0.0. Use the reviewed `.envrc` or explicitly set `UV_PROJECT_ENVIRONMENT`
   to a non-hidden `venv` in an isolated checkout outside synced folders.
 - After code changes run `uv lock --check`, `uv run ruff check .`, `uv run mypy`
   and `uv run pytest`. Strict mypy covers `src/markos` and `tests`.
 - The imported CLI, index, local API and watcher stay read-only. Index paths
-  remain outside vaults; failed rebuilds preserve the last valid index, current
+  remain outside Markdown folders; failed rebuilds preserve the last valid index, current
   sync is byte-identical, and rebuilds remain serialized.
-- Use synthetic temporary vaults and injected clocks. External LLM disclosure
+- Use synthetic temporary Markdown folders and injected clocks. External LLM disclosure
   remains a separate explicit permission; tests mock provider calls.
-- `pyproject.toml` selects no vault/index. Use explicit CLI/env settings or a
+- `pyproject.toml` selects no Markdown root/index. Use explicit CLI/env settings or a
   reviewed config copied from `config/legacy.example.toml`. Do not use a real
-  vault during development or tests. The local API is not a public cloud API.
+  Markdown root during development or tests. The local API is not a public cloud API.
 - M0.1 adds strict synthetic contracts and explicit validation-only preflight
-  under `markos.runtime`. Runtime settings never discover legacy config or vaults.
+  under `markos.runtime`. Runtime settings never discover legacy config or Markdown folders.
   No RabbitMQ/PostgreSQL adapter, service loop or `markos-runtime` entry point
   exists yet. See [[MarkOS v0.3 M0.1 Contracts and Configuration]].
 - Check generated schema drift with
@@ -130,7 +135,7 @@ secrets.
   milestones accepted or completed) in `CHANGELOG.md` as it happens.
   Implementation progress stays in its repository's git history until migration;
   imported and new implementation progress will be recorded here with tests.
-- Do not deploy code or modify an Obsidian vault in this handoff. Use synthetic
+- Do not deploy code or modify a personal Markdown folder in this handoff. Use synthetic
   fixtures; live runtime data never belongs in GitHub.
 - Never store credentials, tokens, private note contents, or other secrets
   in this repository.

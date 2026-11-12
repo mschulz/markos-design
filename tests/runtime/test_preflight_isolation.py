@@ -17,15 +17,21 @@ def test_preflight_never_loads_legacy_config_or_connects(
 ) -> None:
     legacy = tmp_path / "forbidden.toml"
     legacy.write_text("not TOML and must not be read")
-    env = os.environ.copy() | runtime_env | {
-        "MARKOS_CONFIG": str(legacy), "MARKOS_VAULT_PATH": str(tmp_path / "forbidden-vault"),
-        "MARKOS_INDEX_PATH": str(tmp_path / "forbidden-index.duckdb"),
-    }
-    script = r'''
+    env = (
+        os.environ.copy()
+        | runtime_env
+        | {
+            "MARKOS_CONFIG": str(legacy),
+            "MARKOS_VAULT_PATH": str(tmp_path / "forbidden-old-root"),
+            "MARKOS_MARKDOWN_ROOT": str(tmp_path / "forbidden-markdown_root"),
+            "MARKOS_INDEX_PATH": str(tmp_path / "forbidden-index.duckdb"),
+        }
+    )
+    script = r"""
 import os, sys
 from pathlib import Path
 forbidden = tuple(os.environ[name] for name in
-    ("MARKOS_CONFIG", "MARKOS_VAULT_PATH", "MARKOS_INDEX_PATH"))
+    ("MARKOS_CONFIG", "MARKOS_VAULT_PATH", "MARKOS_MARKDOWN_ROOT", "MARKOS_INDEX_PATH"))
 def guard(event, args):
     if event == "socket.connect":
         raise AssertionError("preflight attempted network IO")
@@ -42,9 +48,16 @@ result = validate_startup(Path(sys.argv[1]))
 assert "markos.settings" not in sys.modules
 assert result.settings.scope.service_id == "foundation.publisher"
 print("preflight-safe")
-'''
-    result = subprocess.run([sys.executable, "-c", script, str(runtime_config)], cwd=tmp_path,
-                            env=env, capture_output=True, text=True, check=False, timeout=20)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script, str(runtime_config)],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=20,
+    )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "preflight-safe"
     assert not (tmp_path / "forbidden-index.duckdb").exists()

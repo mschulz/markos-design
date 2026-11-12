@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M0 Implementation Plan
 type: implementation-plan
 status: proposed
-version: 1.1
+version: 1.2
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -17,7 +17,7 @@ tags:
 
 ## Decision
 
-Build v0.3 M0 as a synthetic, durable event-to-task foundation in the canonical `markos-design` repository, after a separate history-preserving import of the existing `markos` implementation. Preserve its read-only vault/index functionality. Use the proposed RabbitMQ profile in [[ADR-003 RabbitMQ Internal Event Bus]] and PostgreSQL operational state; no Gmail account, model call, real notification or source-vault access is needed to prove M0.
+Build v0.3 M0 as a synthetic, durable event-to-task foundation in the canonical `markos-design` repository, after a separate history-preserving import of the existing `markos` implementation. Preserve its read-only Markdown root/index functionality. Use the proposed RabbitMQ profile in [[ADR-003 RabbitMQ Internal Event Bus]] and PostgreSQL operational state; no Gmail account, model call, real notification or source-folder access is needed to prove M0.
 
 This is a concrete proposal for review, not authorization to implement, provision, spend, merge or deploy. It concerns **v0.3 M0**, not the completed v0.2 M0. The original planning change ran no tests. The separately authorized M0.0 import now records its legacy/import checks in [[MarkOS v0.3 M0.0 Import Record]]; future runtime acceptance tests remain unexecuted.
 
@@ -42,16 +42,16 @@ The connected repository is [mschulz/markos](https://github.com/mschulz/markos),
 | Existing component | Verified state | M0 treatment |
 |---|---|---|
 | [pyproject.toml](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/pyproject.toml), `.python-version`, `uv.lock` | Package 0.2.0, Python >=3.13 / 3.13, uv, strict mypy, Ruff, pytest; DuckDB, Pydantic, Typer, FastAPI and related knowledge tooling | Preserve interpreter/toolchain and lock baseline; add transport/database/test dependencies only in bounded implementation PRs |
-| [settings.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/src/markos/settings.py) | TOML/env loader with vault/index paths; vault required by default | Leave legacy Settings behavior; create independent runtime settings that never load vault configuration |
+| [settings.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/src/markos/settings.py) | TOML/env loader with Markdown root/index paths; Markdown root required by default | Leave legacy Settings behavior; create independent runtime settings that never load Markdown root configuration |
 | [domain.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/src/markos/domain.py) | KnowledgeDocument is a Markdown-path model, not an event/task model | Reuse validation style, not the model; add separate event/task contracts |
 | [api.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/src/markos/api.py) | Read-only FastAPI app over the DuckDB index; no remote authentication layer | Preserve local API; do not expose it as the cloud control plane. M0 health is minimal/private, M1 owns authenticated user API/chat |
 | [cli.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/src/markos/cli.py), logging | Existing Typer entry point and simple logging | Preserve commands; add a separate runtime entry point with redaction/structured events |
 | [sync.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/src/markos/sync.py), [watch.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/src/markos/watch.py) | Filesystem sync and foreground polling with injected clock/stop signal | Preserve read-only behavior; reuse testability patterns, not the watcher as a durable scheduler |
 | Semantic extraction, corpus and graph validation | Evidence-grounding functions and provider-boundary tests exist | Preserve; do not invoke providers or fold this subsystem into M0 |
-| [tests/test_api.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/tests/test_api.py), [test_sync.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/tests/test_sync.py), [test_watch.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/tests/test_watch.py) | Tests assert no mutating HTTP routes, byte-identical no-op sync, external index and deterministic timing | Keep the whole legacy suite as a regression gate; no real vault |
+| [tests/test_api.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/tests/test_api.py), [test_sync.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/tests/test_sync.py), [test_watch.py](https://github.com/mschulz/markos/blob/d5d46cbb231e95176a7d052553c176ebe8c805bb/tests/test_watch.py) | Tests assert no mutating HTTP routes, byte-identical no-op sync, external index and deterministic timing | Keep the whole legacy suite as a regression gate; no real Markdown root |
 | Missing from inspected tree/dependencies | RabbitMQ/aio-pika, PostgreSQL adapter/migrations, durable events/tasks/inbox/outbox, scheduler/leases, Compose, runtime CI | New M0 work, not an extension already implemented |
 
-The source pyproject contains machine-specific vault/index defaults. Remove those active defaults during import and use synthetic examples; do not copy or follow the referenced live paths. The source AGENTS memory also records a synced-directory environment problem and older separate-repository/desktop decisions. Preserve its history, but reconcile active instructions with canonical governance; do not inherit its local paths or obsolete hosting assumptions.
+The source pyproject contains machine-specific Markdown root/index defaults. Remove those active defaults during import and use synthetic examples; do not copy or follow the referenced live paths. The source AGENTS memory also records a synced-directory environment problem and older separate-repository/desktop decisions. Preserve its history, but reconcile active instructions with canonical governance; do not inherit its local paths or obsolete hosting assumptions.
 
 ## Import and preservation gate
 
@@ -66,9 +66,9 @@ Prepare a dedicated `codex/` migration PR in `markos-design` before runtime chan
 1. Reinspect both remote heads/branches/open PRs and any actual checkout's dirty/untracked state. The inspected commit is the audit anchor, not permission to overwrite newer work.
 2. Fetch the full source Git history into an isolated development checkout; propose a normal two-parent `--allow-unrelated-histories` merge, retaining the source commit as an ancestor. Do not squash or rewrite the source repository.
 3. Keep canonical root design documents and their paths. Preserve the source README as `MarkOS v0.2 User Guide.md` and the source AGENTS context as historical `MarkOS v0.2 Project Memory.md`; reconcile root README/AGENTS/CLAUDE and merge ignore rules deliberately. Import source modules, tests, `pyproject.toml`, `uv.lock`, `.python-version` and reviewed `.envrc`; existing scaffold READMEs can coexist.
-4. Remove active machine-specific defaults from imported pyproject; preserve original bytes in Git history, not new runtime examples. Keep cloud settings separate from `MARKOS_CONFIG` and vault environment variables.
+4. Remove active machine-specific defaults from imported pyproject; preserve original bytes in Git history, not new runtime examples. Keep cloud settings separate from `MARKOS_CONFIG` and Markdown root environment variables.
 5. Verify ancestry, a before/after file manifest and explained conflict resolutions; install/test in an isolated environment outside a synced folder. Do not relocate the user's current checkout or execute `direnv allow` against unreviewed content.
-6. Run lock/Ruff/mypy/full pytest gates against synthetic temporary paths. Add a test that runtime startup does not load legacy settings or touch a vault even if legacy environment variables are present.
+6. Run lock/Ruff/mypy/full pytest gates against synthetic temporary paths. Add a test that runtime startup does not load legacy settings or touch a Markdown root even if legacy environment variables are present.
 7. Merge only after owner review. Keep `markos` intact; do not archive, delete, push to it or claim migration complete from this planning PR. Retire or redirect its active workflow only through a separately reviewed change.
 
 If import validation fails, stop before adding runtime code; retain both original repository heads and the pre-import lock as rollback anchors.
@@ -80,7 +80,7 @@ All paths below are proposed in the canonical repository after import. Each slic
 | Slice | Required changes | Exit evidence |
 |---|---|---|
 | M0.0 Import | History-preserving merge and reconciled README/AGENTS, package/tests/lock | Legacy gate, manifest and ancestry evidence |
-| M0.1 Contracts/config | `src/markos/runtime/contracts.py`, `settings.py`, `ports.py`; `config/runtime.example.toml`, event JSON Schema/example and subscription manifest | Strict schemas, owner/domain/source validation, no vault access; profile values centralized and startup validates budgets |
+| M0.1 Contracts/config | `src/markos/runtime/contracts.py`, `settings.py`, `ports.py`; `config/runtime.example.toml`, event JSON Schema/example and subscription manifest | Strict schemas, owner/domain/source validation, no Markdown root access; profile values centralized and startup validates budgets |
 | M0.2 Durable store | `runtime/db.py`, `store.py`; ordered SQL under `infrastructure/migrations/` | Transaction rollback, uniqueness, role isolation, concurrent claims and migration checksum tests |
 | M0.3 Transport/handoff | `runtime/bus.py`, `publisher.py`, `consumer.py`, `quarantine.py`; reviewed broker definitions/policies | Confirms/returns/partial fan-out, durable handoff, stall deadlines and safe reconnect |
 | M0.4 Execution/scheduling | `runtime/tasks.py`, `scheduler.py`, `reconcile.py`, `clock.py` | Database leases/fencing, occurrence uniqueness, bounded catch-up, idempotent synthetic worker |
@@ -127,8 +127,8 @@ All cases below are future requirements. Unit tests inject clock/jitter/store/bu
 
 | ID and proposed test file | Setup/fault | Required assertion |
 |---|---|---|
-| A01 `test_import_regression.py` | Import baseline; temporary notes/index; run legacy suite | Source ancestry retained; local commands/API unchanged, no vault write, current sync byte-identical |
-| A02 `test_runtime_settings.py` | Set legacy vault/config environment; start runtime with synthetic DSNs | No legacy config/vault access; missing credentials fail closed without printing secrets |
+| A01 `test_import_regression.py` | Import baseline; temporary notes/index; run legacy suite | Source ancestry retained; local commands/API unchanged, no Markdown root write, current sync byte-identical |
+| A02 `test_runtime_settings.py` | Set legacy Markdown root/config environment; start runtime with synthetic DSNs | No legacy config/Markdown root access; missing credentials fail closed without printing secrets |
 | A03 `test_event_contract.py` | Missing/forged owner, domain/source mismatch, unknown schema, 65,536/65,537-byte JSON | Exact body boundary enforced; invalid event has no dispatch/task and enters permitted durable review |
 | A04 `test_transactions.py` | Fail between event/outbox and inbox/task writes | Whole transaction rolls back; no orphan durable work; repeat creates one scoped task |
 | A05 `test_publish_confirm.py` | No route; missing one required binding; nack; timeout after acceptance | No false successful dispatch; missing subscriber detected; original IDs retained and one durable result per intended consumer |

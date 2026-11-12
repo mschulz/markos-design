@@ -1,7 +1,7 @@
 """Configuration loading for MarkOS.
 
 Configuration is read from the environment and, optionally, a TOML file. This
-module deliberately has no code that creates or modifies the configured vault.
+module deliberately has no code that creates or modifies the configured Markdown root.
 """
 
 from __future__ import annotations
@@ -12,7 +12,9 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal, cast
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+
+from markos._compat import warn_renamed
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
@@ -26,11 +28,19 @@ class Settings(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    vault_path: Path | None = None
+    markdown_root: Path | None = Field(
+        default=None, validation_alias=AliasChoices("markdown_root", "vault_path")
+    )
     index_path: Path | None = None
     log_level: LogLevel = "INFO"
 
-    @field_validator("vault_path", "index_path", mode="before")
+    @property
+    def vault_path(self) -> Path | None:
+        """Deprecated read-only field spelling for existing Python clients."""
+        warn_renamed("vault_path", "markdown_root")
+        return self.markdown_root
+
+    @field_validator("markdown_root", "index_path", mode="before")
     @classmethod
     def expand_path(cls, value: object) -> Path | None:
         if value is None:
@@ -48,16 +58,24 @@ class Settings(BaseModel):
         *,
         environ: Mapping[str, str] | None = None,
         config_path: Path | None = None,
-        require_vault: bool = True,
+        require_markdown_root: bool | None = None,
+        require_vault: bool | None = None,
     ) -> Settings:
         """Load settings, with environment variables overriding TOML values.
 
         Supported environment variables are ``MARKOS_CONFIG``,
-        ``MARKOS_VAULT_PATH``, ``MARKOS_INDEX_PATH``, and ``MARKOS_LOG_LEVEL``.
+        ``MARKOS_MARKDOWN_ROOT``, ``MARKOS_INDEX_PATH``, and ``MARKOS_LOG_LEVEL``.
         The optional TOML file uses a ``[markos]`` table.
         """
 
         env = os.environ if environ is None else environ
+        if require_vault is not None:
+            warn_renamed("require_vault", "require_markdown_root")
+        required = (
+            require_markdown_root
+            if require_markdown_root is not None
+            else (require_vault if require_vault is not None else True)
+        )
         resolved_config_path = config_path
         if resolved_config_path is None and env.get("MARKOS_CONFIG"):
             resolved_config_path = Path(env["MARKOS_CONFIG"]).expanduser()
@@ -66,16 +84,19 @@ class Settings(BaseModel):
         if resolved_config_path is not None:
             values.update(_read_config_file(resolved_config_path))
 
-        if env.get("MARKOS_VAULT_PATH"):
-            values["vault_path"] = env["MARKOS_VAULT_PATH"]
+        if env.get("MARKOS_VAULT_PATH") and not env.get("MARKOS_MARKDOWN_ROOT"):
+            warn_renamed("MARKOS_VAULT_PATH", "MARKOS_MARKDOWN_ROOT")
+            values["markdown_root"] = env["MARKOS_VAULT_PATH"]
+        if env.get("MARKOS_MARKDOWN_ROOT"):
+            values["markdown_root"] = env["MARKOS_MARKDOWN_ROOT"]
         if env.get("MARKOS_INDEX_PATH"):
             values["index_path"] = env["MARKOS_INDEX_PATH"]
         if env.get("MARKOS_LOG_LEVEL"):
             values["log_level"] = env["MARKOS_LOG_LEVEL"]
 
-        if require_vault and not values.get("vault_path"):
+        if required and not values.get("markdown_root"):
             raise SettingsError(
-                "vault path is required; set MARKOS_VAULT_PATH or add vault_path "
+                "markdown_root path is required; set MARKOS_MARKDOWN_ROOT or add markdown_root "
                 "to the [markos] configuration table"
             )
 
@@ -99,7 +120,12 @@ def _read_config_file(path: Path) -> dict[str, Any]:
         raise SettingsError("the [markos] configuration value must be a table")
 
     values = cast(dict[str, Any], section.copy())
-    for key in ("vault_path", "index_path"):
+    if "vault_path" in values:
+        old_value = values.pop("vault_path")
+        if "markdown_root" not in values:
+            warn_renamed("vault_path", "markdown_root")
+            values["markdown_root"] = old_value
+    for key in ("markdown_root", "index_path"):
         configured_path = values.get(key)
         if configured_path and not Path(str(configured_path)).expanduser().is_absolute():
             values[key] = path.parent / str(configured_path)

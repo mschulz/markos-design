@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class KnowledgeDocument(BaseModel):
     """A Markdown knowledge document as understood by MarkOS.
 
-    ``path`` is always relative to a vault. Keeping the vault root out of the
+    ``path`` is always relative to a Markdown root. Keeping the Markdown root out of the
     model makes documents portable between storage adapters and editors.
     """
 
@@ -26,7 +26,7 @@ class KnowledgeDocument(BaseModel):
     @classmethod
     def validate_path(cls, path: PurePath) -> PurePath:
         if path.is_absolute() or ".." in path.parts:
-            raise ValueError("document path must be relative to the vault")
+            raise ValueError("document path must be relative to the Markdown root")
         if path.suffix.casefold() not in {".md", ".markdown"}:
             raise ValueError("document path must identify a Markdown file")
         return path
@@ -41,6 +41,6 @@ class KnowledgeDocument(BaseModel):
 
     @property
     def identifier(self) -> str:
-        """Return the stable, vault-relative identifier for the document."""
+        """Return the stable, root-relative identifier for the document."""
 
         return self.path.as_posix()

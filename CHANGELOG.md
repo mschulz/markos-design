@@ -10,6 +10,14 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ### Completed on 12 November 2026
 
+- Renamed active folder code/configuration to markdown_root, --markdown-root and
+  MARKOS_MARKDOWN_ROOT, with deprecated legacy adapters to preserve callers.
+  Updated active docs/examples and package readme; retained immutable historical
+  snapshots, import hashes and the dependency lock. See Markdown Root Usage.
+- The terminology PR targets main directly and retains the previously reviewed
+  M0.1 work which had merged into a feature branch. No merge/deployment or user
+  folder access is performed.
+
 - Re-reviewed PR #4: all history/file mappings intact and 145 regression tests
   pass. Prepared an import-promotion PR because its feature-branch merge did not
   put the application on main; no merge performed.

@@ -1,6 +1,6 @@
 # Synthetic local example; supply your own explicit paths before use.
-# Paths resolve relative to this file. No real vault is selected by default.
+# Paths resolve relative to this file. No real Markdown root is selected by default.
 [markos]
-vault_path = "example-vault"
+markdown_root = "example-markdown-root"
 index_path = "example-state/index.duckdb"
 log_level = "INFO"

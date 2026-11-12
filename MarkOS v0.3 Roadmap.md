@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 1.6
+version: 1.7
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -28,7 +28,7 @@ Inspection of `main` at `f68edf216551fc43e4f24e492294e7a288c32530` found one bra
 |---|---|---|---|
 | Knowledge authority | Human-readable Markdown is canonical; indexes rebuild from it | Structured facts and immutable sources; generated Markdown is a view | Decide the authoritative knowledge representation, export and recovery guarantees; amend Vision and memory ADR deliberately if needed |
 | Retrieval | Lexical and graph tools; no embeddings or vector database | Keyword and semantic retrieval | Define whether semantic retrieval means graph traversal or embeddings; do not assume a vector-store decision |
-| Product and interfaces | Vault/PARA workflow, CLI, read-only API, planned PySide6 Mac app | Gmail-first services, web/PWA, shared gateway, CLI, optional messaging | Define which existing services can be reused; decide whether desktop plans continue, pause or change |
+| Product and interfaces | Markdown-folder/PARA workflow, CLI, read-only API, planned PySide6 Mac app | Gmail-first services, web/PWA, shared gateway, CLI, optional messaging | Define which existing services can be reused; decide whether desktop plans continue, pause or change |
 | Deployment | Prior Mac-oriented background operation | Accepted DigitalOcean VM / Docker Compose; Supabase durable state; MacBook development/admin only | Specify secure networking, sizing, cost and recovery; follow [[MarkOS Cloud Deployment Architecture]] before provisioning |
 | Storage and delivery | Filesystem originals and disposable DuckDB | PostgreSQL, object storage, proposed RabbitMQ/AMQP outbox/inbox | Specify data ownership, migrations, event contracts, operational recovery and privacy before implementation |
 | Evidence and safety | Exact quotes, hashes, disclosure consent, preview and confirm | Provenance, domain isolation, scoped tools and approvals | Carry forward deterministic grounding and separate external-disclosure permission; define review state for structured facts |
@@ -51,23 +51,24 @@ Governance and [[ADR-002 Cloud-first Deployment]]'s DigitalOcean/Docker Compose/
 
 ## Repository transition
 
-M0.1 contracts/configuration are prepared in a separate review branch, stacked
-on the import promotion. [[MarkOS v0.3 M0.1 Contracts and Configuration]] records
-the pure validation boundary and 224-test evidence. Adapters/durability remain
-M0.2/M0.3 work; no merge or deployment occurs in this slice.
+M0.0 was promoted to main through PR #5. The history-preserving import and
+source-file mappings remain recorded in [[MarkOS v0.3 M0.0 Import Record]].
+The original markos repository remains unchanged.
 
-M0.0 is prepared for review on a dedicated import branch, stacked on PR #3 while
-that plan remains unmerged. [[MarkOS v0.3 M0.0 Import Record]] records the exact
-source/design parents and regression evidence. Source modules, original tests
-and lockfile remain byte-identical; no real vault or new runtime is imported.
-Do not treat this branch as the merged production baseline.
+M0.1 was reviewed in PR #6 and merged into its feature base after PR #5 had
+merged. The Markdown-root naming PR therefore targets main directly, retaining
+M0.1 history as a prerequisite. [[MarkOS v0.3 M0.1 Contracts and Configuration]]
+records its validation-only boundary. [[Markdown Root Usage]] records the new
+canonical names, deprecated compatibility aliases and 237 passing tests.
+Adapters and durability remain M0.2/M0.3 work; this increment performs no merge
+or deployment and accesses no personal Markdown folder.
 
 The concrete inventory and proposed import are in [[MarkOS v0.3 M0 Implementation Plan]]. Inspection of markos main at `d5d46cbb231e95176a7d052553c176ebe8c805bb` confirms Python 3.13, uv, a read-only DuckDB/FastAPI stack and existing tests; no RabbitMQ/PostgreSQL runtime is present. Preserve that interpreter and all legacy safety gates. The plan defines M0.0–M0.7 slices and A01–A20 tests; that planning snapshot preceded the M0.0 import branch described above.
 
 1. Review this documentation baseline and settle the architecture conflicts needed for v0.3 M0.
 2. Inspect the separate `markos` repository: branches, unmerged work, package structure, dependencies, tests, licenses and existing CI. Record exact source commits and reusable services in a migration PR.
 3. Choose an import method that preserves commit history and attribution. Map existing paths and commands, keep a recoverable baseline, validate the imported tests, and define rollback before changing the canonical implementation location.
-4. Import only reviewed work, update links and project instructions, and verify the existing read-only behavior with synthetic fixtures. Do not copy a real vault or runtime data.
+4. Import only reviewed work, update links and project instructions, and verify the existing read-only behavior with synthetic fixtures. Do not copy a real Markdown root or runtime data.
 5. Introduce v0.3 contracts and runtime slices behind explicit milestone approval. Do not remove the separate repository or retire its branches as part of this handoff.
 
 ## Internal event bus proposal

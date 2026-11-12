@@ -2,14 +2,16 @@
 
 MarkOS augments human thinking through source-grounded knowledge and human-controlled assistance. This repository is the canonical GitHub home for its project artifacts: code, tests, infrastructure and documentation. ChatGPT Space is for collaborative drafting; approved changes are incorporated through pull requests.
 
-This M0.0 branch imports the existing markos v0.2 application and tests while
-preserving both repositories' Git histories. The original markos repository is
-unchanged. The import is reviewed but not yet on main; promotion is pending.
-No v0.3 runtime services are implemented.
+The repository preserves the v0.2 application and both repositories' histories,
+and includes M0.1 contracts and configuration. The plain Markdown-folder setting
+is `markdown_root`; no editor-specific dependency is required. The v0.3 runtime
+currently provides validation-only preflight, without service adapters or loops.
 See [the import record](MarkOS%20v0.3%20M0.0%20Import%20Record.md) for provenance,
 file mapping and regression evidence.
 
 ## Start here
+
+- [Markdown Root Usage](Markdown%20Root%20Usage.md): ordinary folders, canonical configuration and compatibility aliases.
 
 - [M0.1 contracts and configuration](MarkOS%20v0.3%20M0.1%20Contracts%20and%20Configuration.md): strict synthetic contracts, explicit runtime preflight and validation evidence.
 
@@ -45,7 +47,7 @@ uv run pytest
 The installed `markos` CLI retains the v0.2 read-only behavior. Start with
 `uv run markos --help` and `uv run markos version`. Supply explicit paths or a
 reviewed configuration based on `config/legacy.example.toml`; the package
-configuration selects no real vault or index. The synthetic example paths are
+configuration selects no real Markdown root or index. The synthetic example paths are
 placeholders, not an instruction to access personal notes.
 
 [MarkOS v0.2 User Guide](MarkOS%20v0.2%20User%20Guide.md) is the exact historical
@@ -73,4 +75,4 @@ The earlier specification records **M0–M10 delivered** in the separate impleme
 
 Read [AGENTS.md](AGENTS.md), the applicable specification and the roadmap. Use a focused `codex/` branch and pull request; include scope, validation and unresolved decisions. Implementation milestones include automated tests and documentation. Keep proposal and acceptance status explicit.
 
-Do not commit credentials, private notes, emails, bills or runtime data. This increment does not deploy code or modify an Obsidian vault.
+Do not commit credentials, private notes, emails, bills or runtime data. This increment does not deploy code or modify a personal Markdown folder.

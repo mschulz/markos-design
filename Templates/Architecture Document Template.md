@@ -52,7 +52,7 @@ Notes on using this template:
 
 - Match the frontmatter fields exactly — `type`, `status` (`draft` /
   `accepted` / `evaluated`, matching what's actually true), and `tags` are
-  read by other documents and by anyone scanning the vault, not decoration.
+  read by other documents and by anyone scanning the Markdown root, not decoration.
 - Prefer one focused document per decision over one document covering
   several unrelated decisions — this repo's practice has been to consolidate
   *related* decisions into `MarkOS Specification.md` rather than spawn many

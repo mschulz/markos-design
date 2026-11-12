@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.4
+version: 0.3.5
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -24,11 +24,15 @@ tags:
 
 ## 1. Vision and scope
 
+Markdown files use an ordinary folder called `markdown_root`; no editor-specific
+metadata or API is required. Current code/configuration names and deprecated
+compatibility aliases are documented in [[Markdown Root Usage]].
+
 MarkOS is an event-driven personal operating system. It ingests information, preserves original evidence, coordinates specialist AI agents, maintains durable contextual knowledge, and reports findings or proposes actions. It must remain usable through a browser, CLI, and optional messaging applications. The initial vertical slice is Gmail → classification → electricity bill processing → knowledge update → user notification.
 
 ### Non-goals for initial release
 
-No autonomous switching of energy retailers, sending emails, making purchases, or changing Home Assistant devices without explicit approval. No general-purpose autonomous agent marketplace. No migration or modification of the existing Obsidian vault. No native iOS app in the first release.
+No autonomous switching of energy retailers, sending emails, making purchases, or changing Home Assistant devices without explicit approval. No general-purpose autonomous agent marketplace. No migration or modification of the existing personal Markdown folder. No native iOS app in the first release.
 
 ## 2. Architecture
 
@@ -204,4 +208,4 @@ RabbitMQ is the proposed internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]
 
 [[MarkOS v0.3 M0 Implementation Plan]] records the inspected Python 3.13 markos baseline, history-preserving import, required paths/schema changes, ordered PR slices and A01–A20 acceptance tests. It is a proposal; no import or runtime implementation has been performed by this documentation review.
 
-Do not begin implementation until review and milestone approval. Treat the runtime specification as a proposal except for the accepted ADR-002 hosting baseline. This documentation update authorizes no provisioning, spending, deployment or merge. Generate ADRs for unresolved architecture choices, executable acceptance tests for each milestone, API/event contracts before coding, and a migration plan that preserves prior MarkOS design artifacts. Do not touch the Obsidian vault. Keep implementation-ready specifications version-controlled in markos-design.
+Do not begin implementation until review and milestone approval. Treat the runtime specification as a proposal except for the accepted ADR-002 hosting baseline. This documentation update authorizes no provisioning, spending, deployment or merge. Generate ADRs for unresolved architecture choices, executable acceptance tests for each milestone, API/event contracts before coding, and a migration plan that preserves prior MarkOS design artifacts. Do not touch the personal Markdown folder. Keep implementation-ready specifications version-controlled in markos-design.

@@ -1,4 +1,4 @@
-"""Explicit, bounded runtime TOML loading, independent of legacy vault settings."""
+"""Explicit, bounded runtime TOML loading, independent of legacy Markdown root settings."""
 
 from __future__ import annotations
 

@@ -2,7 +2,7 @@
 name = "markos"
 version = "0.2.0"
 description = "A local-first personal knowledge engine built on Markdown"
-readme = "MarkOS v0.2 User Guide.md"
+readme = "README.md"
 authors = [
     { name = "Mark Schulz", email = "mark.f.schulz@gmail.com" }
 ]

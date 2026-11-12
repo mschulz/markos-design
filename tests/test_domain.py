@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from markos.domain import KnowledgeDocument
 
 
-def test_document_uses_vault_relative_path_as_identifier() -> None:
+def test_document_uses_markdown_root_relative_path_as_identifier() -> None:
     document = KnowledgeDocument(path=PurePath("Projects/MarkOS.md"), title=" MarkOS ")
 
     assert document.identifier == "Projects/MarkOS.md"
@@ -14,8 +14,8 @@ def test_document_uses_vault_relative_path_as_identifier() -> None:
 
 
 @pytest.mark.parametrize("path", [PurePath("/outside.md"), PurePath("../outside.md")])
-def test_document_rejects_path_outside_vault(path: PurePath) -> None:
-    with pytest.raises(ValidationError, match="relative to the vault"):
+def test_document_rejects_path_outside_markdown_root(path: PurePath) -> None:
+    with pytest.raises(ValidationError, match="relative to the Markdown root"):
         KnowledgeDocument(path=path, title="Outside")
 
 
