@@ -164,11 +164,19 @@ class Service:
                         if cfg.component == "publisher":
                             assert publisher is not None
                             await publisher.publish_once()
-                            ready = not publisher.last_pass_failed
+                            assert session is not None
+                            ready = (
+                                not publisher.last_pass_failed
+                                and session.connection.connected.is_set()
+                            )
                         elif cfg.component == "review":
                             assert publisher is not None
                             await publisher.publish_reviews_once()
-                            ready = not publisher.last_pass_failed
+                            assert session is not None
+                            ready = (
+                                not publisher.last_pass_failed
+                                and session.connection.connected.is_set()
+                            )
                         elif cfg.component == "consumer":
                             assert consumer is not None and session is not None
                             if consumer.failure is not None:

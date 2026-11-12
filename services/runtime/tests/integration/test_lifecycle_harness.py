@@ -167,7 +167,7 @@ def test_lifecycle_restart_pressure_restore_and_clean_runtime() -> None:
         "/opt/runtime/.venv/bin/python",
         "-c",
         'import os,signal; ids=[]\nfor x in os.listdir("/proc"):\n'
-        " if x.isdigit() and int(x)!=os.getpid():\n"
+        " if x.isdigit() and int(x) not in {1,os.getpid()}:\n"
         "  try:\n"
         '   a=open("/proc/"+x+"/cmdline","rb").read().split(b"\\0")\n'
         '   if b"serve-synthetic" in a:ids.append(int(x))\n'
@@ -188,8 +188,8 @@ def test_lifecycle_restart_pressure_restore_and_clean_runtime() -> None:
     h.wait(lambda: h.results(item.event_id) == 2)
     h.phase("broker_outage")
     h.compose("stop", "rabbitmq")
-    item = h.emit("broker-outage")
     h.wait(lambda: not h.health("publisher")["ready"], 35)
+    item = h.emit("broker-outage")
     assert h.results(item.event_id) == 0
     h.compose("up", "-d", "--wait", "rabbitmq")
     h.wait(lambda: h.results(item.event_id) == 2)
