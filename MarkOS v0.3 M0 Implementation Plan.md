@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M0 Implementation Plan
 type: implementation-plan
 status: proposed
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -19,7 +19,7 @@ tags:
 
 Build v0.3 M0 as a synthetic, durable event-to-task foundation in the canonical `markos-design` repository, after a separate history-preserving import of the existing `markos` implementation. Preserve its read-only vault/index functionality. Use the proposed RabbitMQ profile in [[ADR-003 RabbitMQ Internal Event Bus]] and PostgreSQL operational state; no Gmail account, model call, real notification or source-vault access is needed to prove M0.
 
-This is a concrete proposal for review, not authorization to implement, provision, spend, merge or deploy. It concerns **v0.3 M0**, not the completed v0.2 M0. The current change reviews design and prepares this plan; it has not run the existing suite or the future acceptance tests.
+This is a concrete proposal for review, not authorization to implement, provision, spend, merge or deploy. It concerns **v0.3 M0**, not the completed v0.2 M0. The original planning change ran no tests. The separately authorized M0.0 import now records its legacy/import checks in [[MarkOS v0.3 M0.0 Import Record]]; future runtime acceptance tests remain unexecuted.
 
 ## PR 3 consistency review
 
@@ -54,6 +54,12 @@ The connected repository is [mschulz/markos](https://github.com/mschulz/markos),
 The source pyproject contains machine-specific vault/index defaults. Remove those active defaults during import and use synthetic examples; do not copy or follow the referenced live paths. The source AGENTS memory also records a synced-directory environment problem and older separate-repository/desktop decisions. Preserve its history, but reconcile active instructions with canonical governance; do not inherit its local paths or obsolete hosting assumptions.
 
 ## Import and preservation gate
+
+The owner authorized M0.0 on 12 November 2026. Its import branch and validation
+are recorded in [[MarkOS v0.3 M0.0 Import Record]]; review/merge remain pending.
+This authorization covers the import and legacy regression checks only. M0.1–M0.7
+and all deployment work remain unstarted. No runtime startup exists yet: M0.0
+guards application import/config safety, and A02 remains a M0.1 requirement.
 
 Prepare a dedicated `codex/` migration PR in `markos-design` before runtime changes:
 

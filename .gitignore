@@ -4,3 +4,21 @@
 .DS_Store
 
 .trash/
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# macOS metadata
+.DS_Store
+
+# Virtual environments (symlinked outside iCloud sync; see .envrc)
+.venv
+venv
+
+# Personal Claude Code instructions
+CLAUDE.local.md

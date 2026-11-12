@@ -1,0 +1,447 @@
+{
+  "schema_version": 1,
+  "source_repository": "mschulz/markos",
+  "source_commit": "d5d46cbb231e95176a7d052553c176ebe8c805bb",
+  "target_repository": "mschulz/markos-design",
+  "target_base_commit": "2d6e181c5d109bb4275f5217d3a9187093a3bf35",
+  "proposed_pr_base": "codex/rabbitmq-single-vm-profile",
+  "strategy": "two-parent merge retaining both histories",
+  "reviewed_content_exceptions": {
+    ".gitignore": "union of existing design and source ignore rules",
+    "pyproject.toml": "historical guide as package readme; remove active personal vault/index paths"
+  },
+  "files": [
+    {
+      "source_path": ".envrc",
+      "imported_path": ".envrc",
+      "mode": "100644",
+      "source_blob": "b3deb95938c17382f6b5c73d036b89189b691fca",
+      "imported_blob": "b3deb95938c17382f6b5c73d036b89189b691fca",
+      "source_bytes_preserved": true,
+      "imported_sha256": "bdb2960d0ea7c589dbcffc92d20f87f548436f604a394513a097ddc0664a959b"
+    },
+    {
+      "source_path": ".gitignore",
+      "imported_path": ".gitignore",
+      "mode": "100644",
+      "source_blob": "fc12f33a007a3613e26e80ddf6a7398183e28286",
+      "imported_blob": "32abe4a95071a12aec144d3000a56fb11a26286f",
+      "source_bytes_preserved": false,
+      "imported_sha256": "84f559b65b1d060e630b15a23a511d0be0230cfd57852fb48ddf472f93bb946d"
+    },
+    {
+      "source_path": ".python-version",
+      "imported_path": ".python-version",
+      "mode": "100644",
+      "source_blob": "24ee5b1be9961e38a503c8e764b7385dbb6ba124",
+      "imported_blob": "24ee5b1be9961e38a503c8e764b7385dbb6ba124",
+      "source_bytes_preserved": true,
+      "imported_sha256": "02e735b3dfe1c32833eb550b7ff8ffa17f5f2bc3fa1e7bae61a8f5a3883ce398"
+    },
+    {
+      "source_path": "AGENTS.md",
+      "imported_path": "MarkOS v0.2 Project Memory.md",
+      "mode": "100644",
+      "source_blob": "7ef84398b16417b0a0549d903f7de3ee4000bb3d",
+      "imported_blob": "7ef84398b16417b0a0549d903f7de3ee4000bb3d",
+      "source_bytes_preserved": true,
+      "imported_sha256": "3c69ec045494f450221d306a7c3b796227c61fc17983d9837183ed52822f2c85"
+    },
+    {
+      "source_path": "CLAUDE.md",
+      "imported_path": "CLAUDE.md",
+      "mode": "100644",
+      "source_blob": "003ae7dd5ea6b52fe6e0b6ff00dcbe9f11e15a69",
+      "imported_blob": "003ae7dd5ea6b52fe6e0b6ff00dcbe9f11e15a69",
+      "source_bytes_preserved": true,
+      "imported_sha256": "6f38e3352a6431217819ba8ff4987401bbd81fa99fc8598adb670c84fca4ccf7"
+    },
+    {
+      "source_path": "README.md",
+      "imported_path": "MarkOS v0.2 User Guide.md",
+      "mode": "100644",
+      "source_blob": "c44c73da938158178a6469c58f064bb7a2282030",
+      "imported_blob": "c44c73da938158178a6469c58f064bb7a2282030",
+      "source_bytes_preserved": true,
+      "imported_sha256": "19e28f9bc3a07cfee52c9d06fc4b4eb527a02deeac3a5a8446f2d34c34f9a83a"
+    },
+    {
+      "source_path": "pyproject.toml",
+      "imported_path": "pyproject.toml",
+      "mode": "100644",
+      "source_blob": "18ccb6acef41200bbf14ddac5866c7e97559f1a9",
+      "imported_blob": "424b27055d985f88688f113adf341c1b80c64b23",
+      "source_bytes_preserved": false,
+      "imported_sha256": "7529f6974a0a5615190a58cfa09db765741225cc077cead9542f6b33279679cb"
+    },
+    {
+      "source_path": "src/markos/__init__.py",
+      "imported_path": "src/markos/__init__.py",
+      "mode": "100644",
+      "source_blob": "0e07f8e7d82b0d14ce561b647fa3af1a160ae4ea",
+      "imported_blob": "0e07f8e7d82b0d14ce561b647fa3af1a160ae4ea",
+      "source_bytes_preserved": true,
+      "imported_sha256": "8c90269b325a03c212352a5b0add43caa1acc0cb11015f4e57266e30aca57572"
+    },
+    {
+      "source_path": "src/markos/__main__.py",
+      "imported_path": "src/markos/__main__.py",
+      "mode": "100644",
+      "source_blob": "f56cbdb767fee39de6940502bfe0ab788c655eeb",
+      "imported_blob": "f56cbdb767fee39de6940502bfe0ab788c655eeb",
+      "source_bytes_preserved": true,
+      "imported_sha256": "cf14ac9773ff2c634bcd42e7ed77a498afa4f6951b5791e8a77368a02dd6f5c6"
+    },
+    {
+      "source_path": "src/markos/analysis.py",
+      "imported_path": "src/markos/analysis.py",
+      "mode": "100644",
+      "source_blob": "26a104d72bd37750423ab2b3857a8f00e64b870f",
+      "imported_blob": "26a104d72bd37750423ab2b3857a8f00e64b870f",
+      "source_bytes_preserved": true,
+      "imported_sha256": "69214f620a15f3b704f41477ed86833fb34acf064a765321c4755364ccf6943f"
+    },
+    {
+      "source_path": "src/markos/api.py",
+      "imported_path": "src/markos/api.py",
+      "mode": "100644",
+      "source_blob": "b9266e07832333c1d0121422bb45a54cb808aeb8",
+      "imported_blob": "b9266e07832333c1d0121422bb45a54cb808aeb8",
+      "source_bytes_preserved": true,
+      "imported_sha256": "21a5c523f063145501815172d6e2b6583ffd5a74c7e3c1fa84f9a3455f9c43cc"
+    },
+    {
+      "source_path": "src/markos/citations.py",
+      "imported_path": "src/markos/citations.py",
+      "mode": "100644",
+      "source_blob": "0c652890677f6e5c8558b9a80c4744977154f7de",
+      "imported_blob": "0c652890677f6e5c8558b9a80c4744977154f7de",
+      "source_bytes_preserved": true,
+      "imported_sha256": "ce4c327b6d57588a297b384f13c4e4d5f55d40bf294fbe254a50c7db472469cf"
+    },
+    {
+      "source_path": "src/markos/cli.py",
+      "imported_path": "src/markos/cli.py",
+      "mode": "100644",
+      "source_blob": "6cdc652d90d98a9f8b2f10b3aed251007ce43c18",
+      "imported_blob": "6cdc652d90d98a9f8b2f10b3aed251007ce43c18",
+      "source_bytes_preserved": true,
+      "imported_sha256": "0f48320086ec84fd0f21de65c81429fc7ddec001d22759b6c03ca65c40a33e78"
+    },
+    {
+      "source_path": "src/markos/domain.py",
+      "imported_path": "src/markos/domain.py",
+      "mode": "100644",
+      "source_blob": "6d8f405545da80268fcce9ab1949059ab708188c",
+      "imported_blob": "6d8f405545da80268fcce9ab1949059ab708188c",
+      "source_bytes_preserved": true,
+      "imported_sha256": "d39bce6396245963524f8278e5ccf95217e75cf1bd328f43f2b62a70b44a7d48"
+    },
+    {
+      "source_path": "src/markos/freshness.py",
+      "imported_path": "src/markos/freshness.py",
+      "mode": "100644",
+      "source_blob": "40602c1756ebfec2798767b87fed0d7b062069bf",
+      "imported_blob": "40602c1756ebfec2798767b87fed0d7b062069bf",
+      "source_bytes_preserved": true,
+      "imported_sha256": "f870eaec101617eeddf21eedd497553428f3d1a14b73f22564961288405b14a9"
+    },
+    {
+      "source_path": "src/markos/graph_validation.py",
+      "imported_path": "src/markos/graph_validation.py",
+      "mode": "100644",
+      "source_blob": "2625a97ae71de58241001143794f5bebb06732a7",
+      "imported_blob": "2625a97ae71de58241001143794f5bebb06732a7",
+      "source_bytes_preserved": true,
+      "imported_sha256": "c6fdeaba7cc867f9c53b4125998ca0d2b35d34b5311ec556b8d3ea94b8b52852"
+    },
+    {
+      "source_path": "src/markos/index.py",
+      "imported_path": "src/markos/index.py",
+      "mode": "100644",
+      "source_blob": "9329a56fed3f9d979dc89e12275d64b134363e29",
+      "imported_blob": "9329a56fed3f9d979dc89e12275d64b134363e29",
+      "source_bytes_preserved": true,
+      "imported_sha256": "5edbd6a1d56e84afdcc9fd277af74021f6dd15bcc35ca55167c3cf8a6367903f"
+    },
+    {
+      "source_path": "src/markos/links.py",
+      "imported_path": "src/markos/links.py",
+      "mode": "100644",
+      "source_blob": "084bc0d8b081c34bb8de641acf1f319debce8d6e",
+      "imported_blob": "084bc0d8b081c34bb8de641acf1f319debce8d6e",
+      "source_bytes_preserved": true,
+      "imported_sha256": "e2b05128492b33bb9f8abcb83f681f5b85332bf0a63b0a0808cbd86fef524632"
+    },
+    {
+      "source_path": "src/markos/logging.py",
+      "imported_path": "src/markos/logging.py",
+      "mode": "100644",
+      "source_blob": "c1b5c665dad40ddc3f5e4051f9bbb03c581f6fe5",
+      "imported_blob": "c1b5c665dad40ddc3f5e4051f9bbb03c581f6fe5",
+      "source_bytes_preserved": true,
+      "imported_sha256": "529cbb9dc155c6ac92c0d0e47c02d9817efb335b58358d5b136681d289030acf"
+    },
+    {
+      "source_path": "src/markos/markdown.py",
+      "imported_path": "src/markos/markdown.py",
+      "mode": "100644",
+      "source_blob": "6183ac84e5394140819f9f2cdd2de0620edb01ce",
+      "imported_blob": "6183ac84e5394140819f9f2cdd2de0620edb01ce",
+      "source_bytes_preserved": true,
+      "imported_sha256": "0d7a1ffea7bce5c78669154a94eacceb49ed04abf58999e40bb4972392709091"
+    },
+    {
+      "source_path": "src/markos/para_audit.py",
+      "imported_path": "src/markos/para_audit.py",
+      "mode": "100644",
+      "source_blob": "960cf75d4ddd6af02ce2071c487f8d69d28fa184",
+      "imported_blob": "960cf75d4ddd6af02ce2071c487f8d69d28fa184",
+      "source_bytes_preserved": true,
+      "imported_sha256": "e75c400c2ec8cb774e4ef86f632f9ea15d90c7ef6079fbd4129c4e1d5eb506a6"
+    },
+    {
+      "source_path": "src/markos/py.typed",
+      "imported_path": "src/markos/py.typed",
+      "mode": "100644",
+      "source_blob": "8b137891791fe96927ad78e64b0aad7bded08bdc",
+      "imported_blob": "8b137891791fe96927ad78e64b0aad7bded08bdc",
+      "source_bytes_preserved": true,
+      "imported_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "source_path": "src/markos/query.py",
+      "imported_path": "src/markos/query.py",
+      "mode": "100644",
+      "source_blob": "a9dd0b1a7517f19a537c5192976b617e99e34d43",
+      "imported_blob": "a9dd0b1a7517f19a537c5192976b617e99e34d43",
+      "source_bytes_preserved": true,
+      "imported_sha256": "a25f3775440cadb2f0b4dd726877087bdf0923dea9dbf93fb6cf209415ad85df"
+    },
+    {
+      "source_path": "src/markos/semantic_corpus.py",
+      "imported_path": "src/markos/semantic_corpus.py",
+      "mode": "100644",
+      "source_blob": "d1d537deeb9a1733607855c2a29bd05e13f3d1a0",
+      "imported_blob": "d1d537deeb9a1733607855c2a29bd05e13f3d1a0",
+      "source_bytes_preserved": true,
+      "imported_sha256": "3cdb44a8e360490cd43f3f3639632fd8f46ccc6555cd9063409a05f20d86f0c7"
+    },
+    {
+      "source_path": "src/markos/semantic_extraction.py",
+      "imported_path": "src/markos/semantic_extraction.py",
+      "mode": "100644",
+      "source_blob": "fd26a83724acba0f37b5b2e56291cea043d7a24a",
+      "imported_blob": "fd26a83724acba0f37b5b2e56291cea043d7a24a",
+      "source_bytes_preserved": true,
+      "imported_sha256": "bfba084daa0c2799def10e0ba4c59bff0e7a8bbfcacce0770796dbd4805b9248"
+    },
+    {
+      "source_path": "src/markos/settings.py",
+      "imported_path": "src/markos/settings.py",
+      "mode": "100644",
+      "source_blob": "51b9f6066912dd580baa61f97d259de23252834c",
+      "imported_blob": "51b9f6066912dd580baa61f97d259de23252834c",
+      "source_bytes_preserved": true,
+      "imported_sha256": "acd3e29a4798e6f90d2f88e129e8da4b2a0a147cbf664cc91f48ccf269f6ffa4"
+    },
+    {
+      "source_path": "src/markos/sync.py",
+      "imported_path": "src/markos/sync.py",
+      "mode": "100644",
+      "source_blob": "3e0ac89e839027be4079053130c54fa8cc0dd449",
+      "imported_blob": "3e0ac89e839027be4079053130c54fa8cc0dd449",
+      "source_bytes_preserved": true,
+      "imported_sha256": "b217d6458fb236113abe9c74d16776a7b8bb326b9b3387724a7f66094a412602"
+    },
+    {
+      "source_path": "src/markos/watch.py",
+      "imported_path": "src/markos/watch.py",
+      "mode": "100644",
+      "source_blob": "525a8e16d70aae055e6ca1f0e7e62becc74ba89e",
+      "imported_blob": "525a8e16d70aae055e6ca1f0e7e62becc74ba89e",
+      "source_bytes_preserved": true,
+      "imported_sha256": "2008157c0927ea530642be82b2d0a54586b25d70627c241d8f00ed2361c9835b"
+    },
+    {
+      "source_path": "tests/test_analysis.py",
+      "imported_path": "tests/test_analysis.py",
+      "mode": "100644",
+      "source_blob": "e60fd0148e04eccb4c335a92b68c66615d804f2c",
+      "imported_blob": "e60fd0148e04eccb4c335a92b68c66615d804f2c",
+      "source_bytes_preserved": true,
+      "imported_sha256": "488eec79bc8b0ee9afb04a7defa2939de80ed21c8f002e16dde036393302d409"
+    },
+    {
+      "source_path": "tests/test_api.py",
+      "imported_path": "tests/test_api.py",
+      "mode": "100644",
+      "source_blob": "3d2b6dc40e1952c365395c31c2bbffe60800404c",
+      "imported_blob": "3d2b6dc40e1952c365395c31c2bbffe60800404c",
+      "source_bytes_preserved": true,
+      "imported_sha256": "91311dc8c1b92243257f9b46e2dac76cc45e9c937dc98a6c60fe3527a0c19533"
+    },
+    {
+      "source_path": "tests/test_citations.py",
+      "imported_path": "tests/test_citations.py",
+      "mode": "100644",
+      "source_blob": "bfb3873c173bf01aea93392fdac10a7a4f898e9b",
+      "imported_blob": "bfb3873c173bf01aea93392fdac10a7a4f898e9b",
+      "source_bytes_preserved": true,
+      "imported_sha256": "5bec1f5c3408d6d1b30aff65527ea07c5dd838d814b51719386cdfc9d795477c"
+    },
+    {
+      "source_path": "tests/test_cli.py",
+      "imported_path": "tests/test_cli.py",
+      "mode": "100644",
+      "source_blob": "66f55855e74945dbc04d8cc7f630fe5ddbe4b61d",
+      "imported_blob": "66f55855e74945dbc04d8cc7f630fe5ddbe4b61d",
+      "source_bytes_preserved": true,
+      "imported_sha256": "c5064b5269a08d1aedf5c6ef62d65c16f16ccb014fd27caa825412781a5c5397"
+    },
+    {
+      "source_path": "tests/test_domain.py",
+      "imported_path": "tests/test_domain.py",
+      "mode": "100644",
+      "source_blob": "b14ea2819f5d61aacbc0a728700d19aced3c14a5",
+      "imported_blob": "b14ea2819f5d61aacbc0a728700d19aced3c14a5",
+      "source_bytes_preserved": true,
+      "imported_sha256": "ff139eae3ff458276fd30748db71f655b3c8936c8272e471a0cf36b1b212d4b8"
+    },
+    {
+      "source_path": "tests/test_freshness.py",
+      "imported_path": "tests/test_freshness.py",
+      "mode": "100644",
+      "source_blob": "78cfec210a75a33ef813b9e53066e3aaad413ba1",
+      "imported_blob": "78cfec210a75a33ef813b9e53066e3aaad413ba1",
+      "source_bytes_preserved": true,
+      "imported_sha256": "0a944b7bd67cc329a1ffbdfef73683731ae20abbb8a7c8f630cd8e1583309a99"
+    },
+    {
+      "source_path": "tests/test_graph_validation.py",
+      "imported_path": "tests/test_graph_validation.py",
+      "mode": "100644",
+      "source_blob": "990a145fb22dba02c577497ee60af58f57002c02",
+      "imported_blob": "990a145fb22dba02c577497ee60af58f57002c02",
+      "source_bytes_preserved": true,
+      "imported_sha256": "61d6fdf10e8da09300c3391fb5ee63cb7a0a2fe25828946dec45403b2244e12b"
+    },
+    {
+      "source_path": "tests/test_index.py",
+      "imported_path": "tests/test_index.py",
+      "mode": "100644",
+      "source_blob": "00222f31b88592d078ecbb68a9616606517d236f",
+      "imported_blob": "00222f31b88592d078ecbb68a9616606517d236f",
+      "source_bytes_preserved": true,
+      "imported_sha256": "9434c139e092004cac4720db573d896b71228821c77d3529c10c7252c1a249f6"
+    },
+    {
+      "source_path": "tests/test_links.py",
+      "imported_path": "tests/test_links.py",
+      "mode": "100644",
+      "source_blob": "ca253a6135436af38d6634482856c80c89494d49",
+      "imported_blob": "ca253a6135436af38d6634482856c80c89494d49",
+      "source_bytes_preserved": true,
+      "imported_sha256": "d7739d4b3ee0b17604fd5bc820c5ad4719de1c7d9da0088130bd910b56fa0d73"
+    },
+    {
+      "source_path": "tests/test_markdown.py",
+      "imported_path": "tests/test_markdown.py",
+      "mode": "100644",
+      "source_blob": "7d99f1816f994b26156083558a582b0fbc1eeec6",
+      "imported_blob": "7d99f1816f994b26156083558a582b0fbc1eeec6",
+      "source_bytes_preserved": true,
+      "imported_sha256": "571ddb1477a0b621e56ebfacf5cefd2cab402f11fb739ab913a301cfbed248dc"
+    },
+    {
+      "source_path": "tests/test_para_audit.py",
+      "imported_path": "tests/test_para_audit.py",
+      "mode": "100644",
+      "source_blob": "f3a41269c9d2651564cb43b7822173a5f00f8d50",
+      "imported_blob": "f3a41269c9d2651564cb43b7822173a5f00f8d50",
+      "source_bytes_preserved": true,
+      "imported_sha256": "d9283b3fd9db3d06a6f1c1981c53fa399cd4a52068dbb5aca24ef5308f2de70d"
+    },
+    {
+      "source_path": "tests/test_query.py",
+      "imported_path": "tests/test_query.py",
+      "mode": "100644",
+      "source_blob": "8dea1d48a879d6f737196017dad114a4c778e181",
+      "imported_blob": "8dea1d48a879d6f737196017dad114a4c778e181",
+      "source_bytes_preserved": true,
+      "imported_sha256": "633a7a8d88457e79e2382e69e412e83cc02fd83f9edc2a05eeea55b848c0f2bd"
+    },
+    {
+      "source_path": "tests/test_semantic_corpus.py",
+      "imported_path": "tests/test_semantic_corpus.py",
+      "mode": "100644",
+      "source_blob": "fd3ec8c2fa9f569f694c18883ec153dbd60c21df",
+      "imported_blob": "fd3ec8c2fa9f569f694c18883ec153dbd60c21df",
+      "source_bytes_preserved": true,
+      "imported_sha256": "bdaf2d63fd1295237d9c5b4e2fb62819b4e7c71589552a2947116872e61e0dfb"
+    },
+    {
+      "source_path": "tests/test_semantic_extraction.py",
+      "imported_path": "tests/test_semantic_extraction.py",
+      "mode": "100644",
+      "source_blob": "e6e69441bd1fc5f45e60e225c5e0f727c62dedc3",
+      "imported_blob": "e6e69441bd1fc5f45e60e225c5e0f727c62dedc3",
+      "source_bytes_preserved": true,
+      "imported_sha256": "108bd3f8fcb3ac065c15610a34c4eda86124dd53ab917d819768e73aa09df3aa"
+    },
+    {
+      "source_path": "tests/test_settings.py",
+      "imported_path": "tests/test_settings.py",
+      "mode": "100644",
+      "source_blob": "2915864e9c2e6df80c7247d06963a72afb96e5a1",
+      "imported_blob": "2915864e9c2e6df80c7247d06963a72afb96e5a1",
+      "source_bytes_preserved": true,
+      "imported_sha256": "40e537c8a3c26a7910440478f362b3de65e8df9c1e5d455b0e5b51333bca3ad6"
+    },
+    {
+      "source_path": "tests/test_sync.py",
+      "imported_path": "tests/test_sync.py",
+      "mode": "100644",
+      "source_blob": "7a4d1069f56da32845bcfc34fc483f4c5de5cbbc",
+      "imported_blob": "7a4d1069f56da32845bcfc34fc483f4c5de5cbbc",
+      "source_bytes_preserved": true,
+      "imported_sha256": "26a10a243798e817ec4b10d93efeb7f76320a1de9e588003c38a92ef9b9fe122"
+    },
+    {
+      "source_path": "tests/test_watch.py",
+      "imported_path": "tests/test_watch.py",
+      "mode": "100644",
+      "source_blob": "9268a180efad486e673121cb78e1880a73ff2f6f",
+      "imported_blob": "9268a180efad486e673121cb78e1880a73ff2f6f",
+      "source_bytes_preserved": true,
+      "imported_sha256": "fc70b3f45198f8ee2ae79e8ad67c2b8a6bf60300a428345fac7abfa582ce578e"
+    },
+    {
+      "source_path": "uv.lock",
+      "imported_path": "uv.lock",
+      "mode": "100644",
+      "source_blob": "bd5f1de15151d12311191b285b18b791fbb809cb",
+      "imported_blob": "bd5f1de15151d12311191b285b18b791fbb809cb",
+      "source_bytes_preserved": true,
+      "imported_sha256": "77c3b2b94dc2e2b479860dfa1a15d366dbf6438d13ec715ecfefa0a746bd0225"
+    }
+  ],
+  "unchanged_design_paths": [
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    "ADR-0002 GitHub as Canonical Project Record.md",
+    "ADR-002 Cloud-first Deployment.md",
+    "ADR-003 RabbitMQ Internal Event Bus.md",
+    "CLAUDE.md",
+    "Graphify Evaluation.md",
+    "MarkOS Cloud Deployment Architecture.md",
+    "MarkOS Specification.md",
+    "MarkOS v0.3 Specification.md",
+    "Markdown Memory Architecture.md",
+    "Semantic Graph Extraction Roadmap.md",
+    "Semantic Graph Extraction.md",
+    "Templates/Architecture Document Template.md",
+    "Vision.md",
+    "config/README.md",
+    "infrastructure/README.md"
+  ]
+}
