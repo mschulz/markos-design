@@ -1,5 +1,6 @@
 """Scoped transactional storage primitives; no broker, worker loop or implicit DSN."""
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -12,7 +13,9 @@ from psycopg.conninfo import conninfo_to_dict
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool, PoolTimeout
 
+from markos_runtime.contracts.base import Domain
 from markos_runtime.contracts.events import EventEnvelope
+from markos_runtime.contracts.review import ReviewReference
 
 Row = dict[str, Any]
 Status = Literal["created", "duplicate", "conflict", "expired"]
@@ -20,6 +23,10 @@ Status = Literal["created", "duplicate", "conflict", "expired"]
 
 class StorageError(ValueError):
     """Stable public storage failure, never a DSN, SQL statement or payload."""
+
+
+class StorageRejected(StorageError):
+    """Permanent authenticated handoff rejection, eligible for durable review."""
 
 
 @dataclass(frozen=True)
@@ -33,6 +40,24 @@ class OutboxClaim:
     event_id: UUID
     event: EventEnvelope
     fence: int
+    attempts: int = 0
+    consumers: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class StoreIdentity:
+    service_id: str
+    owner_id: UUID
+    domain: Domain
+    can_publish: bool
+    can_consume: bool
+
+
+@dataclass(frozen=True)
+class ReviewClaim:
+    reference: ReviewReference
+    fence: int
+    attempts: int
 
 
 class _SafeConnection(psycopg.AsyncConnection[Row]):
@@ -93,11 +118,19 @@ class DurableStore:
     @asynccontextmanager
     async def _transaction(self) -> AsyncIterator[psycopg.AsyncConnection[Row]]:
         try:
-            async with self._pool.connection() as connection, connection.transaction():
-                await connection.execute("SET LOCAL statement_timeout='5s'")
-                await connection.execute("SET LOCAL lock_timeout='1s'")
-                yield connection
-        except (psycopg.Error, PoolTimeout):
+            async with self._pool.connection() as connection:
+                try:
+                    async with connection.transaction():
+                        await connection.execute("SET LOCAL statement_timeout='5s'")
+                        await connection.execute("SET LOCAL lock_timeout='1s'")
+                        yield connection
+                except asyncio.CancelledError:
+                    # A timed-out handoff must not return a suspect commit connection to the pool.
+                    await connection.close()
+                    raise
+        except (psycopg.Error, PoolTimeout) as error:
+            if isinstance(error, psycopg.Error) and error.sqlstate == "M0001":
+                raise StorageRejected("handoff not authorized or registered") from None
             raise StorageError("storage operation failed") from None
 
     async def append(self, event: EventEnvelope) -> Receipt:
@@ -134,7 +167,11 @@ class DurableStore:
             rows = await cursor.fetchall()
             return tuple(
                 OutboxClaim(
-                    row["event_id"], EventEnvelope.from_wire(bytes(row["wire"])), row["fence"]
+                    row["event_id"],
+                    EventEnvelope.from_wire(bytes(row["wire"])),
+                    row["fence"],
+                    row["attempts"],
+                    tuple(row["consumers"]),
                 )
                 for row in rows
             )
@@ -150,3 +187,82 @@ class DurableStore:
             row = await cursor.fetchone()
             assert row is not None
             return bool(row["recorded"])
+
+    async def identity(self) -> StoreIdentity:
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute("SELECT * FROM markos_runtime.runtime_identity()")
+            ).fetchone()
+            if row is None:
+                raise StorageError("unregistered storage identity")
+            return StoreIdentity(
+                row["service_id"],
+                row["owner_id"],
+                row["domain"],
+                row["can_publish"],
+                row["can_consume"],
+            )
+
+    async def retry_claim(self, claim: OutboxClaim, delay: int, code: str) -> bool:
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute(
+                    "SELECT markos_runtime.retry_outbox(%s,%s,%s,%s) AS ok",
+                    (claim.event_id, claim.fence, delay, code),
+                )
+            ).fetchone()
+            assert row is not None
+            return bool(row["ok"])
+
+    async def review_delivery(self, body: bytes, reason: str) -> UUID:
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute(
+                    "SELECT markos_runtime.review_delivery(%s,%s,%s) AS id",
+                    (sha256(body).hexdigest(), reason, len(body)),
+                )
+            ).fetchone()
+            assert row is not None
+            return cast(UUID, row["id"])
+
+    async def claim_reviews(self) -> tuple[ReviewClaim, ...]:
+        async with self._transaction() as connection:
+            rows = await (
+                await connection.execute("SELECT * FROM markos_runtime.claim_reviews(10,60)")
+            ).fetchall()
+            return tuple(
+                ReviewClaim(
+                    ReviewReference(
+                        schema_version=1,
+                        review_id=row["review_id"],
+                        owner_id=row["owner_id"],
+                        domain=row["domain"],
+                        body_hash=row["body_hash"],
+                        reason=row["reason"],
+                    ),
+                    row["fence"],
+                    row["attempts"],
+                )
+                for row in rows
+            )
+
+    async def finish_review(self, claim: ReviewClaim, delay: int | None = None) -> bool:
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute(
+                    "SELECT markos_runtime.finish_review(%s,%s,%s) AS ok",
+                    (claim.reference.review_id, claim.fence, delay),
+                )
+            ).fetchone()
+            assert row is not None
+            return bool(row["ok"])
+
+    async def hold_expired(self, claim: OutboxClaim) -> bool:
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute(
+                    "SELECT markos_runtime.hold_expired(%s,%s) AS ok", (claim.event_id, claim.fence)
+                )
+            ).fetchone()
+            assert row is not None
+            return bool(row["ok"])

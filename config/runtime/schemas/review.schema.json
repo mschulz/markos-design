@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "body_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Body Hash",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "reason": {
+      "enum": [
+        "invalid",
+        "unauthorized",
+        "conflict",
+        "expired",
+        "oversize"
+      ],
+      "title": "Reason",
+      "type": "string"
+    },
+    "review_id": {
+      "format": "uuid",
+      "title": "Review Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "review_id",
+    "owner_id",
+    "domain",
+    "body_hash",
+    "reason"
+  ],
+  "title": "ReviewReference",
+  "type": "object"
+}

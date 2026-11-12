@@ -324,6 +324,8 @@ def test_migrations_idempotent_and_changed_bytes_rejected(
         ) as connection:
             await migrate(connection, directory)
             path = directory / "0001_durable_foundation.sql"
+            for existing in directory.glob("*.sql"):
+                (tmp_path / existing.name).write_bytes(existing.read_bytes())
             (tmp_path / path.name).write_bytes(path.read_bytes() + b"\n-- changed")
             with pytest.raises(StorageError, match="checksum"):
                 await migrate(connection, tmp_path)
@@ -337,7 +339,7 @@ def test_migrations_idempotent_and_changed_bytes_rejected(
     with psycopg.connect(database["admin"]) as admin:
         assert admin.execute(
             "SELECT count(*) FROM markos_runtime.schema_migrations"
-        ).fetchone() == (1,)
+        ).fetchone() == (2,)
 
 
 def test_no_intended_consumers_rolls_back_event(database: dict[str, str]) -> None:
@@ -430,9 +432,9 @@ def test_failed_migration_transaction_rolls_back_ddl_and_ledger(
     database: dict[str, str], tmp_path: Path
 ) -> None:
     directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
-    path = directory / "0001_durable_foundation.sql"
-    (tmp_path / path.name).write_bytes(path.read_bytes())
-    (tmp_path / "0002_fault.sql").write_text(
+    for existing in directory.glob("*.sql"):
+        (tmp_path / existing.name).write_bytes(existing.read_bytes())
+    (tmp_path / "0003_fault.sql").write_text(
         "CREATE TABLE markos_runtime.must_rollback(id integer); SELECT missing_function();"
     )
 
@@ -450,7 +452,7 @@ def test_failed_migration_transaction_rolls_back_ddl_and_ledger(
         )
         assert admin.execute(
             "SELECT count(*) FROM markos_runtime.schema_migrations"
-        ).fetchone() == (1,)
+        ).fetchone() == (2,)
 
 
 @pytest.mark.parametrize(

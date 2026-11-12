@@ -8,10 +8,12 @@ from markos_runtime.config import RuntimeConfig
 from markos_runtime.contracts.base import ValueModel
 from markos_runtime.contracts.events import EventEnvelope, TaskRequest
 from markos_runtime.contracts.policy import Manifest
+from markos_runtime.contracts.review import ReviewReference
 
 
 def artifacts() -> dict[str, str]:
     models: dict[str, type[ValueModel]] = {
+        "review": ReviewReference,
         "event": EventEnvelope,
         "task": TaskRequest,
         "manifest": Manifest,
