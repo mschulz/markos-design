@@ -94,7 +94,7 @@ def test_schemas_and_examples_match() -> None:
     from markos_runtime.contracts.schedules import ScheduleDefinition
 
     ScheduleDefinition.model_validate_json((examples / "schedule.example.json").read_bytes())
-    assert len(artifacts()) == 6
+    assert len(artifacts()) == 7
     schema = json.loads(artifacts()["event.schema.json"])
     assert schema["additionalProperties"] is False
     assert "causation_id" in schema["required"]
@@ -125,6 +125,7 @@ def test_schemas_are_valid_and_validate_examples() -> None:
     config, _ = load_config(directory / "runtime.example.toml", {})
     event = EventEnvelope.from_wire((directory / "noop.example.json").read_bytes())
     data = {
+        "replay.schema.json": json.loads((directory / "replay.example.json").read_text()),
         "schedule.schema.json": json.loads((directory / "schedule.example.json").read_text()),
         "event.schema.json": json.loads(event.to_wire()),
         "manifest.schema.json": json.loads((directory / "subscriptions.example.json").read_text()),

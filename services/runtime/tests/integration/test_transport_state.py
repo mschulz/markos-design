@@ -95,10 +95,7 @@ def test_cancelled_transaction_discards_connection_before_pool_reuse(
 def test_expired_outbox_is_held_for_review(database: dict[str, str]) -> None:
     async def scenario() -> None:
         async with DurableStore.connect(database["publisher"]) as store:
-            await store.append(event(expired=True))
-            claim = (await store.claim_outbox())[0]
-            await store.review_delivery(claim.event.to_wire(), "expired")
-            assert await store.hold_for_review(claim, "expired")
+            assert (await store.append(event(expired=True))).status == "review"
             assert await store.claim_outbox() == ()
 
     asyncio.run(scenario())

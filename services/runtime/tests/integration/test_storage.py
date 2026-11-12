@@ -184,9 +184,9 @@ def test_expired_event_is_reviewed_without_task(database: dict[str, str]) -> Non
         async with DurableStore.connect(database["publisher"]) as store:
             await store.append(item)
         async with DurableStore.connect(database["consumer"]) as store:
-            assert (await store.handoff(item)).status == "expired"
+            assert (await store.handoff(item)).status == "review"
         assert count(database, "tasks") == count(database, "inbox") == 0
-        assert count(database, "quarantine") == 1
+        assert count(database, "recovery_reviews") == 2
 
     asyncio.run(scenario())
 
@@ -339,7 +339,7 @@ def test_migrations_idempotent_and_changed_bytes_rejected(
     with psycopg.connect(database["admin"]) as admin:
         assert admin.execute(
             "SELECT count(*) FROM markos_runtime.schema_migrations"
-        ).fetchone() == (3,)
+        ).fetchone() == (4,)
 
 
 def test_no_intended_consumers_rolls_back_event(database: dict[str, str]) -> None:
@@ -434,7 +434,7 @@ def test_failed_migration_transaction_rolls_back_ddl_and_ledger(
     directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
     for existing in directory.glob("*.sql"):
         (tmp_path / existing.name).write_bytes(existing.read_bytes())
-    (tmp_path / "0004_fault.sql").write_text(
+    (tmp_path / "0005_fault.sql").write_text(
         "CREATE TABLE markos_runtime.must_rollback(id integer); SELECT missing_function();"
     )
 
@@ -452,7 +452,7 @@ def test_failed_migration_transaction_rolls_back_ddl_and_ledger(
         )
         assert admin.execute(
             "SELECT count(*) FROM markos_runtime.schema_migrations"
-        ).fetchone() == (3,)
+        ).fetchone() == (4,)
 
 
 @pytest.mark.parametrize(

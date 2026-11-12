@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "format": "uuid",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "permit_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Permit Id"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "suppress_effects": {
+      "const": true,
+      "default": true,
+      "title": "Suppress Effects",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "event_id"
+  ],
+  "title": "ReplayRequest",
+  "type": "object"
+}

@@ -93,7 +93,9 @@ def database(admin_dsn: str) -> Iterator[dict[str, str]]:
                 )
                 await connection.execute(
                     "UPDATE markos_runtime.service_identities SET can_execute=can_consume, "
-                    "can_schedule=can_publish WHERE login_role=%s",
+                    "can_schedule=can_publish,can_replay=can_publish,"
+                    "can_manage_retention=can_publish,can_approve_replay=can_publish "
+                    "WHERE login_role=%s",
                     (role[0],),
                 )
 

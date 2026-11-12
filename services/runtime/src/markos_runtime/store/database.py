@@ -19,7 +19,7 @@ from markos_runtime.contracts.events import EventEnvelope
 from markos_runtime.contracts.review import ReviewReference
 
 Row = dict[str, Any]
-Status = Literal["created", "duplicate", "conflict", "expired"]
+Status = Literal["created", "duplicate", "conflict", "expired", "review"]
 
 
 class StorageError(ValueError):
@@ -321,6 +321,16 @@ class DurableStore:
                 await connection.execute(
                     "SELECT markos_runtime.renew_task(%s,%s,%s,%s) AS ok",
                     (claim.task_id, claim.fence, executor_id, seconds),
+                )
+            ).fetchone()
+            assert row is not None
+            return bool(row["ok"])
+
+    async def authorize_publication(self, event_id: UUID, fence: int) -> bool:
+        async with self._transaction() as connection:
+            row = await (
+                await connection.execute(
+                    "SELECT markos_runtime.authorize_publication(%s,%s) AS ok", (event_id, fence)
                 )
             ).fetchone()
             assert row is not None
