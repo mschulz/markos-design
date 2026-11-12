@@ -41,7 +41,7 @@ async def seed(database: dict[str, str], *, completed: bool = False) -> tuple[UU
             start = row[0].astimezone(UTC)
         clock(database, start)
         claim = (await pub.claim_outbox())[0]
-        assert await pub.record_publication(item.event_id, claim.fence)
+        assert await pub.record_publication(item.event_id, claim.fence, epoch=claim.epoch)
     if completed:
         for role in ["consumer", "audit"]:
             async with DurableStore.connect(database[role]) as cons:
@@ -116,7 +116,7 @@ def test_age_boundary_and_expiring_one_use_permit(database: dict[str, str]) -> N
             clock(database, start + timedelta(days=30))
             assert await recovery.request(ReplayRequest(schema_version=1, event_id=eid)) == "queued"
             claim = (await pub.claim_outbox())[0]
-            assert await pub.record_publication(eid, claim.fence)
+            assert await pub.record_publication(eid, claim.fence, epoch=claim.epoch)
             clock(database, start + timedelta(days=30, microseconds=1))
             with psycopg.connect(database["publisher"], autocommit=True) as raw:
                 raw.execute("SET TIME ZONE 'America/New_York'")
@@ -194,7 +194,7 @@ def test_permit_expiry_after_publication_blocks_handoff(database: dict[str, str]
             with psycopg.connect(database["admin"], autocommit=True) as conn:
                 conn.execute("UPDATE markos_runtime.outbox SET available_at=clock_timestamp()")
             claim = (await pub.claim_outbox())[0]
-            assert await pub.record_publication(eid, claim.fence)
+            assert await pub.record_publication(eid, claim.fence, epoch=claim.epoch)
         clock(database, start + timedelta(days=31, seconds=61))
         async with DurableStore.connect(database["consumer"]) as cons:
             assert (await cons.handoff(claim.event)).status == "review"
@@ -287,8 +287,10 @@ def test_deletion_fences_stale_claims_and_prevents_resurrection(database: dict[s
             task = await cons.claim_task(owner)
             assert task
             await Recovery(pub).delete_event(item.event_id)
-            assert not await pub.authorize_publication(item.event_id, claim.fence)
-            assert not await pub.record_publication(item.event_id, claim.fence)
+            assert not await pub.authorize_publication(
+                item.event_id, claim.fence, epoch=claim.epoch
+            )
+            assert not await pub.record_publication(item.event_id, claim.fence, epoch=claim.epoch)
             assert not await cons.finish_task(task, owner)
             assert (await cons.handoff(item)).status == "review"
             assert (await pub.append(item)).status == "review"
@@ -325,7 +327,7 @@ def test_source_access_is_rechecked_before_replay(database: dict[str, str], fail
             await recovery.observe_synthetic_source(source, body, services)
             assert (await pub.append(item)).status == "created"
             claim = (await pub.claim_outbox())[0]
-            assert await pub.record_publication(item.event_id, claim.fence)
+            assert await pub.record_publication(item.event_id, claim.fence, epoch=claim.epoch)
             if failure == "missing":
                 with psycopg.connect(database["admin"], autocommit=True) as conn:
                     conn.execute("DELETE FROM markos_runtime.source_grants")
@@ -536,7 +538,7 @@ def test_shared_operation_retains_primary_task_until_alias_graph_is_released(
         async with DurableStore.connect(database["publisher"]) as pub:
             assert (await pub.append(alias)).status == "created"
             claim = (await pub.claim_outbox())[0]
-            assert await pub.record_publication(alias.event_id, claim.fence)
+            assert await pub.record_publication(alias.event_id, claim.fence, epoch=claim.epoch)
         for role in ["consumer", "audit"]:
             async with DurableStore.connect(database[role]) as cons:
                 assert (await cons.handoff(alias)).status == "duplicate"
@@ -612,14 +614,28 @@ def test_upgrade_preserves_existing_m0d_results_and_sets_conservative_floor(
                 "UPDATE markos_runtime.service_identities SET can_execute=can_consume"
             )
         item = event()
-        async with DurableStore.connect(dsns["publisher"]) as pub:
-            await pub.append(item)
-            claim = (await pub.claim_outbox())[0]
-            assert await pub.record_publication(item.event_id, claim.fence)
+        with psycopg.connect(dsns["publisher"], autocommit=True) as old:
+            old.execute("SELECT markos_runtime.append_event(%s)", (item.to_wire(),))
+            claim = old.execute("SELECT * FROM markos_runtime.claim_outbox(1,60)").fetchone()
+            assert claim is not None
+            assert old.execute(
+                "SELECT markos_runtime.record_publication(%s,%s)", (item.event_id, claim[2])
+            ).fetchone() == (True,)
         for role in ["consumer", "audit"]:
-            async with DurableStore.connect(dsns[role]) as store:
-                await store.handoff(item)
-                assert await Worker(store).run_once()
+            with psycopg.connect(dsns[role], autocommit=True) as old:
+                old.execute(
+                    "SELECT * FROM markos_runtime.handoff(%s,%s)",
+                    (item.event_id, sha256(item.to_wire()).hexdigest()),
+                )
+                executor = uuid4()
+                task = old.execute(
+                    "SELECT * FROM markos_runtime.claim_task(%s,30)", (executor,)
+                ).fetchone()
+                assert task is not None
+                assert old.execute(
+                    "SELECT markos_runtime.finish_task(%s,%s,%s,NULL,1)",
+                    (task[0], task[2], executor),
+                ).fetchone() == (True,)
         async with await psycopg.AsyncConnection.connect(
             migration, autocommit=True, row_factory=dict_row
         ) as conn:

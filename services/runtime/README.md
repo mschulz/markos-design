@@ -1,4 +1,4 @@
-# Independent MarkOS runtime — M0-A / M0-B / M0-C / M0-D / M0-E
+# Independent MarkOS runtime — M0-A through M0-F
 
 This standalone project provides strict synthetic contracts and validation-only
 preflight. The explicit PostgreSQL and M0-C RabbitMQ libraries connect only when called with DSNs.
@@ -18,7 +18,7 @@ UV_PROJECT_ENVIRONMENT="$PWD/venv" uv run mypy
 UV_PROJECT_ENVIRONMENT="$PWD/venv" uv run python -m markos_runtime.schemas --output-dir ../../config/runtime/schemas
 ```
 
-Only `--config` or `MARKOS_RUNTIME_CONFIG` selects configuration. Relative manifest
+For preflight, only `--config` or `MARKOS_RUNTIME_CONFIG` selects configuration. Relative manifest
 filenames resolve beside that file. No legacy env vars, `.env`, home folder or
 repository root is discovered. Secret references are syntax-checked only;
 preflight success does not prove credentials, broker ACLs or database access.
@@ -59,7 +59,9 @@ cleanup. Grants default false; runtime has no clock override, real source adapte
 or external effects. Migration 0004 preserves all prior checksums. See
 [[MarkOS v0.3 M0-E Replay and Retention]] for source/privacy limits and API semantics.
 
-The normal gate is `pytest --ignore=tests/integration/test_volume_loss.py`.
+The normal gate is `pytest --ignore=tests/integration/test_volume_loss.py --ignore=tests/integration/test_lifecycle_harness.py`.
 The separate CI-only volume test needs its unique labelled disposable Compose
 project and `MARKOS_REQUIRE_VOLUME_TEST=1`; it destroys only that broker volume.
 Use neither the acceptance harness nor its credentials for a real service.
+
+M0-F adds `serve-synthetic --confirm-synthetic --config <explicit service JSON>`; it runs only fixed test roles against isolated test targets, resolves named secrets, and exposes private loopback health/metrics. It does not replace connection-free preflight or enable production/provider execution. Migration 0005 requires generation tokens for lease operations and private migrator-only restore fencing. The dedicated GitHub-hosted lifecycle job proves process/dependency/pressure/daemon/fixture-restore behavior using a restricted independent image. See [[MarkOS v0.3 M0-F Lifecycle and Closeout]] and [[MarkOS v0.3 M0 Runbook]] for commands and open production gates. Never run the fault controller against a shared Docker host.

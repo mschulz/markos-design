@@ -11,10 +11,12 @@ from markos_runtime.contracts.policy import Manifest
 from markos_runtime.contracts.replay import ReplayRequest
 from markos_runtime.contracts.review import ReviewReference
 from markos_runtime.contracts.schedules import ScheduleDefinition
+from markos_runtime.lifecycle.config import ServiceConfig
 
 
 def artifacts() -> dict[str, str]:
     models: dict[str, type[ValueModel]] = {
+        "service": ServiceConfig,
         "replay": ReplayRequest,
         "schedule": ScheduleDefinition,
         "review": ReviewReference,

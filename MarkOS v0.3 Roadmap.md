@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.5
+version: 2.6
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -96,8 +96,8 @@ Proposed audit profile: 365-day minimal audit/approval metadata after the latest
 
 1. Retain the accepted architecture correction; PR #7 is closed unmerged and its reference branch/history is preserved.
 2. Preserve merged M0-A–M0-C and their independent contracts, isolation and database/broker evidence; no automatic promotion of old PR #6/#7.
-3. Review M0-D execution/scheduling and M0-E synthetic replay/retention separately, then implement M0-F lifecycle evidence in its own PR.
-4. Gather actual broker/database fault evidence before declaring M0 complete. Only then advance gateway and Gmail work.
+3. Review M0-D execution/scheduling, M0-E replay/retention and M0-F lifecycle/closeout as separate PRs. M0-F preserves both prerequisite histories; no automatic merge.
+4. Review the synthetic fault evidence and explicit remaining gates in [[MarkOS v0.3 M0-F Lifecycle and Closeout]], [[MarkOS v0.3 M0 Runbook]] and `config/runtime/m0-closeout.json` before advancing gateway/Gmail work. Production readiness remains false.
 5. Before provisioning, review provider plans, region, cost, network/security, retention, monitoring and recovery targets. Deployment requires separate authorization.
 
 ## Open implementation decisions
@@ -125,3 +125,7 @@ M3 consumes the Gmail ingestion/source contracts from M2 and the registry, ident
 Rules are the first decision stage. An AI adapter runs only for unresolved cases or explicitly configured evaluation/shadow checks. Record rule IDs, source references, backend/version, question/prompt version, score meaning and the acceptance/review reason; do not put raw mail or secrets in broker messages/logs. A user's correction must not automatically enable a new rule or permission.
 
 Open M3 decisions: agent/category taxonomy and multi-assignment policy; verified rule evidence and override precedence; dataset and per-category error targets; Jev versus LLM provider/version and data handling; acceptance thresholds; optional escalation trigger; time/cost limits and review ownership. Define these in the reviewed M3 evaluation record before automatic routing. Provider claims and example confidence values are not acceptance results.
+
+## M0-F review and closeout status
+
+[[MarkOS v0.3 M0-F Lifecycle and Closeout]] adds explicit test-only role processes, private health/heartbeats, bounded shutdown/reconnect, a restricted independent image/Compose harness, restored-generation fencing and required lifecycle CI. A17–A19 have bounded synthetic evidence, not full production acceptance: daemon restart is not a VM reboot; fixture restore is not real cloud backup/erasure; test caps/alarms are not production sizing; loopback fallback tests are not independently hosted alerts. A13 real action approval and all provider/MCP enablement gates remain open. See [[MarkOS v0.3 M0 Runbook]]. Nothing is merged or deployed by this slice.

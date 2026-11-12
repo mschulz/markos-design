@@ -26,6 +26,7 @@ class Publisher:
         self.session, self.channel, self.store, self.audit = session, channel, store, audit
         profile = limits if limits is not None else getattr(session, "limits", None)
         self.limits = profile if isinstance(profile, ProposedLimits) else ProposedLimits()
+        self.last_pass_failed = False
         self._inflight = asyncio.Semaphore(self.limits.max_inflight_confirms)
 
     async def _one(self, claim: OutboxClaim) -> bool:
@@ -36,7 +37,9 @@ class Publisher:
                     await self.store.review_delivery(claim.event.to_wire(), "oversize")
                     await self.store.hold_for_review(claim, "oversize")
                     return False
-                if not await self.store.authorize_publication(claim.event_id, claim.fence):
+                if not await self.store.authorize_publication(
+                    claim.event_id, claim.fence, epoch=claim.epoch
+                ):
                     return False
                 await self.audit.verify(
                     claim.event.domain,
@@ -53,20 +56,27 @@ class Publisher:
                     str(claim.event_id),
                     claim.event.event_type,
                 )
-                return await self.store.record_publication(claim.event_id, claim.fence)
+                return await self.store.record_publication(
+                    claim.event_id, claim.fence, epoch=claim.epoch
+                )
         except (TransportError, TimeoutError):
-            pass
+            self.last_pass_failed = True
         # Unknown outcomes remain recoverable, not dispatched. No immediate nack/requeue loop.
         await self.store.retry_claim(claim, backoff(claim.attempts), code)
         return False
 
     async def publish_once(self) -> int:
         claims = await self.store.claim_outbox(limit=min(10, self.limits.max_inflight_confirms))
+        if claims:
+            self.last_pass_failed = False
         return sum(await asyncio.gather(*(self._one(c) for c in claims)))
 
     async def publish_reviews_once(self) -> int:
         count = 0
-        for claim in await self.store.claim_reviews(limit=1):
+        claims = await self.store.claim_reviews(limit=1)
+        if claims:
+            self.last_pass_failed = False
+        for claim in claims:
             ref = claim.reference
             try:
                 async with self._inflight, asyncio.timeout(25):
@@ -87,5 +97,6 @@ class Publisher:
                     )
                     count += await self.store.finish_review(claim)
             except (TransportError, TimeoutError):
+                self.last_pass_failed = True
                 await self.store.finish_review(claim, backoff(claim.attempts))
         return count

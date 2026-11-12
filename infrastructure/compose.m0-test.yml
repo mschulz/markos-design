@@ -1,0 +1,105 @@
+# Synthetic acceptance only. Local PostgreSQL, test credentials and test CA are not production.
+x-runtime: &runtime
+  build:
+    context: ../services/runtime
+  image: markos-m0f-test:${MARKOS_TEST_COMPOSE_PROJECT:?explicit test project required}
+  restart: unless-stopped
+  init: true
+  user: '10001:10001'
+  read_only: true
+  tmpfs: ['/tmp:size=16m,noexec,nosuid']
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  mem_limit: 128m
+  cpus: 0.25
+  pids_limit: 64
+  ulimits:
+    nofile: {soft: 1024, hard: 1024}
+  stop_grace_period: 15s
+  logging:
+    driver: json-file
+    options: {max-size: 5m, max-file: '2'}
+  volumes:
+    - ../config/runtime/lifecycle:/etc/markos:ro
+    - ./.test-certs/ca.pem:/etc/test-ca/ca.pem:ro
+  healthcheck:
+    test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health']
+    interval: 3s
+    timeout: 2s
+    retries: 3
+    start_period: 15s
+  depends_on:
+    postgres: {condition: service_healthy}
+    rabbitmq: {condition: service_healthy}
+x-publisher-env: &publisher-env
+  SSL_CERT_FILE: /etc/test-ca/ca.pem
+  MARKOS_RUNTIME_DATABASE_DSN: host=postgres dbname=markos_m0f user=m0b_pub password=synthetic-test-only
+  MARKOS_RUNTIME_BROKER_DSN: amqps://syn-publisher:synthetic-test-only@rabbitmq:5671/markos-test
+  MARKOS_RUNTIME_AUDIT_USER: syn-observer
+  MARKOS_RUNTIME_AUDIT_PASSWORD: synthetic-test-only
+x-consumer-env: &consumer-env
+  SSL_CERT_FILE: /etc/test-ca/ca.pem
+  MARKOS_RUNTIME_DATABASE_DSN: host=postgres dbname=markos_m0f user=m0b_cons password=synthetic-test-only
+  MARKOS_RUNTIME_BROKER_DSN: amqps://syn-consumer:synthetic-test-only@rabbitmq:5671/markos-test
+  MARKOS_RUNTIME_AUDIT_USER: syn-observer
+  MARKOS_RUNTIME_AUDIT_PASSWORD: synthetic-test-only
+x-audit-env: &audit-env
+  SSL_CERT_FILE: /etc/test-ca/ca.pem
+  MARKOS_RUNTIME_DATABASE_DSN: host=postgres dbname=markos_m0f user=m0b_audit password=synthetic-test-only
+  MARKOS_RUNTIME_BROKER_DSN: amqps://syn-audit:synthetic-test-only@rabbitmq:5671/markos-test
+  MARKOS_RUNTIME_AUDIT_USER: syn-observer
+  MARKOS_RUNTIME_AUDIT_PASSWORD: synthetic-test-only
+services:
+  postgres:
+    extends: {file: compose.m0-replay-test.yml, service: postgres}
+    restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 256
+  rabbitmq:
+    extends: {file: compose.m0-replay-test.yml, service: rabbitmq}
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 2
+    pids_limit: 256
+    volumes:
+      - ./.test-certs:/etc/rabbitmq/test-certs:ro
+      - ./rabbitmq/m0-test.conf:/etc/rabbitmq/rabbitmq.conf:ro
+  publisher:
+    <<: *runtime
+    environment: *publisher-env
+    command: ['serve-synthetic', '--confirm-synthetic', '--config', '/etc/markos/publisher.json']
+  consumer:
+    <<: *runtime
+    environment: *consumer-env
+    command: ['serve-synthetic', '--confirm-synthetic', '--config', '/etc/markos/consumer.json']
+  worker:
+    <<: *runtime
+    environment: *consumer-env
+    command: ['serve-synthetic', '--confirm-synthetic', '--config', '/etc/markos/worker.json']
+  review:
+    <<: *runtime
+    environment: *consumer-env
+    command: ['serve-synthetic', '--confirm-synthetic', '--config', '/etc/markos/review.json']
+  audit-consumer:
+    <<: *runtime
+    environment: *audit-env
+    command: ['serve-synthetic', '--confirm-synthetic', '--config', '/etc/markos/audit-consumer.json']
+  audit-worker:
+    <<: *runtime
+    environment: *audit-env
+    command: ['serve-synthetic', '--confirm-synthetic', '--config', '/etc/markos/audit-worker.json']
+  audit-review:
+    <<: *runtime
+    environment: *audit-env
+    command: ['serve-synthetic', '--confirm-synthetic', '--config', '/etc/markos/audit-review.json']
+  scheduler:
+    <<: *runtime
+    environment: *publisher-env
+    command: ['serve-synthetic', '--confirm-synthetic', '--config', '/etc/markos/scheduler.json']
+  recovery:
+    <<: *runtime
+    environment: *publisher-env
+    command: ['serve-synthetic', '--confirm-synthetic', '--config', '/etc/markos/recovery.json']
+volumes:
+  postgres-data:
+  rabbitmq-data:

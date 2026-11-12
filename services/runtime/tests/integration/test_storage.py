@@ -276,12 +276,18 @@ def test_concurrent_claims_and_fenced_expired_owner(database: dict[str, str]) ->
                     "WHERE event_id=%s",
                     (stale.event_id,),
                 )
-            assert not await store.record_publication(stale.event_id, stale.fence)
+            assert not await store.record_publication(
+                stale.event_id, stale.fence, epoch=stale.epoch
+            )
             fresh = (await store.claim_outbox(limit=1))[0]
             assert fresh.event_id == stale.event_id and fresh.fence > stale.fence
-            assert not await store.record_publication(stale.event_id, stale.fence)
-            assert await store.record_publication(fresh.event_id, fresh.fence)
-            assert not await store.record_publication(fresh.event_id, fresh.fence)
+            assert not await store.record_publication(
+                stale.event_id, stale.fence, epoch=stale.epoch
+            )
+            assert await store.record_publication(fresh.event_id, fresh.fence, epoch=fresh.epoch)
+            assert not await store.record_publication(
+                fresh.event_id, fresh.fence, epoch=fresh.epoch
+            )
 
     asyncio.run(scenario())
 
@@ -339,7 +345,7 @@ def test_migrations_idempotent_and_changed_bytes_rejected(
     with psycopg.connect(database["admin"]) as admin:
         assert admin.execute(
             "SELECT count(*) FROM markos_runtime.schema_migrations"
-        ).fetchone() == (4,)
+        ).fetchone() == (5,)
 
 
 def test_no_intended_consumers_rolls_back_event(database: dict[str, str]) -> None:
@@ -434,7 +440,7 @@ def test_failed_migration_transaction_rolls_back_ddl_and_ledger(
     directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
     for existing in directory.glob("*.sql"):
         (tmp_path / existing.name).write_bytes(existing.read_bytes())
-    (tmp_path / "0005_fault.sql").write_text(
+    (tmp_path / "0006_fault.sql").write_text(
         "CREATE TABLE markos_runtime.must_rollback(id integer); SELECT missing_function();"
     )
 
@@ -452,7 +458,7 @@ def test_failed_migration_transaction_rolls_back_ddl_and_ledger(
         )
         assert admin.execute(
             "SELECT count(*) FROM markos_runtime.schema_migrations"
-        ).fetchone() == (4,)
+        ).fetchone() == (5,)
 
 
 @pytest.mark.parametrize(

@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "milestone": "M0-F",
+  "status": "synthetic_foundation_for_review",
+  "production_ready": false,
+  "environment": "disposable_synthetic_ci",
+  "acceptance": [
+    {
+      "id": "A01",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/test_independence.py"
+    },
+    {
+      "id": "A02",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/test_events.py"
+    },
+    {
+      "id": "A03",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/test_config.py"
+    },
+    {
+      "id": "A04",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/integration/test_storage.py"
+    },
+    {
+      "id": "A05",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/integration/test_storage.py"
+    },
+    {
+      "id": "A06",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/integration/test_rabbitmq.py"
+    },
+    {
+      "id": "A07",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/integration/test_rabbitmq.py"
+    },
+    {
+      "id": "A08",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/test_transport.py"
+    },
+    {
+      "id": "A09",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/integration/test_rabbitmq.py"
+    },
+    {
+      "id": "A10",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/integration/test_rabbitmq.py"
+    },
+    {
+      "id": "A11",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/integration/test_execution.py"
+    },
+    {
+      "id": "A12",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/integration/test_scheduling.py"
+    },
+    {
+      "id": "A13",
+      "status": "partial",
+      "limit": "Database failure covered; real action approvals remain open.",
+      "evidence_test": "services/runtime/tests/integration/test_execution.py"
+    },
+    {
+      "id": "A14",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic source observations only; real provider and backup erasure remain open.",
+      "evidence_test": "services/runtime/tests/integration/test_volume_loss.py"
+    },
+    {
+      "id": "A15",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic source observations only; real provider and backup erasure remain open.",
+      "evidence_test": "services/runtime/tests/integration/test_recovery.py"
+    },
+    {
+      "id": "A16",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic source observations only; real provider and backup erasure remain open.",
+      "evidence_test": "services/runtime/tests/integration/test_recovery.py"
+    },
+    {
+      "id": "A17",
+      "status": "partial",
+      "limit": "Process and Docker daemon restart covered; VM reboot/host startup unproven.",
+      "evidence_test": "services/runtime/tests/integration/test_lifecycle_harness.py"
+    },
+    {
+      "id": "A18",
+      "status": "partial",
+      "limit": "Test caps, forced alarms and backlog drain covered; production capacity/alerts unproven.",
+      "evidence_test": "services/runtime/tests/integration/test_lifecycle_harness.py"
+    },
+    {
+      "id": "A19",
+      "status": "partial",
+      "limit": "Fresh database and fixture object restore/fencing plus local fallback covered; real off-host recovery/monitor placement unproven.",
+      "evidence_test": "services/runtime/tests/integration/test_lifecycle_harness.py"
+    },
+    {
+      "id": "A20",
+      "status": "synthetic_evidence",
+      "limit": "Synthetic acceptance only; see slice records.",
+      "evidence_test": "services/runtime/tests/integration/test_lifecycle_harness.py"
+    }
+  ],
+  "production_gates": [
+    "real source provider permission, deletion and backup erasure",
+    "provider plans, region, cost, production secrets and TLS",
+    "host capacity, VM boot, measured RPO/RTO and restore owner",
+    "encrypted off-host backup and independently placed monitoring",
+    "real action approval expiry and unknown-effect reconciliation",
+    "MCP-01\u2013MCP-10 before enabling any real MCP connector"
+  ],
+  "supporting_tests": [
+    "services/runtime/tests/integration/test_lifecycle_state.py",
+    "services/runtime/tests/integration/test_service_process.py",
+    "services/runtime/tests/test_monitor.py"
+  ]
+}

@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.11
+version: 0.3.12
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -253,7 +253,7 @@ RabbitMQ is the selected internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]
 
 ## 16. Implementation handoff rules
 
-M0-A, M0-B and M0-C are merged in main through PRs #10, #11 and #12. See [[MarkOS v0.3 M0-A Contracts and Configuration]], [[MarkOS v0.3 M0-B Durable Storage]] and [[MarkOS v0.3 M0-C RabbitMQ Transport]] for the slice records and evidence. The CLI remains validation-only; explicit storage/transport libraries do not constitute a deployed service. M0-D execution/scheduling and M0-E synthetic replay/retention remain separate reviews, while real-provider recovery/erasure and production lifecycle remain later work. These merges enable no MCP, classifier provider or deployment.
+M0-A, M0-B and M0-C are merged in main through PRs #10, #11 and #12. See [[MarkOS v0.3 M0-A Contracts and Configuration]], [[MarkOS v0.3 M0-B Durable Storage]] and [[MarkOS v0.3 M0-C RabbitMQ Transport]] for the slice records and evidence. Preflight remains validation-only. M0-D execution/scheduling, M0-E synthetic replay/retention and M0-F test-only service lifecycle remain reviewable increments. M0-F adds explicit synthetic supervision/health/restore-generation fencing and isolated CI; see [[MarkOS v0.3 M0-F Lifecycle and Closeout]] and [[MarkOS v0.3 M0 Runbook]]. Real-provider recovery/erasure, actual VM boot/capacity and independently placed production monitoring remain gates. The closeout ledger records production readiness as false. These merges enable no MCP, classifier provider or deployment.
 
 [[MarkOS v0.3 M0 Implementation Plan]] defines an independent runtime, its own dependency/test boundaries, ordered M0-A–M0-F slices and A01–A20 acceptance cases. No history-preserving import or legacy regression gate is a prerequisite for the new architecture. Prior imports remain archival evidence; prior contracts require fit review before adaptation.
 

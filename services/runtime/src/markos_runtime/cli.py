@@ -1,12 +1,8 @@
-"""Validation-only command; no adapters, service loop, socket or secret resolution."""
+"""Connection-free preflight and separately confirmed synthetic service commands."""
 
 import argparse
 import sys
 from pathlib import Path
-
-from markos_runtime.config import load_config, read_bounded
-from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
-from markos_runtime.contracts.events import EventEnvelope
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -17,7 +13,45 @@ def main(argv: list[str] | None = None) -> int:
     )
     preflight.add_argument("--config", type=Path)
     preflight.add_argument("--event", type=Path)
+    service = subcommands.add_parser(
+        "serve-synthetic", help="Run one explicitly configured test-only service"
+    )
+    service.add_argument("--config", type=Path, required=True)
+    service.add_argument("--confirm-synthetic", action="store_true")
+    health = subcommands.add_parser(
+        "health", help="Check private local synthetic service readiness"
+    )
+    health.add_argument("--port", type=int, default=8787)
     args = parser.parse_args(argv)
+    if args.command == "health":
+        from urllib.request import urlopen
+
+        if not 1024 <= args.port <= 65535:
+            return 2
+        try:
+            with urlopen(f"http://127.0.0.1:{args.port}/ready", timeout=1) as response:
+                return 0 if response.status == 200 else 1
+        except OSError:
+            return 1
+    from markos_runtime.config import load_config, read_bounded
+    from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
+    from markos_runtime.contracts.events import EventEnvelope
+
+    if args.command == "serve-synthetic":
+        if not args.confirm_synthetic:
+            print("Explicit synthetic confirmation required.", file=sys.stderr)
+            return 2
+        import os
+
+        from markos_runtime.lifecycle.config import load_service
+        from markos_runtime.lifecycle.service import run_service
+
+        try:
+            service_config, service_manifest = load_service(args.config)
+        except ContractError:
+            print("Invalid explicit synthetic service configuration.", file=sys.stderr)
+            return 2
+        return run_service(service_config, service_manifest, dict(os.environ))
     try:
         config, manifest = load_config(args.config)
         if args.event:

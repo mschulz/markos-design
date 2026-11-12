@@ -8,7 +8,7 @@ GitHub is canonical for all project code, tests, infrastructure and documentatio
 
 M0-A is merged as an independent contracts/configuration project;
 see [the implementation record](MarkOS%20v0.3%20M0-A%20Contracts%20and%20Configuration.md).
-Its preflight validates synthetic documents only. M0-B adds [explicit PostgreSQL storage](MarkOS%20v0.3%20M0-B%20Durable%20Storage.md) in main; M0-C adds [explicit RabbitMQ transport](MarkOS%20v0.3%20M0-C%20RabbitMQ%20Transport.md) in main. M0-D adds [synthetic execution and persistent scheduling](MarkOS%20v0.3%20M0-D%20Execution%20and%20Scheduling.md) for review. M0-E adds [synthetic replay, deletion safeguards and retention](MarkOS%20v0.3%20M0-E%20Replay%20and%20Retention.md) for review. No deployed service or real agent/tool execution is implemented.
+Its preflight validates synthetic documents only. M0-B adds [explicit PostgreSQL storage](MarkOS%20v0.3%20M0-B%20Durable%20Storage.md) in main; M0-C adds [explicit RabbitMQ transport](MarkOS%20v0.3%20M0-C%20RabbitMQ%20Transport.md) in main. M0-D adds [synthetic execution and persistent scheduling](MarkOS%20v0.3%20M0-D%20Execution%20and%20Scheduling.md) for review. M0-E adds [synthetic replay, deletion safeguards and retention](MarkOS%20v0.3%20M0-E%20Replay%20and%20Retention.md) for review. M0-F adds [synthetic lifecycle and closeout](MarkOS%20v0.3%20M0-F%20Lifecycle%20and%20Closeout.md) and a [test runbook](MarkOS%20v0.3%20M0%20Runbook.md) for review. No service is deployed and no real agent/tool execution is implemented.
 
 MCP access for agents is proposed through a governed tool gateway with explicit owner/domain grants, scoped approvals and durable audit. It is not enabled by this documentation; RabbitMQ remains the event bus.
 
@@ -27,7 +27,7 @@ MCP access for agents is proposed through a governed tool gateway with explicit 
 
 Main contains the historical v0.2 application imported through PR #5. PR #6's pure contract/config work was merged into an earlier feature branch, not main. PR #7 is closed unmerged with its branch retained; its legacy naming cleanup is not the replacement-system baseline. Neither legacy regression counts nor pure-schema checks establish a working RabbitMQ/PostgreSQL runtime.
 
-The independent M0-A project under `services/runtime/` has its own package, dependency lock, tests and validation-only entry point. It does not import the old `markos` package or require a Markdown folder, PARA tree or DuckDB. M0-A–M0-C contracts, PostgreSQL storage and RabbitMQ transport are merged; synthetic execution/scheduling are now implemented for review; synthetic replay/retention are now implemented for review; real agents, source-provider access/deletion and deployed service lifecycle remain future work.
+The independent M0-A project under `services/runtime/` has its own package, dependency lock, tests and connection-free preflight command. M0-F adds a separately invoked, explicitly confirmed test-only service command. It does not import the old `markos` package or require a Markdown folder, PARA tree or DuckDB. M0-A–M0-C contracts, PostgreSQL storage and RabbitMQ transport are merged; synthetic execution/scheduling are now implemented for review; synthetic replay/retention are now implemented for review; real agents, source-provider access/deletion and production lifecycle remain future work. M0-F supplies disposable CI process/dependency/pressure/restore evidence with explicit production gaps.
 
 ## Repository boundaries
 

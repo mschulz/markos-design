@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "audit_password_secret_ref": {
+      "default": "MARKOS_RUNTIME_AUDIT_PASSWORD",
+      "pattern": "^MARKOS_RUNTIME_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Audit Password Secret Ref",
+      "type": "string"
+    },
+    "audit_url": {
+      "default": "https://rabbitmq:15671",
+      "maxLength": 256,
+      "title": "Audit Url",
+      "type": "string"
+    },
+    "audit_user_secret_ref": {
+      "default": "MARKOS_RUNTIME_AUDIT_USER",
+      "pattern": "^MARKOS_RUNTIME_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Audit User Secret Ref",
+      "type": "string"
+    },
+    "broker_secret_ref": {
+      "default": "MARKOS_RUNTIME_BROKER_DSN",
+      "pattern": "^MARKOS_RUNTIME_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Broker Secret Ref",
+      "type": "string"
+    },
+    "cleanup_enabled": {
+      "default": false,
+      "title": "Cleanup Enabled",
+      "type": "boolean"
+    },
+    "component": {
+      "enum": [
+        "publisher",
+        "consumer",
+        "worker",
+        "scheduler",
+        "recovery",
+        "review"
+      ],
+      "title": "Component",
+      "type": "string"
+    },
+    "database_secret_ref": {
+      "default": "MARKOS_RUNTIME_DATABASE_DSN",
+      "pattern": "^MARKOS_RUNTIME_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Database Secret Ref",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "environment": {
+      "const": "test",
+      "title": "Environment",
+      "type": "string"
+    },
+    "health_port": {
+      "default": 8787,
+      "maximum": 65535,
+      "minimum": 1024,
+      "title": "Health Port",
+      "type": "integer"
+    },
+    "manifest_file": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}\\.json$",
+      "title": "Manifest File",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "publisher_users": {
+      "maxProperties": 64,
+      "patternProperties": {
+        "^[a-z][a-z0-9]*(?:[-.][a-z0-9]+)*$": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(?:[-.][a-z0-9]+)*$",
+          "type": "string"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 64
+      },
+      "title": "Publisher Users",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "service_id": {
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:[-.][a-z0-9]+)*$",
+      "title": "Service Id",
+      "type": "string"
+    },
+    "shutdown_seconds": {
+      "default": 10,
+      "maximum": 15,
+      "minimum": 5,
+      "title": "Shutdown Seconds",
+      "type": "integer"
+    },
+    "synthetic_work_seconds": {
+      "default": 0.0,
+      "maximum": 5,
+      "minimum": 0,
+      "title": "Synthetic Work Seconds",
+      "type": "number"
+    },
+    "tick_seconds": {
+      "default": 1.0,
+      "maximum": 30,
+      "minimum": 0.1,
+      "title": "Tick Seconds",
+      "type": "number"
+    }
+  },
+  "required": [
+    "schema_version",
+    "environment",
+    "component",
+    "service_id",
+    "owner_id",
+    "domain",
+    "manifest_file"
+  ],
+  "title": "ServiceConfig",
+  "type": "object"
+}
