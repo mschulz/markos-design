@@ -13,6 +13,7 @@ dependencies = [
 
 [project.scripts]
 markos-runtime = "markos_runtime.cli:main"
+markos-control = "markos_runtime.client.cli:main"
 
 [project.optional-dependencies]
 control = [
@@ -28,6 +29,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = ["pytest==9.1.1", "mypy==2.3.0", "ruff==0.16.1", "jsonschema==4.25.1"]
+browser = ["playwright==1.65.1"]
 
 [tool.uv]
 package = true
@@ -49,6 +51,6 @@ strict = true
 files = ["src/markos_runtime", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["markos_runtime.api.*", "tests.control_api.*"]
+module = ["markos_runtime.api.*", "tests.control_api.*", "markos_runtime.web.*", "tests.browser.*", "tests.web_support"]
 # Optional imports are checked in the control-extra job too.
 warn_unused_ignores = false

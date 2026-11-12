@@ -61,7 +61,7 @@ def test_synthetic_service_process_health_signal_shutdown_and_no_startup_migrati
         with psycopg.connect(database["admin"]) as conn:
             assert conn.execute(
                 "SELECT count(*) FROM markos_runtime.schema_migrations"
-            ).fetchone() == (8,)
+            ).fetchone() == (9,)
     finally:
         if process.poll() is None:
             process.kill()

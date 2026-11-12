@@ -74,7 +74,7 @@ jobs:
       - run: uv run --no-sync ruff check .
       - run: uv run --no-sync ruff format --check .
       - run: uv run --no-sync mypy
-      - run: uv run --no-sync pytest --ignore=tests/control_api --ignore=tests/integration/test_volume_loss.py --ignore=tests/integration/test_lifecycle_harness.py
+      - run: uv run --no-sync pytest --ignore=tests/control_api --ignore=tests/browser --ignore=tests/integration/test_volume_loss.py --ignore=tests/integration/test_lifecycle_harness.py
       - run: uv run --no-sync python -m markos_runtime.schemas --output-dir ../../config/runtime/schemas
       - name: Verify standalone wheel outside checkout
         run: |
@@ -83,6 +83,8 @@ jobs:
           uv venv --python 3.13.14 "$RUNNER_TEMP/runtime-clean"
           uv pip install --python "$RUNNER_TEMP/runtime-clean/bin/python" --require-hashes -r "$RUNNER_TEMP/runtime-dependencies.txt"
           uv pip install --python "$RUNNER_TEMP/runtime-clean/bin/python" --no-deps "$RUNNER_TEMP/runtime-wheel/markos_runtime-0.1.0-py3-none-any.whl"
+          "$RUNNER_TEMP/runtime-clean/bin/markos-control" --help
+          "$RUNNER_TEMP/runtime-clean/bin/python" -I -c 'from importlib.resources import files; root=files("markos_runtime.web").joinpath("assets"); assert all(root.joinpath(name).read_bytes() for name in ("shell.html", "app.js", "app.css"))'
           cp -R ../../config/runtime "$RUNNER_TEMP/runtime-examples"
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/runtime-clean/bin/python" -I -c 'import importlib.util; assert importlib.util.find_spec("markos") is None; assert importlib.util.find_spec("duckdb") is None; assert importlib.util.find_spec("pytest") is None'
@@ -108,11 +110,13 @@ jobs:
   control-api:
     name: Authenticated shared API
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       MARKOS_TEST_ADMIN_DSN: host=127.0.0.1 port=5432 dbname=postgres user=postgres password=synthetic-test-only
       MARKOS_REQUIRE_DB_TESTS: '1'
       MARKOS_REQUIRE_API_TESTS: '1'
+      MARKOS_REQUIRE_BROWSER_TESTS: '1'
+      PLAYWRIGHT_BROWSERS_PATH: /tmp/markos-ci-browsers
       MARKOS_TEST_RABBIT_HTTP: http://127.0.0.1:15672
       MARKOS_TEST_AMQP_BASE: amqp://127.0.0.1:5672
       MARKOS_TEST_RABBIT_USER: m0c-admin
@@ -151,11 +155,17 @@ jobs:
           python-version: '3.13.14'
       - run: python -m pip install uv==0.13.6
       - run: echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/markos-control-api" >> "$GITHUB_ENV"
-      - run: uv sync --project services/runtime --locked --extra control
+      - run: uv sync --project services/runtime --locked --extra control --group browser
       - working-directory: services/runtime
         run: uv run --no-sync mypy
       - working-directory: services/runtime
         run: uv run --no-sync pytest -q tests/control_api
+      - name: Install pinned disposable Chromium
+        working-directory: services/runtime
+        run: uv run --no-sync python -m playwright install --with-deps chromium --only-shell
+      - name: Browser web and CLI acceptance
+        working-directory: services/runtime
+        run: uv run --no-sync pytest -q tests/browser
 
   replay-volume-loss:
     name: Broker volume-loss recovery

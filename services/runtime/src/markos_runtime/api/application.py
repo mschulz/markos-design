@@ -7,6 +7,7 @@ import json
 import re
 import time
 from collections.abc import MutableMapping
+from contextlib import suppress
 from datetime import UTC, datetime
 from http.cookies import SimpleCookie
 from typing import Any, cast
@@ -36,7 +37,11 @@ from markos_runtime.contracts.control import (
     ControlValue,
     ConversationRequest,
 )
-from markos_runtime.control.api_config import SyntheticApiConfig, SyntheticConversationApiConfig
+from markos_runtime.control.api_config import (
+    SyntheticApiConfig,
+    SyntheticConversationApiConfig,
+    SyntheticWebApiConfig,
+)
 from markos_runtime.control.store import (
     ControlConflict,
     ControlDenied,
@@ -293,8 +298,16 @@ def create_app(
     # Imports are optional and occur only after an explicit factory invocation.
     api = SyntheticApi(config, store, issuer, session_key, confirm_synthetic=confirm_synthetic)
     from fastapi import FastAPI, Request  # type: ignore[import-not-found]
-    from fastapi.responses import JSONResponse, PlainTextResponse  # type: ignore[import-not-found]
+    from fastapi.responses import (  # type: ignore[import-not-found]
+        JSONResponse,
+        PlainTextResponse,
+        RedirectResponse,
+    )
 
+    from markos_runtime.api.activity import activity_page, open_stream
+    from markos_runtime.web.routes import WebRoutes
+
+    web = WebRoutes(api) if isinstance(config, SyntheticWebApiConfig) else None
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False)
 
     def page(
@@ -357,6 +370,8 @@ def create_app(
             != "application/json"
         ):
             raise ApiFault("invalid", 400)
+        if web is not None and (path.startswith("/app") or path == "/auth/fixture/authorize"):
+            return await web.handle(request, data)
         if path == "/live" and method == "GET":
             return JSONResponse({"live": True})
         if path == "/ready" and method == "GET":
@@ -397,7 +412,11 @@ def create_app(
                 None,
                 api.cookies(request).get(COOKIE),
             )
-            response = PlainTextResponse("Synthetic sign-in complete.")
+            response = (
+                RedirectResponse("/app/conversations", status_code=303)
+                if web is not None
+                else PlainTextResponse("Synthetic sign-in complete.")
+            )
             response.set_cookie(
                 COOKIE, raw, secure=True, httponly=True, samesite="lax", path="/", max_age=28800
             )
@@ -503,6 +522,16 @@ def create_app(
                     )
                 )
             raise ApiFault("not-found", 404)
+        if path == "/api/v1/activity/stream" and method == "GET" and web is not None:
+            return await open_stream(api, request)
+        if path == "/api/v1/approvals" and method == "GET" and web is not None:
+            ctx, binding, raw = await api.authenticate(request)
+            params = api.query(request, {"owner_id", "domain"})
+            owner, domain = api.scope(params)
+            await store.read_agents(ctx, owner, domain)
+            return JSONResponse(
+                {"schema_version": 1, "available": False, "items": [], "reason": "not-enabled"}
+            )
         known = {
             "/api/v1/me",
             "/api/v1/agents",
@@ -590,43 +619,9 @@ def create_app(
                 await store._call("api_status", ctx.session_id, ctx.lookup_hash, owner, domain)
             )
         if path == "/api/v1/activity":
-            after = 0
-            if "cursor" in params:
-                try:
-                    cursor = json.loads(api.codec.open(params["cursor"]))
-                    if (
-                        cursor["owner_id"] != str(owner)
-                        or cursor["domain"] != domain
-                        or cursor["principal_id"] != binding["principal_id"]
-                        or cursor["expires"] <= time.time()
-                        or type(cursor["after"]) is not int
-                    ):
-                        raise ValueError
-                    after = cursor["after"]
-                except Exception:
-                    raise ApiFault("invalid", 400) from None
-            if not re.fullmatch(r"[0-9]{1,3}", params.get("limit", "50")):
-                raise ApiFault("invalid", 400)
-            limit = int(params.get("limit", "50"))
-            if not 1 <= limit <= 100:
-                raise ApiFault("invalid", 400)
-            rows = await store.read_activity(ctx, owner, domain, after=after, limit=limit)
-            next_cursor = (
-                api.codec.seal(
-                    json.dumps(
-                        {
-                            "owner_id": str(owner),
-                            "domain": domain,
-                            "principal_id": binding["principal_id"],
-                            "after": rows[-1].sequence,
-                            "expires": int(time.time()) + 600,
-                        }
-                    )
-                )
-                if rows
-                else None
+            return JSONResponse(
+                await activity_page(api, request, ctx, binding, owner, domain, params)
             )
-            return JSONResponse({"items": wire(rows), "next_cursor": next_cursor})
         raise ApiFault("not-found", 404)
 
     app.add_api_route("/{path:path}", dispatch, methods=["GET", "POST"])
@@ -634,19 +629,31 @@ def create_app(
     class Envelope:
         def __init__(self) -> None:
             self.active = 0
+            self.streams = 0
 
         async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
             if scope["type"] != "http":
                 await app(scope, receive, send)
                 return
-            admitted = self.active < 16
+            is_stream = (
+                scope.get("method") == "GET"
+                and scope.get("path") == "/api/v1/activity/stream"
+                and web is not None
+            )
+            admitted = self.streams < 20 if is_stream else self.active < 16
             if admitted:
-                self.active += 1
+                if is_stream:
+                    self.streams += 1
+                else:
+                    self.active += 1
             try:
                 await self.handle(scope, receive, send, admitted)
             finally:
                 if admitted:
-                    self.active -= 1
+                    if is_stream:
+                        self.streams -= 1
+                    else:
+                        self.active -= 1
 
         async def handle(
             self, scope: dict[str, Any], receive: Any, send: Any, admitted: bool
@@ -657,8 +664,45 @@ def create_app(
             api.requests += 1
             request_id = uuid4()
             messages: list[dict[str, Any]] = []
+            streaming = False
+            total_stream = 0
+            security = [
+                (b"cache-control", b"no-store"),
+                (b"pragma", b"no-cache"),
+                (b"content-security-policy", b"default-src 'none'; frame-ancestors 'none'"),
+                (b"x-content-type-options", b"nosniff"),
+                (b"x-frame-options", b"DENY"),
+                (b"referrer-policy", b"no-referrer"),
+                (b"x-request-id", str(request_id).encode()),
+            ]
+            if web is not None and scope.get("path", "").startswith("/app"):
+                security = [(k, v) for k, v in security if k != b"content-security-policy"] + [
+                    (
+                        b"content-security-policy",
+                        b"default-src 'none'; script-src 'self'; style-src 'self'; "
+                        b"connect-src 'self'; form-action 'self'; base-uri 'none'; "
+                        b"frame-ancestors 'none'",
+                    )
+                ]
 
             async def collected(message: MutableMapping[str, Any]) -> None:
+                nonlocal streaming, total_stream
+                if message["type"] == "http.response.start" and dict(
+                    message.get("headers", [])
+                ).get(b"content-type", b"").startswith(b"text/event-stream"):
+                    streaming = True
+                    message["headers"] = [
+                        (k, v)
+                        for k, v in message.get("headers", [])
+                        if k.lower() not in {h[0] for h in security}
+                    ] + security
+                if streaming:
+                    total_stream += len(message.get("body", b""))
+                    if len(message.get("body", b"")) > 8192 or total_stream > 262144:
+                        raise TimeoutError
+                    async with asyncio.timeout(2):
+                        await send(message)
+                    return
                 if (
                     sum(len(m.get("body", b"")) for m in messages) + len(message.get("body", b""))
                     > 262144
@@ -669,7 +713,12 @@ def create_app(
             try:
                 if not admitted:
                     raise ApiFault("unavailable", 503)
-                async with asyncio.timeout(10):
+                limit = (
+                    610
+                    if scope.get("path") == "/api/v1/activity/stream" and web is not None
+                    else 10
+                )
+                async with asyncio.timeout(limit):
                     pairs = scope.get("headers", [])
                     if (
                         len(pairs) > 64
@@ -685,6 +734,7 @@ def create_app(
                         b"content-type",
                         b"content-length",
                         b"x-csrf-token",
+                        b"last-event-id",
                     }
                     names = [k.lower() for k, _ in pairs if k.lower() in sensitive]
                     if len(names) != len(set(names)):
@@ -715,13 +765,23 @@ def create_app(
                         if not message.get("more_body", False):
                             break
 
+                    replayed = False
+
                     async def replay() -> dict[str, Any]:
+                        nonlocal replayed
+                        if replayed:
+                            return dict(await receive())
+                        replayed = True
                         return {"type": "http.request", "body": bytes(body), "more_body": False}
 
                     if scope.get("method") not in {"GET", "POST"}:
                         raise ApiFault("not-found", 404)
                     await app(scope, replay, collected)
             except Exception as error:
+                if streaming:
+                    with suppress(Exception):
+                        await send({"type": "http.response.body", "body": b"", "more_body": False})
+                    return
                 api.failures += 1
                 if isinstance(error, ApiFault):
                     code, status = error.code, error.status
@@ -744,15 +804,6 @@ def create_app(
                 error_body = {"schema_version": 1, "request_id": str(request_id), "code": code}
                 messages = []
                 await JSONResponse(error_body, status_code=status)(scope, receive, collected)
-            security = [
-                (b"cache-control", b"no-store"),
-                (b"pragma", b"no-cache"),
-                (b"content-security-policy", b"default-src 'none'; frame-ancestors 'none'"),
-                (b"x-content-type-options", b"nosniff"),
-                (b"x-frame-options", b"DENY"),
-                (b"referrer-policy", b"no-referrer"),
-                (b"x-request-id", str(request_id).encode()),
-            ]
             for message in messages:
                 if message["type"] == "http.response.start":
                     message["headers"] = [
