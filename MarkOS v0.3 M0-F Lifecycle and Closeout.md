@@ -37,7 +37,7 @@ Additive migration `0005_lifecycle_fencing.sql` preserves 0001–0004 exactly. M
 
 The private migrator-only `fence_restored_state()` rotates the generation under the same advisory lock used by epoch-sensitive calls, resets leased outbox/review work and running tasks, abandons running attempts, clears executor slots/heartbeats and invalidates replay permits. It records restore history. Running services capture the initial generation and exit if it changes rather than silently adopting restored authority. Deploying this API change in the future requires stopping/upgrading all clients together; the old client API is intentionally incompatible with the new migration.
 
-This fences writes to the restored database, not an unreachable surviving old database or an external provider. Future production recovery must isolate previous hosts, revoke credentials and reconcile unknown external outcomes before allowing effects. M0 has no external effects.
+This fences lease-sensitive writes to the restored database. It does not revoke database credentials, prevent every non-lease API call by an old client, fence an unreachable surviving old database or stop an external provider. Future production recovery must isolate previous hosts, revoke credentials and reconcile unknown external outcomes before allowing effects. M0 has no external effects.
 
 ## CI and evidence boundaries
 
@@ -55,7 +55,7 @@ The disposable harness uses server-authenticated TLS with a generated one-day CA
 | A19 | Quiesced PostgreSQL dump to fresh database, checksum manifest, deleted-object filtering, generation fencing and loopback notification fallback tests; real object provider, encrypted off-host backups and independent notification placement remain open |
 | A20 | Independent wheel/image with no legacy/pytest imports and synthetic schedule → event → broker → two durable results; no real agents/providers |
 
-`config/runtime/m0-closeout.json` records the acceptance disposition and production gates without asserting production readiness. CI prints bounded lifecycle timing/memory samples; they measure only its fixtures on that hosted runner. See [[MarkOS v0.3 M0 Runbook]] for the controlled test procedure and future recovery requirements.
+`config/runtime/m0-closeout.json` records the acceptance disposition and production gates without asserting production readiness. The acceptance set contains 323 runtime cases: 198 unit/boundary, 110 PostgreSQL, 13 broker/database, one broker-volume-loss drill and one lifecycle/restore drill. Local checks pass 308 and explicitly skip the 13 broker cases; the two destructive harness drills run only in their dedicated hosted jobs. The archived application’s 145 checks and seven documentation-checker tests pass independently. CI prints bounded lifecycle timing/memory samples; they measure only its fixtures on that hosted runner. See [[MarkOS v0.3 M0 Runbook]] for the controlled test procedure and future recovery requirements.
 
 ## Closeout decision
 

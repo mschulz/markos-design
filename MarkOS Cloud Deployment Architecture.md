@@ -2,7 +2,7 @@
 title: MarkOS Cloud Deployment Architecture
 type: architecture
 status: draft
-version: 1.6
+version: 1.6.1
 owner: Mark Schulz
 created: 2026-11-11
 updated: 2026-11-12
@@ -149,3 +149,8 @@ Provider behavior was checked against these official references on 11 November 2
 ## M0-E synthetic recovery evidence
 
 [[MarkOS v0.3 M0-E Replay and Retention]] proves retained intended-consumer recovery after removal/recreation of an owned disposable RabbitMQ volume while PostgreSQL stays intact. Its scoped synthetic source gates, tombstones and staged cleanup do not implement cloud object/backup erasure or restore tombstone reapplication. Production lifecycle, real-provider recovery, restore/pressure and operational drills remain future acceptance.
+
+
+## M0-F synthetic lifecycle evidence
+
+[[MarkOS v0.3 M0-F Lifecycle and Closeout]] adds explicitly confirmed synthetic processes, private readiness/liveness/heartbeats, bounded shutdown, generation-fenced lease operations and a restricted container acceptance harness. The CI drill covers process/dependency faults, forced broker memory/disk alarms, Docker daemon restart and fresh-database/fixture-object restore. It does not validate a VM reboot, production capacity, cloud backup/erasure or independent alert placement. [[MarkOS v0.3 M0 Runbook]] and the closeout ledger keep those production gates explicit; no cloud resource is provisioned or deployed.
