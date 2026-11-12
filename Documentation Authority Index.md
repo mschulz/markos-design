@@ -2,7 +2,7 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.1
+version: 1.2
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -55,6 +55,7 @@ This table covers every Markdown file in this PR's repository tree, including hi
 | [README](src/markos/README.md) | Current archive boundary; no new product implementation in legacy package |
 | [README](tests/README.md) | Current distinction between archived regressions and new acceptance |
 | [MarkOS v0.3 M0-A Contracts and Configuration](MarkOS%20v0.3%20M0-A%20Contracts%20and%20Configuration.md) | Current independent M0-A implementation/evidence and explicit limits |
+| [MarkOS v0.3 M0-B Durable Storage](MarkOS%20v0.3%20M0-B%20Durable%20Storage.md) | Current storage implementation, role/migration boundaries and real-database evidence |
 | [Independent runtime README](services/runtime/README.md) | Current independent project commands, dependencies and preflight limits |
 
 ## Prior branch documents and PRs
@@ -71,4 +72,4 @@ Unsettled implementation choices include source provider/retention, detailed ret
 
 ## Validation of this correction
 
-All 31 Markdown documents are classified. Local links in current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, archived root package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. Independent M0-A now has 104 contract/configuration tests and A01–A03 evidence; A04–A20 durable/transport acceptance remains unimplemented. See [[MarkOS v0.3 M0-A Contracts and Configuration]].
+All 32 Markdown documents are classified. Local links in current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, archived root package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. Independent M0-A/M0-B now has 145 tests, including 34 real PostgreSQL cases, and A01–A05 evidence; A06–A20 transport/execution/recovery acceptance remains future work. See [[MarkOS v0.3 M0-A Contracts and Configuration]].

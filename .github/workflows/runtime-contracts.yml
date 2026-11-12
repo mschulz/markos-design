@@ -4,18 +4,35 @@ on:
     paths:
       - 'services/runtime/**'
       - 'config/runtime/**'
+      - 'infrastructure/migrations/**'
       - '.github/workflows/runtime-contracts.yml'
   push:
     branches: [main]
     paths:
       - 'services/runtime/**'
       - 'config/runtime/**'
+      - 'infrastructure/migrations/**'
       - '.github/workflows/runtime-contracts.yml'
 permissions:
   contents: read
 jobs:
   contracts:
     runs-on: ubuntu-latest
+    env:
+      MARKOS_TEST_ADMIN_DSN: host=127.0.0.1 port=5432 dbname=postgres user=postgres password=synthetic-test-only
+      MARKOS_REQUIRE_DB_TESTS: '1'
+    services:
+      postgres:
+        image: postgres:17.11
+        env:
+          POSTGRES_PASSWORD: synthetic-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     defaults:
       run:
         working-directory: services/runtime

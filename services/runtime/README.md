@@ -1,8 +1,9 @@
-# Independent MarkOS runtime — M0-A
+# Independent MarkOS runtime — M0-A / M0-B
 
 This standalone project provides strict synthetic contracts and validation-only
-preflight. It does not install/import the archived root project, access notes,
-connect to services, resolve secret values or execute tasks. No PARA, Obsidian,
+preflight. The explicit M0-B storage library connects only when called with a DSN.
+Preflight does not connect, resolve secrets or execute tasks; neither component
+installs/imports the archived root project or accesses notes. No PARA, Obsidian,
 DuckDB, Gmail/provider integration or production mode is included.
 
 From this directory, use an isolated environment (ignore inherited `.envrc`):
@@ -23,7 +24,13 @@ preflight success does not prove credentials, broker ACLs or database access.
 
 Python 3.13 is selected for this project's tested standard-library/typing baseline
 and Pydantic compatibility, independently of the archive. The separate minimal
-lock includes Pydantic plus development/build tools; transport/database libraries
-are deliberately deferred to M0-B/M0-C. This is a tested baseline, not a latest-
+lock now includes Pydantic, Psycopg 3.3.8/binary, pool 3.3.3 and development/build tools;
+transport libraries remain M0-C work. This is a tested baseline, not a latest-
 version or production-security claim. See the root M0-A record for decisions,
 trust boundaries and validation.
+
+Storage integration tests require `MARKOS_TEST_ADMIN_DSN` pointing at a dedicated
+disposable local PostgreSQL 17 instance. They create/drop synthetic databases and
+roles. Set `MARKOS_REQUIRE_DB_TESTS=1` to require them; without a DSN they skip,
+while contract/configuration tests still run. No production DSN belongs in Git.
+The root M0-B record defines migration roles, atomic boundaries and remaining work.

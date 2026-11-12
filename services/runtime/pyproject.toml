@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Independent MarkOS event-runtime contracts and explicit preflight"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
-dependencies = ["pydantic==2.13.4"]
+dependencies = [
+    "psycopg-pool==3.3.3",
+    "psycopg[binary]==3.3.8",
+    "pydantic==2.13.4",
+]
 
 [project.scripts]
 markos-runtime = "markos_runtime.cli:main"

@@ -9,8 +9,11 @@ from pathlib import Path
 def test_runtime_dependency_set_excludes_archive() -> None:
     requirements = importlib.metadata.requires("markos-runtime") or []
     assert any(r.startswith("pydantic==") for r in requirements)
-    forbidden = {"markos", "duckdb", "fastapi", "markdown-it-py", "aio-pika", "psycopg"}
-    assert not any(r.split("=")[0].strip().lower() in forbidden for r in requirements)
+    forbidden = {"markos", "duckdb", "fastapi", "markdown-it-py", "aio-pika"}
+    installed = {
+        d.metadata["Name"].lower().replace("_", "-") for d in importlib.metadata.distributions()
+    }
+    assert not installed & forbidden
 
 
 def test_guarded_preflight_outside_repository(config_file: Path, tmp_path: Path) -> None:
