@@ -27,10 +27,12 @@ acceptance requirements, not tests run by this documentation PR.
 acceptance cases. Include classic-queue handoff watchdog/channel-close recovery
 under saturated prefetch and strict owner_id/source/domain rejection. Import and
 preserve the existing markos Python 3.13 legacy suite before new runtime tests.
-No existing suite or future runtime tests were executed in this plan-only review.
+The earlier plan-only review ran no tests. M0.0 now runs the legacy/import
+suite; future runtime tests remain unimplemented.
 
 Later milestones add the acceptance evidence in [[MarkOS v0.3 Roadmap]].
 
-There is no executable test suite in this repository yet. Choose the toolchain
-after inspecting the separate implementation; do not report a runtime milestone
-complete from this scaffold.
+This M0.0 branch contains the imported v0.2 pytest suite and two import/config
+guards. See [[MarkOS v0.3 M0.0 Import Record]] for actual regression evidence.
+The future event-bus acceptance matrix above remains unimplemented. Passing
+legacy/import tests does not complete v0.3 M0 or validate RabbitMQ behavior.

@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 1.4
+version: 1.5
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -51,7 +51,13 @@ Governance and [[ADR-002 Cloud-first Deployment]]'s DigitalOcean/Docker Compose/
 
 ## Repository transition
 
-The concrete inventory and proposed import are in [[MarkOS v0.3 M0 Implementation Plan]]. Inspection of markos main at `d5d46cbb231e95176a7d052553c176ebe8c805bb` confirms Python 3.13, uv, a read-only DuckDB/FastAPI stack and existing tests; no RabbitMQ/PostgreSQL runtime is present. Preserve that interpreter and all legacy safety gates. The plan defines M0.0–M0.7 slices and A01–A20 tests; no migration has been executed.
+M0.0 is prepared for review on a dedicated import branch, stacked on PR #3 while
+that plan remains unmerged. [[MarkOS v0.3 M0.0 Import Record]] records the exact
+source/design parents and regression evidence. Source modules, original tests
+and lockfile remain byte-identical; no real vault or new runtime is imported.
+Do not treat this branch as the merged production baseline.
+
+The concrete inventory and proposed import are in [[MarkOS v0.3 M0 Implementation Plan]]. Inspection of markos main at `d5d46cbb231e95176a7d052553c176ebe8c805bb` confirms Python 3.13, uv, a read-only DuckDB/FastAPI stack and existing tests; no RabbitMQ/PostgreSQL runtime is present. Preserve that interpreter and all legacy safety gates. The plan defines M0.0–M0.7 slices and A01–A20 tests; that planning snapshot preceded the M0.0 import branch described above.
 
 1. Review this documentation baseline and settle the architecture conflicts needed for v0.3 M0.
 2. Inspect the separate `markos` repository: branches, unmerged work, package structure, dependencies, tests, licenses and existing CI. Record exact source commits and reusable services in a migration PR.
