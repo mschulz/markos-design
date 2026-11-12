@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Requested durable handoff, not proof that a DB transaction has committed.",
+  "properties": {
+    "consumer_id": {
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:[-.][a-z0-9]+)*$",
+      "title": "Consumer Id",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "event_id": {
+      "format": "uuid",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "const": "foundation.noop.requested",
+      "title": "Event Type",
+      "type": "string"
+    },
+    "operation_key": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._:-]*$",
+      "title": "Operation Key",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "task_id": {
+      "format": "uuid",
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "event_id",
+    "owner_id",
+    "domain",
+    "consumer_id",
+    "event_type",
+    "operation_key"
+  ],
+  "title": "TaskRequest",
+  "type": "object"
+}

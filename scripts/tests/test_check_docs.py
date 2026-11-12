@@ -1,9 +1,9 @@
 """Synthetic failure cases for the documentation CI gate."""
 
-from pathlib import Path
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from check_docs import check  # noqa: E402
@@ -20,8 +20,23 @@ class DocumentationChecks(unittest.TestCase):
             "| [Readme](README.md) | Current entry point |\n"
             "| [Old](Old.md) | Exact archived snapshot |\n"
         )
-        front = "---\n" + "".join(f"{k}: value\n" for k in
-                ("title", "type", "status", "version", "owner", "created", "updated", "reviewed")) + "---\n"
+        front = (
+            "---\n"
+            + "".join(
+                f"{k}: value\n"
+                for k in (
+                    "title",
+                    "type",
+                    "status",
+                    "version",
+                    "owner",
+                    "created",
+                    "updated",
+                    "reviewed",
+                )
+            )
+            + "---\n"
+        )
         (self.root / "Documentation Authority Index.md").write_text(front + self.index)
         (self.root / "README.md").write_text("[Old](Old.md)\n[[Old]]\n")
         (self.root / "Old.md").write_text("[Old missing link](missing.md)\n")

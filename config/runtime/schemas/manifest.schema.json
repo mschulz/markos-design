@@ -1,0 +1,122 @@
+{
+  "$defs": {
+    "ServicePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "consumes": {
+          "default": [],
+          "items": {
+            "const": "foundation.noop.requested",
+            "type": "string"
+          },
+          "maxItems": 1,
+          "title": "Consumes",
+          "type": "array"
+        },
+        "domain": {
+          "enum": [
+            "personal",
+            "research",
+            "work"
+          ],
+          "title": "Domain",
+          "type": "string"
+        },
+        "owner_id": {
+          "format": "uuid",
+          "title": "Owner Id",
+          "type": "string"
+        },
+        "publishes": {
+          "default": [],
+          "items": {
+            "const": "foundation.noop.requested",
+            "type": "string"
+          },
+          "maxItems": 1,
+          "title": "Publishes",
+          "type": "array"
+        },
+        "service_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(?:[-.][a-z0-9]+)*$",
+          "title": "Service Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service_id",
+        "owner_id",
+        "domain"
+      ],
+      "title": "ServicePolicy",
+      "type": "object"
+    },
+    "Subscription": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "enum": [
+            "personal",
+            "research",
+            "work"
+          ],
+          "title": "Domain",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "foundation.noop.requested",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "owner_id": {
+          "format": "uuid",
+          "title": "Owner Id",
+          "type": "string"
+        },
+        "service_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(?:[-.][a-z0-9]+)*$",
+          "title": "Service Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service_id",
+        "owner_id",
+        "domain",
+        "event_type"
+      ],
+      "title": "Subscription",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "policies": {
+      "items": {
+        "$ref": "#/$defs/ServicePolicy"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Policies",
+      "type": "array"
+    },
+    "subscriptions": {
+      "items": {
+        "$ref": "#/$defs/Subscription"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Subscriptions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "policies",
+    "subscriptions"
+  ],
+  "title": "Manifest",
+  "type": "object"
+}

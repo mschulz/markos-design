@@ -2,7 +2,7 @@
 title: ADR-005 Governed MCP Access for Agents
 type: architecture-decision
 status: proposed
-version: 1.1
+version: 1.2
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -16,7 +16,7 @@ tags:
 
 ## Context and status
 
-The owner requested MCP access for agents, documented in the specification and roadmap with permissions, domain isolation, approvals and audit. This ADR proposes the implementation boundary and acceptance gates. It enables no server, credential or tool and completes no runtime milestone. Review it independently of the open M0 runtime PRs.
+The owner requested MCP access for agents, documented in the specification and roadmap with permissions, domain isolation, approvals and audit. This ADR proposes the implementation boundary and acceptance gates. It enables no server, credential or tool and completes no runtime milestone. Review it independently of the merged M0-A–M0-C foundation and subsequent M0 implementation slices.
 
 MCP connects agents to approved tools and data sources. RabbitMQ remains the internal event bus; PostgreSQL remains authoritative for durable tasks, knowledge, approvals and audit. Immutable originals remain in object storage; Markdown is a derived export. Follow [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]]: no PARA, Obsidian, legacy application dependency or MacBook-dependent production service.
 
@@ -47,6 +47,16 @@ All choices in this profile remain **proposed**, unmeasured starting values. Thi
 | Retry and cost | At most **one retry for a proven-safe read**, within all attempt/rate/time budgets and after reauthorization. No blind retry of uncertain mutations. Synthetic phase permits **no paid tools**; paid connectors require separately approved monetary ceilings |
 
 SDK behavior is not an authorization boundary. Version 2.3.0 can re-list tools and retry after a `HeaderMismatch`; prevent that automatic path from bypassing grant/schema review, approval, audit or attempt limits. Use a controlled lower-level path if the high-level client cannot gate each wire attempt. A schema change fails closed for review, rather than accepting a newly discovered schema and retrying. The SDK can exclude interactive OAuth waits from request timeouts: the gateway's outer deadline still applies; account onboarding is a separate bounded user workflow, never an unattended tool worker waiting indefinitely. Version pinning alone does not verify a server's identity or capabilities.
+
+### M0 execution and M3 classification integration
+
+Merged M0-A–M0-C implements synthetic no-op contracts, PostgreSQL storage and RabbitMQ handoff; it does not implement an MCP client, general tool executor, approval consumption or gateway admission. Add those capabilities only through reviewed contracts/migrations and isolated acceptance. Preserve the existing strict event/identity checks, intended-consumer state, transaction boundaries, transport limits and regression evidence; MCP calls do not belong in broker callbacks or scheduler scans.
+
+Dispatch tools from durable task execution with current database-clock task/run authority. Provider network work occurs after short claim/authorization/audit transactions commit, with no database transaction or broker delivery held across the call. Claim gateway capacity and persist dispatch authorization atomically, rechecking task fence/lease, grant, approval, source access and remaining run budget at that boundary. A stale worker cannot authorize a new call or finalize a result. A lease can expire after a request leaves the gateway; no local fence guarantees cancellation or rollback at the provider. Preserve the prior dispatch record and reconcile unknown outcomes before retrying an effect.
+
+The proposed two global gateway attempts are a separate nested limit inside authorised agent runs, not two extra agent executions. Do not multiply either budget per replica or create an unbudgeted detached task when a call waits for capacity/approval. Approval waiting must use durable resumable state, without a live broker delivery, transaction, execution slot or in-memory waiter held indefinitely. The implementation must define release/reclaim/renewal and immutable resume identity together so an expired run or changed approval cannot dispatch. Bound the call by the lesser of its gateway deadline and the authorised run's remaining time; task cancellation and gateway cancellation still require external-outcome reconciliation.
+
+Rules-first M3 classification retains its interchangeable Jev/LLM adapters. An MCP-enabled classifier/tool path uses this gateway's grants and disclosure checks; a native provider adapter remains independent of MCP acceptance and still needs its own reviewed privacy, cost and task-execution controls. Model output cannot expand tool grants, change domain, or bypass the category-to-agent policy.
 
 ### 2. Permissions and credentials
 
@@ -107,8 +117,8 @@ These are future implementation tests, not executed evidence from this documenta
 | MCP-03 | Read-only private-data disclosure to an unapproved recipient is blocked; standing grants cover only their exact classified scope. Effect/disclosure uncertainty denies dispatch. |
 | MCP-04 | Approval preview matches immutable intent; changed args/schema/policy, wrong approver, expiry, revocation and replay deny dispatch. Concurrent claims consume approval once. |
 | MCP-05 | OAuth/provider profile tests reject wrong-audience tokens and token passthrough; discovery/redirect/SSRF/rebinding cases cannot leak credentials or reach metadata endpoints. |
-| MCP-06 | Malicious tool descriptions/results cannot enable tools, alter permissions or trigger nested calls. Test exact byte/time/rate/run/backlog/concurrency limits and one-over boundaries, streamed/JSON/compressed oversize responses, slow progress, OAuth waits, SDK hidden retries and multiple replicas; exhaustion stops safely. No paid synthetic tools. |
-| MCP-07 | Unavailable policy/approval/audit database means zero calls. Crash before dispatch and after remote effect/before result commit leaves recoverable evidence; unresolved effects are not blindly retried. |
+| MCP-06 | Malicious tool descriptions/results cannot enable tools, alter permissions or trigger nested calls. Prove separate global execution/gateway limits across replicas, no detached unbudgeted work and the lesser-of-run/gateway deadline. Test exact byte/time/rate/run/backlog/concurrency limits and one-over boundaries, streamed/JSON/compressed oversize responses, slow progress, OAuth waits, SDK hidden retries and multiple replicas; exhaustion stops safely. No paid synthetic tools. |
+| MCP-07 | Expired task fences, revoked authority or exhausted run budget prevent new dispatch and stale finalization. Approval waits hold no live broker delivery, transaction or execution slot; resume reclaims authority and revalidates the exact intent. Unavailable policy/approval/audit database means zero calls. Crash before dispatch and after remote effect/before result commit leaves recoverable evidence; unresolved effects are not blindly retried. |
 | MCP-08 | Verified idempotency/reconciliation prevents duplicate effects across lost responses, lease expiry, cancellation, replay and restore; unsupported providers require human resolution. |
 | MCP-09 | Audit captures allowed/denied/approval/unknown paths with correlation and redaction; agents cannot edit past records or read another scope. Revocation blocks queued/retried calls. Controlled-clock tests cover 365/7/14-day boundaries, unresolved/hold protection, the 24-hour alert, daily cleanup and deletion reapplication after restore. |
 | MCP-10 | Isolated SDK/server interoperability and cloud recovery demonstrate MCP works with MacBook off; RabbitMQ still carries internal events. No personal folders or legacy imports are required. |

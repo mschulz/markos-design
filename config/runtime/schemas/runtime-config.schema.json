@@ -1,0 +1,281 @@
+{
+  "$defs": {
+    "ProposedLimits": {
+      "additionalProperties": false,
+      "description": "ADR-003 planning bounds; validation does not apply broker/host settings.",
+      "properties": {
+        "active_handoff_seconds": {
+          "default": 10,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Active Handoff Seconds",
+          "type": "integer"
+        },
+        "app_memory_mib": {
+          "default": 2048,
+          "minimum": 128,
+          "title": "App Memory Mib",
+          "type": "integer"
+        },
+        "broker_cpus": {
+          "default": 4,
+          "maximum": 4,
+          "minimum": 1,
+          "title": "Broker Cpus",
+          "type": "integer"
+        },
+        "broker_memory_mib": {
+          "default": 4096,
+          "maximum": 4096,
+          "minimum": 256,
+          "title": "Broker Memory Mib",
+          "type": "integer"
+        },
+        "channels_per_connection": {
+          "default": 32,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Channels Per Connection",
+          "type": "integer"
+        },
+        "close_seconds": {
+          "default": 2,
+          "maximum": 2,
+          "minimum": 1,
+          "title": "Close Seconds",
+          "type": "integer"
+        },
+        "confirm_seconds": {
+          "default": 10,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Confirm Seconds",
+          "type": "integer"
+        },
+        "connect_seconds": {
+          "default": 10,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Connect Seconds",
+          "type": "integer"
+        },
+        "dedup_days": {
+          "default": 90,
+          "minimum": 90,
+          "title": "Dedup Days",
+          "type": "integer"
+        },
+        "disk_alarm_mib": {
+          "default": 10240,
+          "minimum": 10240,
+          "title": "Disk Alarm Mib",
+          "type": "integer"
+        },
+        "disk_warning_mib": {
+          "default": 20480,
+          "minimum": 10240,
+          "title": "Disk Warning Mib",
+          "type": "integer"
+        },
+        "handoffs_per_process": {
+          "default": 2,
+          "maximum": 2,
+          "minimum": 1,
+          "title": "Handoffs Per Process",
+          "type": "integer"
+        },
+        "heartbeat_seconds": {
+          "default": 30,
+          "maximum": 30,
+          "minimum": 5,
+          "title": "Heartbeat Seconds",
+          "type": "integer"
+        },
+        "lock_seconds": {
+          "default": 1,
+          "maximum": 1,
+          "minimum": 1,
+          "title": "Lock Seconds",
+          "type": "integer"
+        },
+        "max_connections": {
+          "default": 32,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Connections",
+          "type": "integer"
+        },
+        "max_inflight_confirms": {
+          "default": 100,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Inflight Confirms",
+          "type": "integer"
+        },
+        "max_message_bytes": {
+          "default": 65536,
+          "maximum": 65536,
+          "minimum": 1,
+          "title": "Max Message Bytes",
+          "type": "integer"
+        },
+        "max_queues": {
+          "default": 64,
+          "maximum": 64,
+          "minimum": 1,
+          "title": "Max Queues",
+          "type": "integer"
+        },
+        "memory_alarm_mib": {
+          "default": 2048,
+          "minimum": 128,
+          "title": "Memory Alarm Mib",
+          "type": "integer"
+        },
+        "os_memory_mib": {
+          "default": 2048,
+          "minimum": 256,
+          "title": "Os Memory Mib",
+          "type": "integer"
+        },
+        "prefetch": {
+          "default": 10,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Prefetch",
+          "type": "integer"
+        },
+        "queue_max_bytes": {
+          "default": 33554432,
+          "maximum": 33554432,
+          "minimum": 65536,
+          "title": "Queue Max Bytes",
+          "type": "integer"
+        },
+        "queue_max_messages": {
+          "default": 10000,
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Queue Max Messages",
+          "type": "integer"
+        },
+        "replay_batch": {
+          "default": 100,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Replay Batch",
+          "type": "integer"
+        },
+        "replay_days": {
+          "default": 30,
+          "maximum": 30,
+          "minimum": 30,
+          "title": "Replay Days",
+          "type": "integer"
+        },
+        "replay_per_second": {
+          "default": 10,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Replay Per Second",
+          "type": "integer"
+        },
+        "statement_seconds": {
+          "default": 5,
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Statement Seconds",
+          "type": "integer"
+        },
+        "terminal_retention_days": {
+          "default": 30,
+          "minimum": 30,
+          "title": "Terminal Retention Days",
+          "type": "integer"
+        },
+        "total_delivery_seconds": {
+          "default": 30,
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Total Delivery Seconds",
+          "type": "integer"
+        },
+        "vm_cpus": {
+          "default": 4,
+          "minimum": 1,
+          "title": "Vm Cpus",
+          "type": "integer"
+        },
+        "vm_memory_mib": {
+          "default": 8192,
+          "minimum": 1024,
+          "title": "Vm Memory Mib",
+          "type": "integer"
+        },
+        "worker_slots": {
+          "default": 2,
+          "maximum": 2,
+          "minimum": 1,
+          "title": "Worker Slots",
+          "type": "integer"
+        }
+      },
+      "title": "ProposedLimits",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "broker_secret_ref": {
+      "default": "MARKOS_RUNTIME_BROKER_DSN",
+      "pattern": "^MARKOS_RUNTIME_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Broker Secret Ref",
+      "type": "string"
+    },
+    "database_secret_ref": {
+      "default": "MARKOS_RUNTIME_DATABASE_DSN",
+      "pattern": "^MARKOS_RUNTIME_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Database Secret Ref",
+      "type": "string"
+    },
+    "environment": {
+      "enum": [
+        "test",
+        "development"
+      ],
+      "title": "Environment",
+      "type": "string"
+    },
+    "limits": {
+      "$ref": "#/$defs/ProposedLimits"
+    },
+    "manifest_file": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}\\.json$",
+      "title": "Manifest File",
+      "type": "string"
+    },
+    "role": {
+      "enum": [
+        "publisher",
+        "consumer"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "service_id": {
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:[-.][a-z0-9]+)*$",
+      "title": "Service Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "environment",
+    "role",
+    "service_id",
+    "manifest_file"
+  ],
+  "title": "RuntimeConfig",
+  "type": "object"
+}
