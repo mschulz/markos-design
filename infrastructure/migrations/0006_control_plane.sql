@@ -107,6 +107,9 @@ CREATE FUNCTION markos_control.gateway() RETURNS void LANGUAGE plpgsql SECURITY 
  IF NOT FOUND
  OR NOT pg_has_role(session_user,'markos_control_gateway','MEMBER')
  OR pg_has_role(session_user,'markos_runtime_client','MEMBER')
+ OR EXISTS(SELECT 1 FROM pg_roles elevated WHERE
+ (elevated.rolsuper OR elevated.rolbypassrls OR elevated.rolcreaterole OR elevated.rolcreatedb)
+ AND pg_has_role(session_user,elevated.oid,'MEMBER'))
  OR EXISTS(SELECT 1 FROM pg_roles r JOIN pg_namespace n ON n.nspname='markos_control'
  WHERE r.rolname=session_user AND (r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb
  OR pg_has_role(session_user,n.nspowner,'MEMBER'))) THEN

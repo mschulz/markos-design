@@ -916,3 +916,23 @@ def test_temporary_table_shadow_cannot_replace_session_or_membership_authority(
                     )
 
     asyncio.run(scenario())
+
+
+def test_gateway_cannot_hide_elevated_privileges_in_an_inherited_role(
+    control: dict[str, Any],
+) -> None:
+    elevated = "m1b_elevated_" + uuid4().hex
+    with psycopg.connect(control["admin"], autocommit=True) as conn:
+        conn.execute(sql.SQL("CREATE ROLE {} NOLOGIN CREATEDB").format(sql.Identifier(elevated)))
+        try:
+            conn.execute(sql.SQL("GRANT {} TO m1b_gateway").format(sql.Identifier(elevated)))
+
+            async def scenario() -> None:
+                with pytest.raises(ControlDenied):
+                    async with ControlStore.connect(control["gateway"]):
+                        pass
+
+            asyncio.run(scenario())
+        finally:
+            conn.execute(sql.SQL("REVOKE {} FROM m1b_gateway").format(sql.Identifier(elevated)))
+            conn.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(elevated)))

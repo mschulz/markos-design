@@ -24,7 +24,7 @@ The owner authorized M1-B persistence through a separate PR. This implementation
 
 `0006_control_plane.sql` creates a separate `markos_control` schema with principals, memberships, hashed session bindings, agent/configuration current state and immutable histories, conversations/messages, held message intents, scoped sequence counters, activity, idempotency and minimal successful-operation audit. Messages store a database-checked SHA-256 of exact UTF-8 content. Migrations 0001–0005 and their checksums remain unchanged; schema ledger now records six migrations.
 
-Privileged bootstrap must create the **NOLOGIN** `markos_control_gateway` group before migration. The migration role needs no CREATEROLE privilege and creates no login/account. A separately provisioned non-admin gateway login must both belong to that group and be explicitly listed in private `gateway_logins`. It must not be a superuser, BYPASSRLS/CREATEROLE/CREATEDB role, schema-owner member or M0 runtime-client member. Tests provision synthetic roles explicitly; no real gateway credential or login mapping is installed by this work.
+Privileged bootstrap must create the **NOLOGIN** `markos_control_gateway` group before migration. The migration role needs no CREATEROLE privilege and creates no login/account. A separately provisioned non-admin gateway login must both belong to that group and be explicitly listed in private `gateway_logins`. It must not be a superuser, BYPASSRLS/CREATEROLE/CREATEDB role, schema-owner member or M0 runtime-client member; inherited membership in an elevated role is also denied. Tests provision synthetic roles explicitly; no real gateway credential or login mapping is installed by this work.
 
 The group has schema usage and EXECUTE on narrow public functions only. It has no base-table/sequence access or private-helper execution, membership/provisioning endpoint, migration or M0 restore authority. All tables enable RLS without gateway policies; qualified SECURITY DEFINER functions implement scoped access under the schema owner's privileges. Function grants and search paths are explicit; temporary tables and caller-controlled settings cannot replace authority. Runtime/agent credentials remain separate. The gateway is still a trusted delegation service: possession of its credential can impersonate a provisioned subject through its session-binding function. This does not make PostgreSQL a JWT verifier; M1-C must authenticate before calling these functions.
 
@@ -56,7 +56,7 @@ Reads filter owner/domain before pagination. Conversations/activity use scope-sp
 
 ## Acceptance evidence
 
-The new suite contains **61 real PostgreSQL cases**. Required acceptance totals **532 pytest cases**: 346 unit/boundary, 171 PostgreSQL, 13 broker/database, one volume-loss and one lifecycle/restore drill; optional control-profile compatibility is additional evidence. Existing schema/lock/format/type/docs gates remain required. Local absence of RabbitMQ is explicit; hosted CI must execute its integration cases.
+The new suite contains **62 real PostgreSQL cases**. Required acceptance totals **533 pytest cases**: 346 unit/boundary, 172 PostgreSQL, 13 broker/database, one volume-loss and one lifecycle/restore drill; optional control-profile compatibility is additional evidence. Existing schema/lock/format/type/docs gates remain required. Local absence of RabbitMQ is explicit; hosted CI must execute its integration cases.
 
 | Case | M1-B evidence and limitation |
 |---|---|
