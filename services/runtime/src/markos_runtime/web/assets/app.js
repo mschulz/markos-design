@@ -2,7 +2,7 @@
 (() => {
   const page = document.body.dataset.page;
   const view = document.getElementById("view"), notice = document.getElementById("notice");
-  let me, scope, csrf, agent, configuration, conversation, pending, generation = 0;
+  let me, scope, csrf, agent, configuration, conversation, pending, conversationCursor, messageCursor, generation = 0;
   let streamController, currentCursor, stopped = false, seen = new Set();
   const node = (tag, text, attrs = {}) => {
     const element = document.createElement(tag);
@@ -125,7 +125,7 @@
     select.onchange = () => run(async () => {
       if (pending) { select.value = scope.owner_id + ":" + scope.domain; message("Retry the pending send before changing workspaces."); return; }
       generation++; document.getElementById("preview").close();
-      streamController?.abort(); pending = undefined; conversation = undefined; currentCursor = undefined; seen = new Set();
+      streamController?.abort(); pending = undefined; conversation = undefined; conversationCursor = undefined; messageCursor = undefined; currentCursor = undefined; seen = new Set();
       scope = me.memberships.find(m => m.owner_id + ":" + m.domain === select.value);
       await load();
     });
@@ -154,31 +154,38 @@
     }
   }
   async function conversations() {
-    const result = await api(scoped("/api/v1/conversations") + "&limit=100");
+    const result = await api(scoped("/api/v1/conversations") + "&limit=100" + (conversationCursor ? "&cursor=" + encodeURIComponent(conversationCursor) : ""));
     const chooser = node("select", undefined, {id: "conversation"});
     view.replaceChildren(node("label", "Conversation", {for: "conversation"}), chooser);
     for (const item of result.items) {
       const value = item.conversation;
       chooser.append(node("option", new Date(value.created_at).toLocaleString() + " · " + value.conversation_id.slice(0, 8), {value: value.conversation_id}));
     }
-    if (!conversation || !result.items.some(x => x.conversation.conversation_id === conversation)) conversation = result.items[0]?.conversation.conversation_id;
+    if (!conversation) { conversation = result.items[0]?.conversation.conversation_id; messageCursor = undefined; }
+    else if (!result.items.some(x => x.conversation.conversation_id === conversation)) chooser.append(node("option", "Selected conversation · " + conversation.slice(0, 8), {value: conversation}));
     if (conversation) chooser.value = conversation;
-    chooser.onchange = () => run(async () => { if (pending) { message("Retry the pending send before changing conversations."); chooser.value = conversation; return; } conversation = chooser.value; await showMessages(); });
+    chooser.onchange = () => run(async () => { if (pending) { message("Retry the pending send before changing conversations."); chooser.value = conversation; return; } conversation = chooser.value; messageCursor = undefined; await showMessages(); });
     if (can("operator")) view.append(button("New conversation", async () => {
       if (pending) { message("Retry the pending send first."); return; }
       const id = crypto.randomUUID(), key = "conversation:" + id;
       await api(scoped("/api/v1/conversations"), {schema_version: 1, domain: scope.domain, conversation_id: id, operation_key: key});
-      conversation = id; await conversations();
+      conversation = id; conversationCursor = undefined; messageCursor = undefined; await conversations();
     }));
-    if (!result.items.length) view.append(node("p", "No conversations yet."));
+    const turnPage = cursor => async () => {
+      if (pending) { message("Retry the pending send before changing pages."); return; }
+      conversationCursor = cursor; conversation = undefined; messageCursor = undefined; await conversations();
+    };
+    if (conversationCursor) view.append(button("First conversation page", turnPage(undefined)));
+    if (result.items.length === 100) view.append(button("Next conversation page", turnPage(result.next_cursor)));
+    if (!result.items.length) view.append(node("p", "No conversations on this page."));
     view.append(node("div", undefined, {id: "messages"}));
     if (conversation) await showMessages();
   }
   async function showMessages() {
-    const selectedConversation = conversation;
+    const selectedConversation = conversation, selectedCursor = messageCursor;
     const region = document.getElementById("messages"); region.replaceChildren();
-    const result = await api(scoped("/api/v1/conversations/" + conversation + "/messages") + "&limit=100");
-    if (selectedConversation !== conversation || !region.isConnected) return;
+    const result = await api(scoped("/api/v1/conversations/" + conversation + "/messages") + "&limit=100" + (messageCursor ? "&cursor=" + encodeURIComponent(messageCursor) : ""));
+    if (selectedConversation !== conversation || selectedCursor !== messageCursor || !region.isConnected) return;
     for (const item of result.items) {
       const article = node("article"); article.append(node("h2", item.author_kind === "human" ? "Workspace member" : "Test agent"), node("p", item.body, {class: "message"}));
       if (item.author_kind === "human") article.append(button("Check request status", async () => {
@@ -194,7 +201,13 @@
       }));
       region.append(article);
     }
-    if (!result.items.length) region.append(node("p", "This conversation is empty."));
+    const turnPage = cursor => async () => {
+      if (pending) { message("Retry the pending send before changing pages."); return; }
+      messageCursor = cursor; await showMessages();
+    };
+    if (messageCursor) region.append(button("First message page", turnPage(undefined)));
+    if (result.items.length === 100) region.append(button("Next message page", turnPage(result.next_cursor)));
+    if (!result.items.length) region.append(node("p", "No messages on this page."));
     region.append(button("Refresh messages", showMessages));
     if (!can("operator")) { region.append(node("p", "You can read this conversation. Sending requires the operator role.")); return; }
     if (!agent?.enabled) { region.append(node("p", "The test agent is unavailable. An administrator must enable it and review its configuration.")); return; }

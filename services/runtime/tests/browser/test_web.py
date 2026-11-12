@@ -351,3 +351,34 @@ def test_reviewed_cancellation_and_browser_outage_clear_private_state(
             await expect(page.get_by_role("button", name="Reload workspace")).to_be_visible()
 
     asyncio.run(scenario())
+
+
+def test_browser_reads_message_history_beyond_one_bounded_page(
+    control: dict[str, Any], tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        async with web_server(control, tmp_path) as server, browser_page(server) as page:
+            # Seed synthetic historical messages through the test migration identity only.
+            with psycopg.connect(control["migration"], autocommit=True) as conn:
+                conn.execute(
+                    "INSERT INTO markos_control.messages "
+                    "(owner_id,domain,conversation_id,sequence,body,body_sha256,author_id) "
+                    "SELECT c.owner_id,c.domain,c.conversation_id,n,body,"
+                    "encode(sha256(convert_to(body,'UTF8')),'hex'),%s "
+                    "FROM markos_control.conversations c CROSS JOIN generate_series(1,101) n "
+                    "CROSS JOIN LATERAL (SELECT 'Synthetic history '||n AS body) t",
+                    (control["principals"]["both"],),
+                )
+            await login(page, server, "viewer")
+            await expect(page.locator("#messages .message")).to_have_count(100)
+            await expect(page.locator("#messages .message").first).to_have_text(
+                "Synthetic history 1"
+            )
+            await page.get_by_role("button", name="Next message page", exact=True).click()
+            await expect(page.locator("#messages .message")).to_have_count(1)
+            await expect(page.locator("#messages .message")).to_have_text("Synthetic history 101")
+            await page.get_by_role("button", name="First message page", exact=True).click()
+            await expect(page.locator("#messages .message")).to_have_count(100)
+            await expect(page.get_by_label("Message", exact=True)).to_have_count(0)
+
+    asyncio.run(scenario())
