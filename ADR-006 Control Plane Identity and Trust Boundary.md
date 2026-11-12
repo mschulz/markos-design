@@ -2,7 +2,7 @@
 title: ADR-006 Control Plane Identity and Trust Boundary
 type: architecture-decision
 status: proposed
-version: 1.1
+version: 1.2
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -18,11 +18,11 @@ tags:
 
 Use one trusted interaction gateway to authenticate humans and delegate narrowly scoped operations to PostgreSQL. Keep human identity separate from agent/service login identity. Implement the versioned synthetic contract profile in [[MarkOS v0.3 M1-A Contracts and Identity]] first; authentication, database authority, API routes, sessions and dispatch remain later slices. This ADR is proposed for review, not production enablement. It follows [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] and [[ADR-005 Governed MCP Access for Agents]] without changing RabbitMQ, PostgreSQL authority, source objects, derived Markdown or rules-first M3 routing.
 
-The owner authorized M1-A after review of PR #18. That M1-A authorization covered contracts, explicit inert configuration, tests and identity decisions. The owner has subsequently authorized M1-B persistence separately; see [[MarkOS v0.3 M1-B Control Plane Persistence]]. M1-C–M1-G, accounts, tools, merging and deployment remain outside that implementation authorization. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
+The owner authorized M1-A after review of PR #18. That M1-A authorization covered contracts, explicit inert configuration, tests and identity decisions. The owner has subsequently authorized M1-B persistence separately; see [[MarkOS v0.3 M1-B Control Plane Persistence]]. The owner separately authorized M1-C authentication/API; see the review record below. M1-D–M1-G, real accounts, tools, merging and deployment require separate authorization. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
 
 ## Authentication and session profile
 
-For the first implemented/tested profile, use only a synthetic issuer `https://auth.markos.test`, audience `markos-control-test`, asymmetric ES256 and normalized token kind `human-access`. No key URL, issuer, algorithm or token kind is selected from untrusted input. The checked-in public-key placeholder has an empty key set and is deliberately unusable; M1-A does not read it, fetch keys or accept tokens. M1-C must supply an ephemeral signed-token/PKCE issuer fixture before testing the actual authentication adapter.
+For the first implemented/tested profile, use only a synthetic issuer `https://auth.markos.test`, audience `markos-control-test`, asymmetric ES256 and normalized token kind `human-access`. No key URL, issuer, algorithm or token kind is selected from untrusted input. The checked-in public-key placeholder has an empty key set and is deliberately unusable; M1-A does not read it, fetch keys or accept tokens. M1-C supplies an ephemeral in-process signed-token/PKCE issuer fixture; it supplies no real Supabase adapter or hosted issuer.
 
 Recommend Supabase Auth as the future production identity adapter, subject to a separate configured issuer/project/audience and account/security review. There is no implicit trust from using Supabase PostgreSQL. Reject symmetric/service-role/API-key credentials as human access, unsupported algorithms, invalid signatures, wrong issuer/audience, expired/not-yet-valid tokens, missing subject/session and unknown keys. Translate provider-specific claims into the internal human descriptor only after verification; an internal `token_kind` field is not a requirement that Supabase emits that custom claim automatically.
 
@@ -34,7 +34,7 @@ Freeze the following synthetic implementation requirements now. They are contrac
 | Keys | Approved configured key source only; 64-KiB key-set ceiling, 60-second cache ceiling, five-second absolute fetch deadline, bounded refresh admission and no token-provided `jku`/`x5u`. Unknown key fails closed after at most one admitted refresh; never repeat unbounded fetches per attacker request. |
 | Browser | Same-origin opaque random session; persist only token/session lookup hashes and encrypted refresh material where needed. Cookie `__Host-markos-session`, Secure, HttpOnly, SameSite=Lax, Path=/, no Domain. Rotate on login; validate CSRF plus Origin on writes. Never store provider tokens in browser storage or query strings. |
 | Session bounds | 30-minute idle and eight-hour absolute maximum, bounded further by provider/token validity; at most ten active sessions/principal and 100 globally. Renewal verifies current provider/local authority and never extends the original absolute deadline. |
-| CLI | Explicit PKCE/browser onboarding to the same verified actor model; five-minute bearer ceiling, no token on command line, in Git or logs. Secure token storage/onboarding are M1-C work, not an existing command. |
+| CLI | Explicit PKCE/browser onboarding to the same verified actor model; five-minute bearer ceiling, no token on command line, in Git or logs. M1-C supplies the fixture HTTP onboarding protocol and an in-memory test client. Interactive commands and secure persistent client storage remain M1-E/provider work. |
 | Local revocation | Database-backed session, membership and policy checks at every protected request and dispatch; stream recheck at most every 15 seconds. Logout/revocation blocks the next operation and future retries. A cached role or signed JWT cannot bypass this. |
 | Provider revocation | Before real onboarding, the adapter must verify current upstream session validity using supported provider behavior. Freeze a maximum 15-second validity-cache bound; unknown/unavailable authority fails closed. Prove revocation with fixture and provider-specific tests; offline signature verification alone does not provide immediate provider logout. No unsupported assumption about a provider SDK's user lookup is accepted as evidence. |
 | Restore | A fresh restored generation invalidates all old browser/CLI sessions, unconsumed approval authority and dispatch leases. Independently current revocation/deletion records must be reapplied before real access; an older snapshot is not current authorization. |
@@ -80,7 +80,7 @@ Synthetic chat/conversation data has a 30-day floor after all associated work is
 
 Freeze an **optional** `control` dependency profile in the independent runtime lock: FastAPI 0.162.5 (without standard/CLI/cloud extras), Uvicorn 0.54.0 (without standard extras), PyJWT 2.15.1 with crypto, and Jinja2 3.1.6. Preserve existing base pins. The isolated compatibility probe exercises an in-memory ASGI request, ES256 library signing/verification and wrong-audience rejection, template autoescape and construction of a server configuration without binding a socket. It proves primitive compatibility only, not authentication/session or HTTP security acceptance. The base wheel/image remains usable without these optional packages.
 
-Strict Pydantic UUID/time wire parsing must operate on bounded original JSON bytes via `from_wire()`. Default FastAPI validation of a decoded Python dictionary does not preserve those strict JSON-mode semantics. M1-C must enforce size before buffering/parsing, reject duplicate keys/non-finite JSON and redact errors; it must not weaken the contracts to make framework coercion pass. No API entry point is created by this decision.
+Strict Pydantic UUID/time wire parsing must operate on bounded original JSON bytes via `from_wire()`. Default FastAPI validation of a decoded Python dictionary does not preserve those strict JSON-mode semantics. M1-C must enforce size before buffering/parsing, reject duplicate keys/non-finite JSON and redact errors; it must not weaken the contracts to make framework coercion pass. The M1-C factory uses this parser boundary; this ADR alone starts no service.
 
 ## Alternatives and remaining gates
 
@@ -96,3 +96,8 @@ Checked 12 November 2026: [FastAPI](https://pypi.org/project/fastapi/), [Uvicorn
 ## M1-B persistence boundary
 
 [[MarkOS v0.3 M1-B Control Plane Persistence]] implements explicit gateway-role/session/membership checks, rotation/refresh, versioned registry/configuration and atomic staged conversations/messages/activity through additive migration 0006. The gateway remains trusted to bind a verified provider subject; no token verifier/API is supplied. Held proposals are not publishable until M1-D extends the existing event/outbox boundary. Runtime base-table access remains denied; scoped definer functions are the database delegation boundary. Production/provider/MCP enablement and full audit/retention/restore gates remain open.
+
+
+## Merged M1-B and M1-C review status
+
+PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.

@@ -603,7 +603,7 @@ def test_migration_upgrade_preserves_populated_m0_and_checksums(
             await runtime.append(event())
         with psycopg.connect(control["migration"], autocommit=True) as conn:
             conn.execute("DROP SCHEMA markos_control CASCADE")
-            conn.execute("DELETE FROM markos_runtime.schema_migrations WHERE version=6")
+            conn.execute("DELETE FROM markos_runtime.schema_migrations WHERE version>=6")
         directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
         async with await psycopg.AsyncConnection.connect(
             control["migration"], autocommit=True, row_factory=dict_row
@@ -614,7 +614,7 @@ def test_migration_upgrade_preserves_populated_m0_and_checksums(
             assert conn.execute("SELECT count(*) FROM markos_runtime.events").fetchone() == (1,)
             assert conn.execute(
                 "SELECT count(*) FROM markos_runtime.schema_migrations"
-            ).fetchone() == (6,)
+            ).fetchone() == (7,)
 
     asyncio.run(scenario())
 

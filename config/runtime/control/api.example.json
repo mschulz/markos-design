@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "environment": "test",
+  "identity_profile": "synthetic-pkce",
+  "api_origin": "https://127.0.0.1:18443",
+  "real_accounts_enabled": false,
+  "chat_execution_enabled": false,
+  "tool_execution_enabled": false
+}

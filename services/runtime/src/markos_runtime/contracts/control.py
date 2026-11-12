@@ -401,6 +401,7 @@ class AuditRecord(ScopedValue):
 class ApiError(ControlValue):
     request_id: UUID
     code: Literal[
+        "invalid",
         "unauthenticated",
         "forbidden",
         "not-found",
@@ -413,6 +414,7 @@ class ApiError(ControlValue):
     @property
     def status(self) -> int:
         return {
+            "invalid": 400,
             "unauthenticated": 401,
             "forbidden": 403,
             "not-found": 404,

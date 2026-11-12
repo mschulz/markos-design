@@ -47,3 +47,8 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.13"
 strict = true
 files = ["src/markos_runtime", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["markos_runtime.api.*", "tests.control_api.*"]
+# Optional imports are checked in the control-extra job too.
+warn_unused_ignores = false

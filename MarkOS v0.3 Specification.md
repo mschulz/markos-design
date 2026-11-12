@@ -266,3 +266,8 @@ Review each implementation slice with contracts, automated tests and docs. Keep 
 ## M1-B persistence boundary
 
 [[MarkOS v0.3 M1-B Control Plane Persistence]] implements additive scoped control-plane storage and narrow gateway database functions following [[ADR-006 Control Plane Identity and Trust Boundary]]. The trusted gateway must authenticate a provider subject before opening a persisted binding; this library itself verifies no JWT or upstream session. Registry/configuration, conversation/message/activity and idempotency writes are transactional. Held proposals are not M0 events/outbox entries or execution permission; M1-D must extend the existing active contracts and promote authorized work atomically. M1-C API/authentication and later approvals/tools, retention and production recovery remain gates. RabbitMQ/PostgreSQL authority, governed MCP and rules-first M3 are unchanged.
+
+
+## Merged M1-B and M1-C review status
+
+PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.
