@@ -2,7 +2,7 @@
 title: ADR-006 Control Plane Identity and Trust Boundary
 type: architecture-decision
 status: proposed
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -18,7 +18,7 @@ tags:
 
 Use one trusted interaction gateway to authenticate humans and delegate narrowly scoped operations to PostgreSQL. Keep human identity separate from agent/service login identity. Implement the versioned synthetic contract profile in [[MarkOS v0.3 M1-A Contracts and Identity]] first; authentication, database authority, API routes, sessions and dispatch remain later slices. This ADR is proposed for review, not production enablement. It follows [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] and [[ADR-005 Governed MCP Access for Agents]] without changing RabbitMQ, PostgreSQL authority, source objects, derived Markdown or rules-first M3 routing.
 
-The owner authorized M1-A after review of PR #18. That authorizes contracts, explicit inert configuration, tests and identity decisions; it does not authorize M1-B–M1-G, accounts, tools, merging or deployment. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
+The owner authorized M1-A after review of PR #18. That M1-A authorization covered contracts, explicit inert configuration, tests and identity decisions. The owner has subsequently authorized M1-B persistence separately; see [[MarkOS v0.3 M1-B Control Plane Persistence]]. M1-C–M1-G, accounts, tools, merging and deployment remain outside that implementation authorization. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
 
 ## Authentication and session profile
 
@@ -91,3 +91,8 @@ M1-B–M1-G still require database role/functions/migrations, actual signature/k
 ## Sources
 
 Checked 12 November 2026: [FastAPI](https://pypi.org/project/fastapi/), [Uvicorn](https://pypi.org/project/uvicorn/), [PyJWT](https://pypi.org/project/PyJWT/) and [Jinja2](https://pypi.org/project/Jinja2/) package metadata; [Supabase signing keys](https://supabase.com/docs/guides/auth/signing-keys) and [session semantics](https://supabase.com/docs/guides/auth/sessions). Exact optional versions were resolved from official PyPI JSON and locked independently. The security model, bounds and production gates above are MarkOS decisions, not guarantees supplied by those libraries.
+
+
+## M1-B persistence boundary
+
+[[MarkOS v0.3 M1-B Control Plane Persistence]] implements explicit gateway-role/session/membership checks, rotation/refresh, versioned registry/configuration and atomic staged conversations/messages/activity through additive migration 0006. The gateway remains trusted to bind a verified provider subject; no token verifier/API is supplied. Held proposals are not publishable until M1-D extends the existing event/outbox boundary. Runtime base-table access remains denied; scoped definer functions are the database delegation boundary. Production/provider/MCP enablement and full audit/retention/restore gates remain open.

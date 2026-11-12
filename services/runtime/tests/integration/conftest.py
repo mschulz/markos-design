@@ -39,12 +39,20 @@ def admin_dsn() -> str:
     if not (host in {"127.0.0.1", "localhost"} or host.startswith("/private/tmp/markos-m0b-")):
         pytest.fail("synthetic PostgreSQL tests require explicit local test host")
     with psycopg.connect(dsn, autocommit=True) as connection:
-        for name in ["markos_migrator", "markos_runtime_client", "m0b_unmapped"] + [
-            role[0] for role in ROLES.values()
-        ]:
+        for name in [
+            "markos_migrator",
+            "markos_runtime_client",
+            "markos_control_gateway",
+            "m1b_gateway",
+            "m0b_unmapped",
+        ] + [role[0] for role in ROLES.values()]:
             if connection.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (name,)).fetchone():
                 continue
-            login = "NOLOGIN" if name == "markos_runtime_client" else "LOGIN"
+            login = (
+                "NOLOGIN"
+                if name in {"markos_runtime_client", "markos_control_gateway"}
+                else "LOGIN"
+            )
             connection.execute(
                 sql.SQL(
                     "CREATE ROLE {} {} NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS "
@@ -55,6 +63,7 @@ def admin_dsn() -> str:
             connection.execute(
                 sql.SQL("GRANT markos_runtime_client TO {}").format(sql.Identifier(name))
             )
+        connection.execute("GRANT markos_control_gateway TO m1b_gateway")
     return dsn
 
 
@@ -69,6 +78,9 @@ def database(admin_dsn: str) -> Iterator[dict[str, str]]:
         key: make_conninfo(admin_dsn, dbname=name, user=role[0], password="synthetic-test-only")
         for key, role in ROLES.items()
     }
+    dsns["gateway"] = make_conninfo(
+        admin_dsn, dbname=name, user="m1b_gateway", password="synthetic-test-only"
+    )
     dsns["migration"] = make_conninfo(
         admin_dsn, dbname=name, user="markos_migrator", password="synthetic-test-only"
     )

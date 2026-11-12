@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.14
+version: 0.3.15
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -262,3 +262,7 @@ Review each implementation slice with contracts, automated tests and docs. Keep 
 ## M1-A implementation boundary
 
 [[MarkOS v0.3 M1-A Contracts and Identity]] and [[ADR-006 Control Plane Identity and Trust Boundary]] add strict synthetic descriptors, explicit inert control preflight, role/session/delegation decisions and optional stack compatibility tests. These contracts are not authentication or durable approval evidence. The active M0 event parser, broker topology, SQL migrations and no-op worker do not accept chat events; M1-D must extend them together. Actual identity verification, scoped control-plane storage/API, tool dispatch and distributed enforcement remain later M1 slices. RabbitMQ/PostgreSQL authority, governed MCP and rules-first M3 decisions remain unchanged.
+
+## M1-B persistence boundary
+
+[[MarkOS v0.3 M1-B Control Plane Persistence]] implements additive scoped control-plane storage and narrow gateway database functions following [[ADR-006 Control Plane Identity and Trust Boundary]]. The trusted gateway must authenticate a provider subject before opening a persisted binding; this library itself verifies no JWT or upstream session. Registry/configuration, conversation/message/activity and idempotency writes are transactional. Held proposals are not M0 events/outbox entries or execution permission; M1-D must extend the existing active contracts and promote authorized work atomically. M1-C API/authentication and later approvals/tools, retention and production recovery remain gates. RabbitMQ/PostgreSQL authority, governed MCP and rules-first M3 are unchanged.

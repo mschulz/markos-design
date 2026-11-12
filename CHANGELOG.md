@@ -8,6 +8,14 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M1-B control-plane persistence prepared for review — 12 November 2026
+
+- Reviewed merged main at `ea076ff` after PRs #18/#19; tree/history preserved and all five post-merge checks green (471 runtime cases plus optional compatibility and documentation). No blocking finding within M1-A contract scope.
+- Added migration 0006 and explicit ControlStore with separate gateway role/mapping, private base tables, current session/membership/generation checks, hashed session rotation/refresh/logout, versioned registry/configuration histories and scoped conversations/messages/activity.
+- Added atomic, idempotent held message proposals with current agent/config revisions and database-checked content hashes; no active event/outbox/broker/task promotion until M1-D. Privileged bootstrap remains explicit and separate from runtime startup.
+- Added real PostgreSQL isolation/concurrency/rollback/session/limit/upgrade evidence and [[MarkOS v0.3 M1-B Control Plane Persistence]]. Human authentication/API, chat execution, full approval/audit/retention and real provider/production gates remain later work. Migrations 0001–0005, dependencies, schemas and archive are unchanged. No merge or deployment.
+
+
 ### M1-A contracts and identity prepared for review — 12 November 2026
 
 - Reviewed PR #18 at `082f5d7`; no blocking consistency findings and documentation CI green. Preserved its unmerged planning commit as this review branch’s prerequisite.

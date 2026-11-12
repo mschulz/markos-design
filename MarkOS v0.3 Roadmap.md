@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.8
+version: 2.9
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -137,3 +137,7 @@ Open M3 decisions: agent/category taxonomy and multi-assignment policy; verified
 ## M1-A contracts and identity review
 
 [[MarkOS v0.3 M1-A Contracts and Identity]] implements the first slice with validation-only descriptors and preflight, frozen synthetic settings, separate chat contract namespace and optional API stack compatibility evidence. [[ADR-006 Control Plane Identity and Trust Boundary]] records the proposed human/session/gateway/database boundary. No database migration, signature-verifying login service, browser/CLI gateway, chat executor or MCP access is added. M1-B scoped persistence is the next reviewable slice after these contracts/decisions; real production profiles remain gated.
+
+## M1-B persistence review
+
+M1-A planning/contracts are merged through PRs #18/#19. [[MarkOS v0.3 M1-B Control Plane Persistence]] adds explicit scoped session/registry/configuration/conversation storage and an additive migration for review. Database functions validate current scope/version, with bounded held work and idempotent atomic staging. This completes neither publishable chat nor human authentication; M1-C supplies the verified API boundary and M1-D the reviewed transport/executor promotion. No merge or deployment is performed by this slice.

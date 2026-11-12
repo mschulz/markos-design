@@ -63,6 +63,10 @@ The workflow uses a pinned checkout action, read-only repository permissions, no
 
 Use focused `codex/` branches and reviewable PRs to main. Keep implementation, acceptance evidence and docs together. No merge, deployment, provisioning or personal-folder migration is performed by this increment. The separate `markos` repository remains untouched; no second active source of truth is introduced.
 
-## M1-A contracts prepared for review
+## M1-A contracts merged
 
-[M1-A Contracts and Identity](MarkOS%20v0.3%20M1-A%20Contracts%20and%20Identity.md) adds versioned synthetic control-plane models, schemas/examples, frozen test configuration and connection-free `preflight-control`. [ADR-006](ADR-006%20Control%20Plane%20Identity%20and%20Trust%20Boundary.md) records proposed identity/session/delegation decisions and production gates. An optional independently locked API/JWT/template profile is compatibility tested. No login service, control-plane database, chat execution or tool access is implemented; a valid principal/intent descriptor is not authority. PR #18 remains an unmerged prerequisite, preserved in the separate M1-A review branch.
+[M1-A Contracts and Identity](MarkOS%20v0.3%20M1-A%20Contracts%20and%20Identity.md) adds versioned synthetic control-plane models, schemas/examples, frozen test configuration and connection-free `preflight-control`. [ADR-006](ADR-006%20Control%20Plane%20Identity%20and%20Trust%20Boundary.md) records proposed identity/session/delegation decisions and production gates. An optional independently locked API/JWT/template profile is compatibility tested. No login service, control-plane database, chat execution or tool access is implemented; a valid principal/intent descriptor is not authority. PRs #18/#19 are merged; the original planning/contract evidence and all prerequisite history remain preserved.
+
+## M1-B persistence prepared for review
+
+[M1-B Control Plane Persistence](MarkOS%20v0.3%20M1-B%20Control%20Plane%20Persistence.md) adds explicit scoped PostgreSQL storage for sessions/memberships, versioned registry/configuration, conversations/messages/activity and idempotency, with a dedicated gateway role and additive migration 0006. Messages are staged as held proposals; the current RabbitMQ/no-op path is unchanged. Human authentication/API, publishable chat, approvals/tools and production deployment remain later work.

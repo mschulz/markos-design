@@ -1,1 +1,1 @@
-"""Validation-only M1-A configuration. No authentication or gateway service."""
+"""Inert configuration and explicitly connected persistence; no human authentication/API."""
