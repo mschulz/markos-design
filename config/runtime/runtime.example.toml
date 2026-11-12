@@ -1,0 +1,10 @@
+# Synthetic, validation-only. These names reference secrets; no values are loaded.
+[runtime]
+environment = "test"
+role = "publisher"
+service_id = "foundation-generator"
+manifest_file = "subscriptions.example.json"
+database_secret_ref = "MARKOS_RUNTIME_DATABASE_DSN"
+broker_secret_ref = "MARKOS_RUNTIME_BROKER_DSN"
+
+# Omitted limits use the proposed ADR-003 profile, not applied infrastructure.
