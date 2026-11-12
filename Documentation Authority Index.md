@@ -2,7 +2,7 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.8
+version: 1.9
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -65,6 +65,7 @@ This table covers every Markdown file in this PR's repository tree, including hi
 | [MarkOS v0.3 M1 Control Plane Implementation Plan](MarkOS%20v0.3%20M1%20Control%20Plane%20Implementation%20Plan.md) | Current merged-main review and proposed M1 contracts/authentication, implementation slices and acceptance tests; no M1 runtime implementation |
 | [ADR-006 Control Plane Identity and Trust Boundary](ADR-006%20Control%20Plane%20Identity%20and%20Trust%20Boundary.md) | Proposed human/service separation, trusted gateway delegation, frozen synthetic identity/session profile and remaining security gates |
 | [MarkOS v0.3 M1-A Contracts and Identity](MarkOS%20v0.3%20M1-A%20Contracts%20and%20Identity.md) | Current M1-A contract/preflight/profile evidence and explicit later authentication/persistence/dispatch limits |
+| [MarkOS v0.3 M1-B Control Plane Persistence](MarkOS%20v0.3%20M1-B%20Control%20Plane%20Persistence.md) | Current explicit control-store/migration, trusted gateway scope, held-work persistence and real-database evidence; authentication/dispatch remain later gates |
 | [Independent runtime README](services/runtime/README.md) | Current independent project commands, dependencies and preflight limits |
 
 ## Prior branch documents and PRs
@@ -81,11 +82,11 @@ Unsettled implementation choices include source provider/retention, detailed ret
 
 ## Validation and retained M0 evidence
 
-All 41 Markdown documents are classified. Local links in current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, archived root package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. Independent M0-A through M0-E now has 294 cases: 177 unit/boundary, 103 PostgreSQL, 13 broker/database and one dedicated broker-volume-loss drill. A01–A12 and A14–A16 have synthetic evidence; A13 has database-failure evidence. M0-F adds a 323-case runtime acceptance set (198 unit/boundary, 110 PostgreSQL, 13 broker/database and two dedicated harness drills), lifecycle/restore-generation tests and an independent container harness; its record distinguishes partial A17–A19 operational evidence from production gates. Real provider/action approvals, cloud erasure/restore, VM boot/capacity and independent monitoring remain open. Local broker absence is explicit; required CI runs both services. See [[MarkOS v0.3 M0-A Contracts and Configuration]].
+All 42 Markdown documents are classified. Local links in current/template documents resolve; superseded records retain historical links and statements as evidence. The two exact source snapshots, import manifest, archived root package metadata, source/tests and dependency lock are unchanged. The archived application's 145 tests, Ruff, strict mypy (38 files) and lock check pass; these results show archive preservation only. Independent M0-A through M0-E now has 294 cases: 177 unit/boundary, 103 PostgreSQL, 13 broker/database and one dedicated broker-volume-loss drill. A01–A12 and A14–A16 have synthetic evidence; A13 has database-failure evidence. M0-F adds a 323-case runtime acceptance set (198 unit/boundary, 110 PostgreSQL, 13 broker/database and two dedicated harness drills), lifecycle/restore-generation tests and an independent container harness; its record distinguishes partial A17–A19 operational evidence from production gates. Real provider/action approvals, cloud erasure/restore, VM boot/capacity and independent monitoring remain open. Local broker absence is explicit; required CI runs both services. See [[MarkOS v0.3 M0-A Contracts and Configuration]].
 
 ## MCP documentation update
 
-ADR-005 adds a proposed MCP access boundary, leaving the accepted event/data architecture and existing M0 scope intact. The current inventory, including later runtime slices, classifies all 41 Markdown documents. The documentation gate checks current/template metadata and local links. This update changes architecture documentation and adds isolated documentation-check tooling/tests plus a read-only GitHub Actions workflow; application source, legacy/runtime tests, locks, import manifest and exact archived snapshots are unchanged. MCP acceptance tests are not implemented or run by this update. The merged M0-A–M0-C implementation/evidence above remains intact; that documentation slice changed no runtime code or locks; subsequent implementation evidence is listed above. Earlier regression counts above remain historical evidence, not new results.
+ADR-005 adds a proposed MCP access boundary, leaving the accepted event/data architecture and existing M0 scope intact. The current inventory, including later runtime slices, classifies all 42 Markdown documents. The documentation gate checks current/template metadata and local links. This update changes architecture documentation and adds isolated documentation-check tooling/tests plus a read-only GitHub Actions workflow; application source, legacy/runtime tests, locks, import manifest and exact archived snapshots are unchanged. MCP acceptance tests are not implemented or run by this update. The merged M0-A–M0-C implementation/evidence above remains intact; that documentation slice changed no runtime code or locks; subsequent implementation evidence is listed above. Earlier regression counts above remain historical evidence, not new results.
 
 The proposed SDK/resource/audit profile is specified in ADR-005; first real MCP enablement requires MCP-01–MCP-10, while native adapters remain independent. Documentation CI validates inventory, current metadata/local paths and changed whitespace; synthetic checker tests cover broken/stale/duplicate inventory entries, links, root-scoped wikilinks, path escape and missing metadata. External URLs, heading anchors, MCP interoperability and runtime behavior are outside that check. Branch protection is not modified.
 
@@ -95,4 +96,8 @@ PRs #15–#17 are merged, with reviewed code/history preserved. [[MarkOS v0.3 M1
 
 ## M1-A review status
 
-The owner authorized M1-A after PR #18 review. [[MarkOS v0.3 M1-A Contracts and Identity]] and [[ADR-006 Control Plane Identity and Trust Boundary]] add strict inert contracts, identity/delegation decisions and an optional locked compatibility profile for review. Earlier M1 planning statements describe that documentation slice; M1-A implements no authentication service, database migration, chat worker or tool access. All 41 Markdown documents are inventoried. M1-B–M1-G and real-account/provider/production gates remain open; no merge or deployment is performed.
+The owner authorized M1-A after PR #18 review. [[MarkOS v0.3 M1-A Contracts and Identity]] and [[ADR-006 Control Plane Identity and Trust Boundary]] add strict inert contracts, identity/delegation decisions and an optional locked compatibility profile for review. Earlier M1 planning statements describe that documentation slice; M1-A implements no authentication service, database migration, chat worker or tool access. All 42 Markdown documents are inventoried. M1-B–M1-G and real-account/provider/production gates remain open; no merge or deployment is performed.
+
+## Merged M1-A and M1-B review status
+
+PRs #18/#19 are merged. [[MarkOS v0.3 M1-B Control Plane Persistence]] reviews main at `ea076ff` with green post-merge 471-case runtime/compatibility/documentation CI, then records additive control-plane storage for review. Earlier M1-A preparation statements remain historical evidence. M1-B does not enable human authentication, chat transport/execution, approvals/tools or deployment; the architecture and production gaps remain intact. All 42 Markdown documents are classified.

@@ -234,7 +234,12 @@ def certs() -> None:
 async def bootstrap() -> None:
     project()
     with psycopg.connect(admin("postgres"), autocommit=True) as conn:
-        for name in ["markos_migrator", "markos_runtime_client", *LOGINS.values()]:
+        for name in [
+            "markos_migrator",
+            "markos_runtime_client",
+            "markos_control_gateway",
+            *LOGINS.values(),
+        ]:
             if conn.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (name,)).fetchone():
                 continue
             conn.execute(
@@ -243,7 +248,11 @@ async def bootstrap() -> None:
                     "NOBYPASSRLS PASSWORD 'synthetic-test-only'"
                 ).format(
                     sql.Identifier(name),
-                    sql.SQL("NOLOGIN" if name == "markos_runtime_client" else "LOGIN"),
+                    sql.SQL(
+                        "NOLOGIN"
+                        if name in {"markos_runtime_client", "markos_control_gateway"}
+                        else "LOGIN"
+                    ),
                 )
             )
         for name in LOGINS.values():

@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M1 Control Plane Implementation Plan
 type: implementation-plan
 status: proposed
-version: 1.1
+version: 1.2
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -159,3 +159,7 @@ Related: [[MarkOS v0.3 M0 Implementation Plan]], [[MarkOS v0.3 M0-F Lifecycle an
 ## M1-A implementation review status
 
 The owner subsequently authorized M1-A. [[MarkOS v0.3 M1-A Contracts and Identity]] records strict descriptors, inert test configuration/preflight, 18 new schemas/examples and an optional locked dependency compatibility profile. [[ADR-006 Control Plane Identity and Trust Boundary]] freezes the synthetic role/session/resource/retention profile and trusted delegation boundary for review. M1-01/02/03/18 coverage remains at the contract/isolation layer; actual authentication, current DB scopes, API, distributed limits and one-time consumption are later work. M0 event parsing/topology/SQL and no-op execution remain unchanged. M1-B–M1-G and deployment are not enabled.
+
+## M1-B implementation review status
+
+PRs #18/#19 are merged and the owner authorized M1-B separately. [[MarkOS v0.3 M1-B Control Plane Persistence]] records additive migration 0006, narrow gateway-role functions, current session/membership authority, versioned registry/configuration, scoped conversations/messages/activity and idempotency. M1-05 coverage is the atomic persistence portion: held proposals do not publish, and M1-D still owes atomic promotion into the active event/consumer/outbox contract. M1-20 coverage is upgrade plus generation invalidation; populated control-plane backup/restore remains M1-G. M1-C authentication/API is the next slice, not implemented here. All real provider/production gates remain open.
