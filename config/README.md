@@ -2,7 +2,7 @@
 
 Existing `legacy.example.toml` belongs to the archived local Markdown/DuckDB application. Its `vault_path` spelling, and PR #7's proposed `markdown_root` rename, are legacy compatibility details. Neither configures the new runtime or implies PARA storage.
 
-Proposed new runtime contracts/examples will live under `config/runtime/`, with versioned event/subscription/identity schemas, secret references and explicit runtime-only settings. The independent preflight must never discover legacy config, note folders or the root package. Prior PR #6 examples require fit review before adaptation.
+M0-A runtime schemas/examples now live under `config/runtime/`: synthetic event/subscription/policy JSON, explicit TOML and four generated schemas. Preflight never discovers legacy config, note folders or the root package. Secret reference names are validated; secret values and connections are not resolved. See [[MarkOS v0.3 M0-A Contracts and Configuration]] for the fit review, trust boundary and limitations.
 
 No required `markdown_root` appears in the event foundation. A future Markdown export adapter may explicitly configure an ordinary output folder without PARA or Obsidian conventions. Originals and structured state remain in cloud source storage/PostgreSQL.
 

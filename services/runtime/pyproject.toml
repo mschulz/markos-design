@@ -1,0 +1,36 @@
+[project]
+name = "markos-runtime"
+version = "0.1.0"
+description = "Independent MarkOS event-runtime contracts and explicit preflight"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = ["pydantic==2.13.4"]
+
+[project.scripts]
+markos-runtime = "markos_runtime.cli:main"
+
+[build-system]
+requires = ["uv_build==0.12.1"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = ["pytest==9.1.1", "mypy==2.3.0", "ruff==0.16.1", "jsonschema==4.25.1"]
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["src/markos_runtime", "tests"]

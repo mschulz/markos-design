@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.6
+version: 0.3.7
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -201,6 +201,8 @@ RabbitMQ is the selected internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]
 7. Whether electricity is the first specialist vertical slice or whether another category should precede it.
 
 ## 16. Implementation handoff rules
+
+M0-A has been separately authorized and implemented for review; see [[MarkOS v0.3 M0-A Contracts and Configuration]]. Its independent schemas/configuration/validation-only CLI do not implement persistence, RabbitMQ transport or executable workers.
 
 [[MarkOS v0.3 M0 Implementation Plan]] defines an independent runtime, its own dependency/test boundaries, ordered M0-A–M0-F slices and A01–A20 acceptance cases. No history-preserving import or legacy regression gate is a prerequisite for the new architecture. Prior imports remain archival evidence; prior contracts require fit review before adaptation.
 

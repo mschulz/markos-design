@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.0
+version: 2.1
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -41,10 +41,17 @@ Propose `services/runtime/` as a separate project with its own lock and tests. T
 
 [[MarkOS v0.3 M0 Implementation Plan]] breaks M0 into reviewable slices and acceptance cases. Old M0–M16 completion records do not transfer to this sequence. Baseline backup/monitoring design belongs in M0 before real data; M7 proves and hardens it.
 
+## M0-A review status
+
+M0-A contracts/configuration are implemented on an independent review branch,
+with 104 tests, its own lock/CLI, schemas/examples and a clean-wheel isolation
+check. See [[MarkOS v0.3 M0-A Contracts and Configuration]]. This does not deliver
+M0-B–M0-F or any runtime service. PR #7 is closed unmerged; its branch is retained.
+
 ## Immediate plan
 
 1. Review this architecture correction and retire PR #7 as a foundation path; preserve all history.
-2. Prepare an independent runtime scaffold and revised contracts/config PR. Review PR #6 artifacts against the new specification; adapt only explicitly justified parts. Prove the dependency boundary without legacy note/config access.
+2. Review the independent M0-A scaffold/contracts/configuration PR and its candidate-fit and isolation evidence. Then implement M0-B persistence; no automatic merge or promotion of old PR #6/#7.
 3. Add durable state and migrations, then RabbitMQ handoff, then execution/scheduling, replay/retention and a synthetic end-to-end harness in separate PRs.
 4. Gather actual broker/database fault evidence before declaring M0 complete. Only then advance gateway and Gmail work.
 5. Before provisioning, review provider plans, region, cost, network/security, retention, monitoring and recovery targets. Deployment requires separate authorization.
