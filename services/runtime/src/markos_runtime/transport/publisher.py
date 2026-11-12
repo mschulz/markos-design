@@ -1,13 +1,11 @@
 """One bounded publishing pass; PostgreSQL owns durable retries and original IDs."""
 
 import asyncio
-from datetime import UTC, datetime
 
 from aio_pika.abc import AbstractRobustChannel
 
 from markos_runtime.backoff import backoff as backoff
 from markos_runtime.config import ProposedLimits
-from markos_runtime.contracts.base import ContractError
 from markos_runtime.store.database import DurableStore, OutboxClaim
 from markos_runtime.transport.broker import BrokerSession, TransportError
 from markos_runtime.transport.management import TopologyAudit
@@ -38,7 +36,8 @@ class Publisher:
                     await self.store.review_delivery(claim.event.to_wire(), "oversize")
                     await self.store.hold_for_review(claim, "oversize")
                     return False
-                claim.event.require_live(datetime.now(UTC))
+                if not await self.store.authorize_publication(claim.event_id, claim.fence):
+                    return False
                 await self.audit.verify(
                     claim.event.domain,
                     claim.consumers,
@@ -55,11 +54,6 @@ class Publisher:
                     claim.event.event_type,
                 )
                 return await self.store.record_publication(claim.event_id, claim.fence)
-        except ContractError:
-            code = "expired"
-            await self.store.review_delivery(claim.event.to_wire(), "expired")
-            await self.store.hold_for_review(claim, "expired")
-            return False
         except (TransportError, TimeoutError):
             pass
         # Unknown outcomes remain recoverable, not dispatched. No immediate nack/requeue loop.

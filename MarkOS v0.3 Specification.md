@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.10
+version: 0.3.11
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -136,7 +136,7 @@ Partition credentials, calls, results, caches and any connection state by owner/
 
 A read-only call may disclose private data. Standing grants permit only reviewed bounded reads with defined data classes and recipients; new disclosure or consequential effects require human approval bound to an immutable, expiring, one-use call intent. Approval cannot override permissions. Persist authorization/approval consumption and dispatch audit before calls; unavailable policy/audit storage blocks dispatch. Unknown external outcomes require reconciliation, with no blind retries or exactly-once claim. Replay suppresses external effects by default.
 
-MCP calls run from durable task execution, outside broker handoff, scheduler scans and database transactions. The current M0-A–M0-C runtime supplies only synthetic contracts, storage and transport; it enables no MCP or general tool executor. Add the gateway through a separately reviewed execution/control-plane contract, preserving the M0 task/fence, approval and outbox boundaries. Agent execution slots and gateway attempt limits are separate budgets; a tool call cannot create extra agent slots or escape its run deadline. Expired/revoked task authority blocks future gateway dispatch and local finalization; an already-issued remote effect remains subject to reconciliation. Native model adapters for rules-first M3 routing remain interchangeable and do not acquire an MCP dependency merely by using a model.
+MCP calls run from durable task execution, outside broker handoff, scheduler scans and database transactions. The M0-A–M0-E runtime supplies only synthetic contracts, storage, transport, no-op execution/scheduling and recovery/retention; it enables no MCP or general tool executor. Add the gateway through a separately reviewed execution/control-plane contract, preserving the M0 task/fence, approval and outbox boundaries. Agent execution slots and gateway attempt limits are separate budgets; a tool call cannot create extra agent slots or escape its run deadline. Expired/revoked task authority blocks future gateway dispatch and local finalization; an already-issued remote effect remains subject to reconciliation. Native model adapters for rules-first M3 routing remain interchangeable and do not acquire an MCP dependency merely by using a model.
 
 PostgreSQL stores scoped intent, approval, dispatch and result/unknown records with redacted provenance and correlation. Agents cannot rewrite audit history. [[ADR-005 Governed MCP Access for Agents]] defines transport/security controls, approval/revocation/retry semantics, audit fields and future MCP-01–MCP-10 acceptance tests. This proposal enables no MCP access and changes no M0 implementation scope.
 
@@ -181,6 +181,10 @@ TLS and broker authentication, secrets management, encrypted backups, database m
 ### M0-D implementation boundary
 
 [[MarkOS v0.3 M0-D Execution and Scheduling]] implements the synthetic subset for review: inline no-op tasks, DB-clock leases/fences/global slots, durable attempts/review and versioned interval/daily schedules. Scans commit unique occurrences, events/outbox and cursor/audit together. Catch-up is bounded, coalesce/skip are audited and DST gap/fold behavior is explicit. Only fixed no-op work executes; real agents/tools, approvals, source-backed execution, daemon lifecycle and full replay/retention remain separate gates.
+
+### M0-E implementation boundary
+
+[[MarkOS v0.3 M0-E Replay and Retention]] implements synthetic retained-consumer recovery, including published events lost with broker storage; database rate/cooldown gates; one-use older-replay permits with effects suppressed; synthetic source/checksum/access observations; deletion tombstones and dry-run-first 30/90-day cleanup with unfinished/review holds. The dedicated CI drill deletes only its disposable RabbitMQ volume while PostgreSQL survives. Real provider permission attestation, object/broker/backup erasure and restore tombstone handling, final audit retention, real action approvals and deployed lifecycle remain separate gates. Retained minimal tombstones/audit are not all age-purged by this slice.
 
 ### Persistent scheduling
 
@@ -249,7 +253,7 @@ RabbitMQ is the selected internal bus in [[ADR-003 RabbitMQ Internal Event Bus]]
 
 ## 16. Implementation handoff rules
 
-M0-A, M0-B and M0-C are merged in main through PRs #10, #11 and #12. See [[MarkOS v0.3 M0-A Contracts and Configuration]], [[MarkOS v0.3 M0-B Durable Storage]] and [[MarkOS v0.3 M0-C RabbitMQ Transport]] for the slice records and evidence. The CLI remains validation-only; explicit storage/transport libraries do not constitute a deployed service. M0-D execution/scheduling remains a separate review, while full replay/recovery and production lifecycle remain later work. These merges enable no MCP, classifier provider or deployment.
+M0-A, M0-B and M0-C are merged in main through PRs #10, #11 and #12. See [[MarkOS v0.3 M0-A Contracts and Configuration]], [[MarkOS v0.3 M0-B Durable Storage]] and [[MarkOS v0.3 M0-C RabbitMQ Transport]] for the slice records and evidence. The CLI remains validation-only; explicit storage/transport libraries do not constitute a deployed service. M0-D execution/scheduling and M0-E synthetic replay/retention remain separate reviews, while real-provider recovery/erasure and production lifecycle remain later work. These merges enable no MCP, classifier provider or deployment.
 
 [[MarkOS v0.3 M0 Implementation Plan]] defines an independent runtime, its own dependency/test boundaries, ordered M0-A–M0-F slices and A01–A20 acceptance cases. No history-preserving import or legacy regression gate is a prerequisite for the new architecture. Prior imports remain archival evidence; prior contracts require fit review before adaptation.
 

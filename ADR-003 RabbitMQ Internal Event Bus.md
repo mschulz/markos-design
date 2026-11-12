@@ -2,7 +2,7 @@
 title: ADR-003 RabbitMQ Internal Event Bus
 type: architecture-decision
 status: accepted
-version: 1.4
+version: 1.5
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -148,3 +148,7 @@ The prior profile review recorded these references on 12 November 2026. This arc
 - [Publisher confirms and consumer acknowledgements](https://www.rabbitmq.com/docs/confirms): separate publisher/broker and consumer/broker confirmations.
 - [Dead-letter exchanges](https://www.rabbitmq.com/docs/dlx): failure routing and safety considerations.
 - [Quorum queues](https://www.rabbitmq.com/docs/quorum-queues): replicated queue option and deployment requirements.
+
+## M0-E synthetic acceptance amendment
+
+[[MarkOS v0.3 M0-E Replay and Retention]] implements the proposed operational-event 30/90-day profile for synthetic acceptance, with unfinished/review holds, deletion tombstones and a dedicated actual broker-volume-loss drill. Replay reserves at most ten events/second across replicas and at most ten per pass, with a 60-second per-event automatic probe delay; explicit authorized requests can act sooner. Effects remain suppressed. Minimal tombstone/audit ledgers are not age-purged here. These tests do not approve real source/privacy/audit retention, provider/backup erasure, production capacity or deployment; ADR-005's MCP audit profile remains separate.

@@ -15,6 +15,14 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 - Retained the documentation workflow/checker and all 35 inventoried Markdown documents. The pull request remains unmerged; no deployment or real-provider access.
 
 
+
+### M0-E replay and retention prepared for review — 12 November 2026
+
+- Reviewed PR #15 at `8286870`: no blocking correctness/architecture findings; 256-case CI green. Preserved current main's governed MCP/rules-first routing decisions and the original prerequisite branch.
+- Added bounded retained-event recovery (including confirmed broker work), one-use scoped older-replay permits, suppressed effects, synthetic source access/checksum observations, deletion tombstones and staged 30/90-day cleanup with holds and dry-run-first invocation; additive migration 0004 preserves earlier checksums.
+- Added an actual disposable broker-volume-loss drill preserving PostgreSQL, queued-deletion rejection, age/permit/cleanup boundary and shared-operation/fairness tests. Required acceptance spans 294 runtime cases plus separate documentation checks. No merge, real provider/erasure, personal data or deployment.
+
+
 ### M0-D synthetic execution and scheduling — 2026-11-12
 
 - Reviewed PR #12 at `22fbf25`: no blocking correctness/architecture findings; 194-case CI green.

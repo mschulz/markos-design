@@ -1,0 +1,29 @@
+# Disposable synthetic CI acceptance only. Not a production service lifecycle.
+services:
+  postgres:
+    image: postgres:17.11
+    environment:
+      POSTGRES_PASSWORD: synthetic-test-only
+    ports: ['127.0.0.1:5432:5432']
+    volumes: ['postgres-data:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  rabbitmq:
+    image: rabbitmq:4.4.0-management@sha256:7ddb7fd4630026bc84f72760f33629e8c1ef3bb106360fb385fae0dd4ef886f3
+    environment:
+      RABBITMQ_DEFAULT_USER: m0c-admin
+      RABBITMQ_DEFAULT_PASS: synthetic-test-only
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -rabbit channel_max 32 -rabbit max_message_size 65536
+    ports: ['127.0.0.1:5672:5672', '127.0.0.1:15672:15672']
+    volumes: ['rabbitmq-data:/var/lib/rabbitmq']
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 3s
+      timeout: 5s
+      retries: 30
+volumes:
+  postgres-data:
+  rabbitmq-data:

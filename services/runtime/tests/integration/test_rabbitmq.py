@@ -695,3 +695,46 @@ def test_schedule_transport_handoff_and_noop_execution(
         assert count(database, "task_results") == count(database, "schedule_occurrences") == 1
 
     asyncio.run(scenario())
+
+
+def test_deleted_queued_payload_cannot_create_or_execute_tasks(
+    database: dict[str, str], rabbit: Harness
+) -> None:
+    from markos_runtime.execution.worker import Worker
+    from markos_runtime.recovery.service import Recovery
+
+    async def scenario() -> None:
+        item = event()
+        async with (
+            DurableStore.connect(database["publisher"]) as pub,
+            BrokerSession.connect(rabbit.dsn("publisher")) as session,
+        ):
+            await pub.append(item)
+            publisher = Publisher(
+                session, await session.channel(publisher=True), pub, rabbit.auditor()
+            )
+            assert await publisher.publish_once() == 1
+            await Recovery(pub).delete_event(item.event_id)
+        for role in ["consumer", "audit"]:
+            async with (
+                DurableStore.connect(database[role]) as store,
+                BrokerSession.connect(rabbit.dsn(role)) as session,
+            ):
+                consumer = Consumer(
+                    session, store, {"foundation-generator": rabbit.users["publisher"]}
+                )
+                await consumer.start()
+                try:
+                    await until(
+                        lambda role=role: (
+                            count(database, "recovery_reviews") == (1 if role == "consumer" else 2)
+                        )
+                    )
+                    assert not await Worker(store).run_once()
+                finally:
+                    await consumer.stop()
+        assert count(database, "tasks") == count(database, "task_results") == 0
+        with psycopg.connect(database["admin"]) as conn:
+            assert conn.execute("SELECT wire FROM markos_runtime.events").fetchone() == (None,)
+
+    asyncio.run(scenario())

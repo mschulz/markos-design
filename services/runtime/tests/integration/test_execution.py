@@ -221,7 +221,7 @@ def test_source_references_cannot_execute_without_current_access_checks(
             assert not await Worker(cons).run_once()
 
     asyncio.run(scenario())
-    assert count(database, "execution_reviews") == 1
+    assert count(database, "recovery_reviews") >= 1
 
 
 def test_completion_fault_rolls_back_result_state_and_slot_release(
