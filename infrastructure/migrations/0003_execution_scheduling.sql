@@ -271,10 +271,26 @@ BEGIN
  IF p_version IS NULL OR p_expected IS NULL OR NOT s.enabled OR s.version<>p_version OR s.next_due<>p_expected OR p_next IS NULL OR p_next<=p_expected
  OR jsonb_typeof(p_entries) IS DISTINCT FROM 'array' OR jsonb_array_length(p_entries)>100
  OR jsonb_typeof(p_audit) IS DISTINCT FROM 'object' OR octet_length(p_audit::text)>4096 THEN RAISE EXCEPTION 'invalid schedule transition'; END IF;
+ IF p_next>p_expected+interval '62 days'
+ OR NOT(p_audit ?& ARRAY['policy','covered','skipped','created','pending','age_limit_seconds'])
+ OR p_audit->>'policy' IS DISTINCT FROM s.definition->>'missed_policy'
+ OR jsonb_typeof(p_audit->'created') IS DISTINCT FROM 'number'
+ OR jsonb_typeof(p_audit->'covered') IS DISTINCT FROM 'number'
+ OR jsonb_typeof(p_audit->'skipped') IS DISTINCT FROM 'number'
+ OR jsonb_typeof(p_audit->'pending') IS DISTINCT FROM 'boolean'
+ OR (p_audit->>'created')::integer<>jsonb_array_length(p_entries)
+ OR (p_audit->>'covered')::integer NOT BETWEEN 1 AND 44641
+ OR (p_audit->>'skipped')::integer<>(p_audit->>'covered')::integer-jsonb_array_length(p_entries)
+ OR (p_audit->>'skipped')::integer<0
+ OR p_audit->'age_limit_seconds' IS DISTINCT FROM s.definition->'max_age_seconds'
+ THEN RAISE EXCEPTION 'invalid schedule audit'; END IF;
  FOR entry IN SELECT * FROM jsonb_array_elements(p_entries) LOOP
   body:=convert_to(entry->>'wire','UTF8');doc:=convert_from(body,'UTF8')::jsonb;
   IF entry->>'due_at' IS NULL OR entry->>'wire' IS NULL OR (entry->>'due_at')::timestamptz<p_expected OR (entry->>'due_at')::timestamptz>=p_next
   OR (entry->>'due_at')::timestamptz>clock_timestamp()
+  OR (doc->>'occurred_at')::timestamptz IS DISTINCT FROM (entry->>'due_at')::timestamptz
+  OR doc->>'operation_key' IS DISTINCT FROM 'schedule:'||replace(p_id::text,'-','')||':v'||p_version::text||':'||
+    ((extract(epoch FROM (entry->>'due_at')::timestamptz)*1000000)::bigint)::text
   OR doc->'payload' IS DISTINCT FROM '{"label":"scheduled synthetic noop"}'::jsonb
   OR doc->'payload_ref' IS DISTINCT FROM 'null'::jsonb
   THEN RAISE EXCEPTION 'invalid occurrence'; END IF;

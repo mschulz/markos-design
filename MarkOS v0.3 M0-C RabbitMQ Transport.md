@@ -71,7 +71,7 @@ The first real-broker run exposed an incorrect bindings endpoint; the adapter no
 
 ## Remaining work
 
-M0-D owns task/agent execution, global worker slots, scheduling and business completion. M0-E owns source access/deletion, 30-day age gates, replay/retention and recovery of missing handoffs including previously confirmed broker work. M0-F owns the production lifecycle, TLS/credential provisioning, host pressure/quotas/monitoring, backup/restore and operational measurements. This slice does not prove broker volume-loss recovery, exactly-once effects, production availability, source permission checks or 30/90-day cleanup. No cloud configuration, real account/provider, personal-note migration, merge or deployment is performed.
+The subsequent [[MarkOS v0.3 M0-D Execution and Scheduling]] supplies fixed synthetic no-op execution, global lease slots and persistent scheduling; real agent execution/approvals remain future work. M0-E owns source access/deletion, 30-day age gates, replay/retention and recovery of missing handoffs including previously confirmed broker work. M0-F owns the production lifecycle, TLS/credential provisioning, host pressure/quotas/monitoring, backup/restore and operational measurements. This slice does not prove broker volume-loss recovery, exactly-once effects, production availability, source permission checks or 30/90-day cleanup. No cloud configuration, real account/provider, personal-note migration, merge or deployment is performed.
 
 ## References
 

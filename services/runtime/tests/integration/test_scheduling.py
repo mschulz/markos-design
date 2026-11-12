@@ -162,6 +162,7 @@ def test_disable_is_fenced_and_explicit_resume_recovers_missed_work(
             assert await s.scan_once() == 2
 
     asyncio.run(scenario())
+    assert count(database, "schedule_controls") == 2
 
 
 def test_scheduler_owner_domain_and_grant_denials(database: dict[str, str]) -> None:
@@ -180,7 +181,13 @@ def test_scheduler_owner_domain_and_grant_denials(database: dict[str, str]) -> N
                 await Scheduler(consumer).scan_once()
 
     asyncio.run(scenario())
-    for table in ["schedules", "schedule_versions", "schedule_scans", "schedule_occurrences"]:
+    for table in [
+        "schedules",
+        "schedule_versions",
+        "schedule_scans",
+        "schedule_occurrences",
+        "schedule_controls",
+    ]:
         with psycopg.connect(database["otherpub"]) as conn:
             assert conn.execute(f"SELECT count(*) FROM markos_runtime.{table}").fetchone() == (0,)
 

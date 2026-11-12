@@ -2,7 +2,7 @@
 title: MarkOS Cloud Deployment Architecture
 type: architecture
 status: draft
-version: 1.4
+version: 1.5
 owner: Mark Schulz
 created: 2026-11-11
 updated: 2026-11-12
@@ -43,6 +43,10 @@ Keep secrets outside Git and images, with least-privilege runtime roles and prot
 
 PostgreSQL holds structured facts, entities, relationships and provenance under owner/domain scope. Immutable originals live in protected cloud object storage with database references and checksums. Markdown summaries/exports are derived artifacts; an optional standard folder has no PARA hierarchy or Obsidian requirement. No production service depends on a mounted personal note directory, legacy DuckDB index or old filesystem watcher. Source/export access, deletion, retention and recovery contracts require explicit implementation.
 
+## M0-D implementation evidence
+
+[[MarkOS v0.3 M0-D Execution and Scheduling]] implements fixed synthetic no-op execution and versioned interval/daily scheduling for review, with database leases/fences/global slots, atomic occurrences/events/outbox and audited missed policies. The broader requirements below remain targets for real agents and deployed operations. CLI/service lifecycle, production job types, approvals, source access and full replay/recovery are not delivered by this slice.
+
 ## Persistent scheduling and missed-job recovery
 
 The scheduler runs in the VM, while PostgreSQL owns scheduling truth. Persist a stable schedule ID/version, owner/domain, job type, payload reference, enabled flag, interval/cron expression, IANA timezone, next due time, missed-run policy, catch-up limit, retry/backoff limit and execution timeout. Store UTC instants and define daylight-saving behavior explicitly for wall-clock schedules.
@@ -67,7 +71,7 @@ If PostgreSQL is unavailable, stop claiming jobs and performing unrecorded side 
 
 Set `restart: unless-stopped` for every long-running Compose service, including scheduler and ingestion. Enable Docker at host boot and verify recovery after a VM reboot. An intentionally stopped container remains stopped with this policy; maintenance recovery must explicitly start it. One-shot migrations and restore tasks need deliberate invocation and failure handling rather than an unlimited restart loop.
 
-Define readiness/liveness checks, startup grace periods, resource bounds and graceful termination. Workers finish safely or release/expire leases on shutdown. Persist RabbitMQ data in a named volume; use durable exchanges/queues and persistent messages, with confirms and manual acknowledgements as specified in [[ADR-003 RabbitMQ Internal Event Bus]]. Keep reviewed topology definitions, policies and permissions recoverable separately from secrets. Propose RabbitMQ 4.4.0 with durable classic queues and aio-pika 10.2.3. The ADR-003 profile proposes a 4-vCPU/8-GiB/80-GiB SSD VM planning envelope, a 4-GiB broker cap with 2-GiB absolute memory alarm and a 10-GiB free-disk alarm (warning at 20 GiB). The broker CPU ceiling is 4, not reserved cores; shared-host contention and all service budgets require M0 measurement and cost review. Enforce ADR-003 queue, message, connection, channel, prefetch and publisher limits; reject-publish backpressure leaves work in PostgreSQL. Pin an image digest and dependency lock in the future implementation PR. Quorum replication requires a separately reviewed multi-node failure-domain design to provide availability. A single node on this VM is not highly available. Never store authoritative tasks only in container files.
+Define readiness/liveness checks, startup grace periods, resource bounds and graceful termination. Workers finish safely or release/expire leases on shutdown. Persist RabbitMQ data in a named volume; use durable exchanges/queues and persistent messages, with confirms and manual acknowledgements as specified in [[ADR-003 RabbitMQ Internal Event Bus]]. Keep reviewed topology definitions, policies and permissions recoverable separately from secrets. Propose RabbitMQ 4.4.0 with durable classic queues and aio-pika 10.2.3. The ADR-003 profile proposes a 4-vCPU/8-GiB/80-GiB SSD VM planning envelope, a 4-GiB broker cap with 2-GiB absolute memory alarm and a 10-GiB free-disk alarm (warning at 20 GiB). The broker CPU ceiling is 4, not reserved cores; shared-host contention and all service budgets require M0 measurement and cost review. Enforce ADR-003 queue, message, connection, channel, prefetch and publisher limits; reject-publish backpressure leaves work in PostgreSQL. M0-C pins the tested image digest and independent client lock; see [[MarkOS v0.3 M0-C RabbitMQ Transport]]. Production capacity and rollout remain unverified. Quorum replication requires a separately reviewed multi-node failure-domain design to provide availability. A single node on this VM is not highly available. Never store authoritative tasks only in container files.
 
 Use healthy dependency conditions for local Compose startup where appropriate; services still need runtime reconnect/backoff for broker and remote Supabase failures. A health check alone does not restart an unhealthy process: exit on unrecoverable failure or alert for operator remediation. Rotate logs, monitor disk and prevent crash loops from exhausting the VM.
 

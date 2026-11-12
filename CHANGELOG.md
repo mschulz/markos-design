@@ -8,6 +8,13 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M0-D synthetic execution and scheduling — 2026-11-12
+
+- Reviewed PR #12 at `22fbf25`: no blocking correctness/architecture findings; 194-case CI green.
+- Added explicit fixed no-op execution with PostgreSQL leases/fences/global two-slot limit, attempts, retry and durable review; hard process recovery and commit-failure tests.
+- Added strict versioned interval/daily schedules, DST/missed policies, atomic occurrences/events/outbox/cursor and immutable scan/control history; additive migration 0003 preserves prior checksums.
+- Required suite: 256 tests, including 75 PostgreSQL and 12 broker/database cases. Real approvals, agents/tools, replay/retention and service lifecycle remain gates. No merge or deployment.
+
 ### M0-C RabbitMQ transport prepared for review — 12 November 2026
 
 - Reviewed PR #11’s transaction/identity/migration boundaries and passing CI. Added pinned, independent RabbitMQ transport, live topology/validated identity checks, actual confirms/returns, durable retry/review state, manual ack after commit and independent watchdog/generation recovery.

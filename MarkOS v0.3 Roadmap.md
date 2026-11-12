@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.3
+version: 2.4
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-12
@@ -63,13 +63,17 @@ M0-C adds pinned RabbitMQ/aio-pika library transport, exact live topology audit,
 confirms/mandatory returns, durable backoff/review outboxes and generation-fenced
 consumer recovery with independent watchdogs. The required suite has 194 cases,
 including 11 real broker/database cases. See [[MarkOS v0.3 M0-C RabbitMQ Transport]].
-No agent worker, full broker-loss replay or production deployment is delivered.
+That transport slice delivers no agent worker, full broker-loss replay or production deployment.
+
+## M0-D review status
+
+[[MarkOS v0.3 M0-D Execution and Scheduling]] adds a fixed no-op worker, DB-clock leases/fencing and a global two-lease budget, durable attempts/retry/review and atomic interval/daily scheduling. Missed policies, timezone/DST, versions and controls are explicit/audited. The required 256-case suite includes 12 broker/database cases. Real agents/tools/approval expiry, retained-event replay and the deployed lifecycle remain later gates.
 
 ## Immediate plan
 
-1. Review this architecture correction and retire PR #7 as a foundation path; preserve all history.
+1. Retain the accepted architecture correction; PR #7 is closed unmerged and its reference branch/history is preserved.
 2. Review the independent M0-A scaffold/contracts/configuration PR and its candidate-fit and isolation evidence. Review M0-B persistence next; no automatic merge or promotion of old PR #6/#7.
-3. Review M0-B/M0-C storage and transport, then implement M0-D execution/scheduling, M0-E replay/retention and M0-F lifecycle evidence in separate PRs.
+3. Review M0-B/M0-C storage/transport and M0-D synthetic execution/scheduling, then implement M0-E replay/retention and M0-F lifecycle evidence in separate PRs.
 4. Gather actual broker/database fault evidence before declaring M0 complete. Only then advance gateway and Gmail work.
 5. Before provisioning, review provider plans, region, cost, network/security, retention, monitoring and recovery targets. Deployment requires separate authorization.
 

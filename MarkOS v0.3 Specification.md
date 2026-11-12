@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.9
+version: 0.3.10
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-12
@@ -136,6 +136,10 @@ Configuration is centrally stored, validated, versioned and auditable. Admin UI 
 ## 12. Reliability, security and observability
 
 TLS and broker authentication, secrets management, encrypted backups, database migrations, access-control tests, audit logs, trace IDs, structured logs, metrics, alerts, rate limits, LLM prompt-injection defenses, untrusted document handling, data retention and deletion policies. Backups and restore drills cover PostgreSQL, source files and configuration. Provide replay tooling with side-effect suppression and sandbox test mode. Document threat model for email attachments, external links, malicious event payloads and agent tool permissions.
+
+### M0-D implementation boundary
+
+[[MarkOS v0.3 M0-D Execution and Scheduling]] implements the synthetic subset for review: inline no-op tasks, DB-clock leases/fences/global slots, durable attempts/review and versioned interval/daily schedules. Scans commit unique occurrences, events/outbox and cursor/audit together. Catch-up is bounded, coalesce/skip are audited and DST gap/fold behavior is explicit. Only fixed no-op work executes; real agents/tools, approvals, source-backed execution, daemon lifecycle and full replay/retention remain separate gates.
 
 ### Persistent scheduling
 
