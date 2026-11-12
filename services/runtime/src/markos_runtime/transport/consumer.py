@@ -8,7 +8,7 @@ from aio_pika.abc import AbstractIncomingMessage, AbstractRobustChannel
 from markos_runtime.config import ProposedLimits
 from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
 from markos_runtime.contracts.events import EventEnvelope
-from markos_runtime.store.database import DurableStore, StorageError, StorageRejected, StoreIdentity
+from markos_runtime.store.database import DurableStore, StorageRejected, StoreIdentity
 from markos_runtime.transport.broker import BrokerSession, TransportError
 
 
@@ -23,7 +23,7 @@ class Consumer:
         total_seconds: float | None = None,
         limits: ProposedLimits | None = None,
     ) -> None:
-        self.limits = limits or ProposedLimits()
+        self.limits: ProposedLimits = limits or getattr(session, "limits", ProposedLimits())
         active_seconds = (
             self.limits.active_handoff_seconds if active_seconds is None else active_seconds
         )
@@ -45,6 +45,8 @@ class Consumer:
         self.identity: StoreIdentity | None = None
         self.ready = asyncio.Event()
         self._failed = asyncio.Event()
+        self._epoch = 0
+        self.failure: TransportError | None = None
 
     def _closed_callback(self, *args: object) -> None:
         self._failed.set()
@@ -63,6 +65,8 @@ class Consumer:
         assert self.identity is not None
         channel = await self.session.channel(publisher=False)
         self._channel = channel
+        self._epoch += 1
+        epoch = self._epoch
         self._failed.clear()
         channel.close_callbacks.add(self._closed_callback)
         try:
@@ -72,30 +76,65 @@ class Consumer:
                 passive=True,
                 robust=False,
             )
-            await queue.consume(self._callback, no_ack=False, robust=False)
+
+            async def callback(message: AbstractIncomingMessage) -> None:
+                await self._callback(message, epoch)
+
+            await queue.consume(callback, no_ack=False, robust=False)
             self.ready.set()
         except Exception:
             await self.session.close_channel(channel)
             raise TransportError("consumer subscription unavailable") from None
 
-    async def _callback(self, message: AbstractIncomingMessage) -> None:
+    def _deadline(self, task: asyncio.Task[None]) -> None:
+        # This watchdog signals recovery independently of coroutine cancellation progress.
+        self.ready.clear()
+        self._epoch += 1
+        self._failed.set()
+        task.cancel()
+
+    async def _callback(self, message: AbstractIncomingMessage, epoch: int | None = None) -> None:
         task = asyncio.current_task()
         assert task is not None
+        generation = self._epoch if epoch is None else epoch
         self._tasks.add(task)
+        loop = asyncio.get_running_loop()
+        total_timer = loop.call_later(self.total_seconds, self._deadline, task)
+        active_timer: asyncio.TimerHandle | None = None
         try:
-            async with asyncio.timeout(self.total_seconds):
-                async with self._handoffs, asyncio.timeout(self.active_seconds):
-                    await self._handoff(message)
-                # Durable transaction exited before ack. An ack failure is an unknown outcome.
-                await message.ack()
-        except (StorageError, TransportError, TimeoutError, ConnectionError):
+            async with self._handoffs:
+                active_timer = loop.call_later(self.active_seconds, self._deadline, task)
+                await self._handoff(message)
+                active_timer.cancel()
+            if generation != self._epoch or self._failed.is_set() or self._closed.is_set():
+                return  # Late/uncertain handlers never acknowledge an old channel generation.
+            await message.ack()
+        except asyncio.CancelledError:
+            if self._closed.is_set():
+                raise
             self.ready.clear()
             self._failed.set()
         except Exception:
             self.ready.clear()
             self._failed.set()
         finally:
+            total_timer.cancel()
+            if active_timer is not None:
+                active_timer.cancel()
             self._tasks.discard(task)
+
+    async def _drain(self) -> bool:
+        tasks = tuple(self._tasks)
+        for task in tasks:
+            task.cancel()
+        if not tasks:
+            return True
+        _, pending = await asyncio.wait(tasks, timeout=self.limits.close_seconds)
+        if pending:
+            self.session.factory.abort()
+            self.failure = TransportError("handoff cancellation incomplete; consumer stopped")
+            return False
+        return True
 
     async def _handoff(self, message: AbstractIncomingMessage) -> None:
         assert self.identity is not None
@@ -130,11 +169,12 @@ class Consumer:
         while not self._closed.is_set():
             await self._failed.wait()
             self.ready.clear()
+            self._epoch += 1
             if self._channel is not None:
                 await self.session.close_channel(self._channel)
-            for task in tuple(self._tasks):
-                task.cancel()
-            await asyncio.gather(*tuple(self._tasks), return_exceptions=True)
+            if not await self._drain():
+                await self.session.close()
+                return
             if self._closed.is_set():
                 break
             await asyncio.sleep(min(300, 2 ** min(attempts, 8)))
@@ -157,6 +197,5 @@ class Consumer:
                 await self._supervisor
         if self._channel is not None:
             await self.session.close_channel(self._channel)
-        for task in tuple(self._tasks):
-            task.cancel()
-        await asyncio.gather(*tuple(self._tasks), return_exceptions=True)
+        self._epoch += 1
+        await self._drain()

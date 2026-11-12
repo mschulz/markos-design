@@ -30,7 +30,7 @@ class Publisher:
         if session.vhost != audit.vhost:
             raise TransportError("broker/audit namespace mismatch")
         self.session, self.channel, self.store, self.audit = session, channel, store, audit
-        self.limits = limits or ProposedLimits()
+        self.limits: ProposedLimits = limits or getattr(session, "limits", ProposedLimits())
         self._inflight = asyncio.Semaphore(self.limits.max_inflight_confirms)
 
     async def _one(self, claim: OutboxClaim) -> bool:
@@ -42,7 +42,12 @@ class Publisher:
                     await self.store.hold_for_review(claim, "oversize")
                     return False
                 claim.event.require_live(datetime.now(UTC))
-                await self.audit.verify(claim.event.domain, claim.consumers)
+                await self.audit.verify(
+                    claim.event.domain,
+                    claim.consumers,
+                    max_messages=self.limits.queue_max_messages,
+                    max_bytes=self.limits.queue_max_bytes,
+                )
                 code = "confirm"
                 await self.session.send(
                     self.channel,
@@ -74,7 +79,13 @@ class Publisher:
             ref = claim.reference
             try:
                 async with self._inflight, asyncio.timeout(25):
-                    await self.audit.verify(ref.domain, (), review=True)
+                    await self.audit.verify(
+                        ref.domain,
+                        (),
+                        review=True,
+                        max_messages=self.limits.queue_max_messages,
+                        max_bytes=self.limits.queue_max_bytes,
+                    )
                     await self.session.send(
                         self.channel,
                         f"markos.{ref.domain}.review",

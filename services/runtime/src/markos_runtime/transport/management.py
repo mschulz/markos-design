@@ -56,7 +56,9 @@ class TopologyAudit:
         return await asyncio.to_thread(self._request, "/".join(quote(x, safe="") for x in parts))
 
     @staticmethod
-    def validate_queue(queue: dict[str, Any]) -> None:
+    def validate_queue(
+        queue: dict[str, Any], *, max_messages: int = 10000, max_bytes: int = 33554432
+    ) -> None:
         args = {**(queue.get("effective_policy_definition") or {}), **queue.get("arguments", {})}
         # Policy keys and AMQP argument names differ; enforce whichever is present.
         overflow_values = [args[k] for k in ("x-overflow", "overflow") if k in args]
@@ -71,16 +73,22 @@ class TopologyAudit:
             or queue.get("exclusive", False) is not False
             or queue.get("type") != "classic"
             or type(maximum) is not int
-            or not 1 <= maximum <= 10000
+            or not 1 <= maximum <= max_messages
             or type(size) is not int
-            or not 65536 <= size <= 33554432
+            or not 65536 <= size <= max_bytes
             or overflow != "reject-publish"
             or any(k in args for k in ["x-message-ttl", "message-ttl", "x-expires", "expires"])
         ):
             raise TransportError("queue safety profile mismatch")
 
     async def verify(
-        self, domain: str, consumers: tuple[str, ...], *, review: bool = False
+        self,
+        domain: str,
+        consumers: tuple[str, ...],
+        *,
+        review: bool = False,
+        max_messages: int = 10000,
+        max_bytes: int = 33554432,
     ) -> None:
         exchange = f"markos.{domain}.review" if review else f"markos.{domain}.events"
         key = "v1.review.requested" if review else "v1.foundation.noop-requested"
@@ -110,4 +118,8 @@ class TopologyAudit:
         if actual != {(q, key, "queue") for q in queues}:
             raise TransportError("intended subscriber bindings mismatch")
         for queue in queues:
-            self.validate_queue(await self.get("queues", self.vhost, queue))
+            self.validate_queue(
+                await self.get("queues", self.vhost, queue),
+                max_messages=max_messages,
+                max_bytes=max_bytes,
+            )

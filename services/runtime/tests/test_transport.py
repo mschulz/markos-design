@@ -269,3 +269,48 @@ def test_topology_safety_profile_rejects_unsafe_queue(bad: str) -> None:
         descriptor["arguments"].pop("x-max-length")
     with pytest.raises(TransportError):
         TopologyAudit.validate_queue(descriptor)
+
+
+def test_watchdog_signals_even_if_handoff_delays_cancellation(
+    event_document: dict[str, Any],
+) -> None:
+    class ResistantStore(FakeStore):
+        def __init__(self) -> None:
+            super().__init__()
+            self.release = asyncio.Event()
+
+        async def handoff(self, event: EventEnvelope) -> Receipt:
+            try:
+                await self.release.wait()
+            except asyncio.CancelledError:
+                await self.release.wait()
+            self.trace.append("late-commit")
+            return Receipt("created", UUID(int=1))
+
+    async def scenario() -> None:
+        store = ResistantStore()
+        instance = Consumer(
+            cast(BrokerSession, object()),
+            cast(DurableStore, store),
+            {"foundation-generator": "publisher-login"},
+            active_seconds=0.02,
+            total_seconds=0.5,
+        )
+        instance.identity = StoreIdentity(
+            "foundation-worker",
+            UUID("11111111-1111-4111-8111-111111111111"),
+            "personal",
+            False,
+            True,
+        )
+        message = FakeMessage(
+            EventEnvelope.from_wire(json.dumps(event_document).encode()), store.trace
+        )
+        task = asyncio.create_task(instance._callback(cast(AbstractIncomingMessage, message)))
+        await asyncio.sleep(0.05)
+        assert instance._failed.is_set() and not task.done()
+        store.release.set()
+        await task
+        assert "ack" not in store.trace
+
+    asyncio.run(scenario())
