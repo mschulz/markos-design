@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-13 — Plain preview labels
+
+- Applied first MVP feedback: Sign-in code, Test label, Review test request and Test service access replace visible fixture/credential/grant jargon. Login help and demo notices use plain language.
+- Updated existing browser acceptance locators and the preview walkthrough. Request fields, authentication, exact approvals, stored messages and runtime behavior stay unchanged.
+
+
 ## 2026-11-13 — M1-G lean synthetic preview (review PR)
 
 - Reviewed PR #24 merged main `c590cb2`; both post-merge workflows passed. Preserved its exact tree/history and the archive.

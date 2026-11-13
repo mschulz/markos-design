@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M1-G CI and Lean Preview
 type: implementation-record
 status: implemented-synthetic-preview
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-13
 updated: 2026-11-13
@@ -56,9 +56,9 @@ docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f ../../infrastructure/compose
 uv run --no-sync python -m tests.control_process.support start --confirm-synthetic
 ```
 
-Open `https://127.0.0.1:18443/app/sign-in` using a browser profile that trusts only this disposable test CA, `infrastructure/.test-certs/ca.pem`. Fixture credentials are in the local private `infrastructure/.m1g-preview/controller.json`, excluded from Git: `both` is administrator/operator, `approver` approves, and `viewer` reads. Enter a credential in the sign-in form; do not put credentials in a URL, shell argument, screenshot or shared feedback. Keep this synthetic CA out of normal production trust stores.
+Open `https://127.0.0.1:18443/app/sign-in` using a browser profile that trusts only this disposable test CA, `infrastructure/.test-certs/ca.pem`. Demo sign-in codes are in the local private `infrastructure/.m1g-preview/controller.json`, excluded from Git: `both` is administrator/operator, `approver` approves, and `viewer` reads. Enter a code in the **Sign-in code** field; do not put credentials in a URL, shell argument, screenshot or shared feedback. Keep this synthetic CA out of normal production trust stores.
 
-A useful first feedback pass takes about ten minutes: sign in as `both`; send a message and inspect the durable checksum reply; inspect Agents and health, Activity and Configuration; submit a synthetic tool request; sign in as `approver` in a separate profile and inspect the exact preview before approving. Try a narrow screen and keyboard navigation. Record confusing labels, missing status, unnecessary steps and the next useful real task. Approval/admin/operator roles remain distinct. This preview demonstrates control flow, not agent intelligence or a Gmail classifier.
+A useful first feedback pass takes about ten minutes: sign in as `both`; send a message and inspect the durable checksum reply; inspect Agents and health, Activity and Configuration; enter a message and **Test label**, then choose **Review test request**; sign in as `approver` in a separate profile and inspect the exact preview before approving. Try a narrow screen and keyboard navigation. Record confusing labels, missing status, unnecessary steps and the next useful real task. Approval/admin/operator roles remain distinct. This preview demonstrates control flow, not agent intelligence or a Gmail classifier.
 
 The CLI uses the same HTTPS API. `markos-control --help` describes commands and explicit private session files outside Git; onboard through the fixture web authorization page. It never connects directly to SQL/RabbitMQ. Setup creates one enabled test agent/conversation and an exact approval-required fixture grant; this is privileged synthetic bootstrap, never an API bypass available to a normal user.
 

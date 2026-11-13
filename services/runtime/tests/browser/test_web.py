@@ -62,7 +62,7 @@ async def browser_page(server: dict[str, Any], *, mobile: bool = False) -> Any:
 async def login(page: Any, server: dict[str, Any], who: str = "both") -> None:
     await page.goto(server["origin"] + "/app/sign-in")
     await page.get_by_role("button", name="Sign in", exact=True).click()
-    await page.get_by_label("Fixture credential", exact=True).fill(server["credentials"][who])
+    await page.get_by_label("Sign-in code", exact=True).fill(server["credentials"][who])
     await page.get_by_role("button", name="Continue", exact=True).click()
     await page.wait_for_url("**/app/conversations")
     await expect(page.get_by_label("Workspace", exact=True)).to_be_visible()
@@ -288,7 +288,7 @@ def test_cli_browser_pkce_handoff_keeps_bearer_out_of_browser(
                 )
             )
             await page.goto(address)
-            await page.get_by_label("Fixture credential", exact=True).fill(
+            await page.get_by_label("Sign-in code", exact=True).fill(
                 server["credentials"]["operator"]
             )
             await page.get_by_role("button", name="Continue", exact=True).click()
