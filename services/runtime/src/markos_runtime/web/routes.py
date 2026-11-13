@@ -115,7 +115,7 @@ class WebRoutes:
             if lease is None:
                 raise ApiFault("unavailable", 503)
             try:
-                code = self.api.issuer.authorize(
+                code = await self.api.issuer.authorize_async(
                     value.credential, params["code_challenge"], params["nonce"]
                 )
             finally:

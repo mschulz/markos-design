@@ -52,6 +52,6 @@ strict = true
 files = ["src/markos_runtime", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["markos_runtime.api.*", "tests.control_api.*", "markos_runtime.web.*", "markos_runtime.tools.*", "tests.browser.*", "tests.web_support", "tests.tools_support"]
+module = ["markos_runtime.api.*", "tests.control_api.*", "markos_runtime.web.*", "markos_runtime.tools.*", "tests.browser.*", "tests.web_support", "tests.tools_support", "markos_runtime.control_lifecycle.*", "tests.control_process.*"]
 # Optional imports are checked in the control-extra job too.
 warn_unused_ignores = false

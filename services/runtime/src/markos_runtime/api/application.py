@@ -656,10 +656,30 @@ def create_app(
                     self.streams += 1
                 else:
                     self.active += 1
+            local_admitted = admitted
+            lease = None
             try:
+                if (
+                    admitted
+                    and not is_stream
+                    and scope.get("type") == "http"
+                    and scope.get("path") not in {"/live", "/ready"}
+                ):
+                    try:
+                        async with asyncio.timeout(5):
+                            lease = await store._call("claim_http_request")
+                        admitted = lease is not None
+                    except Exception:
+                        admitted = False
                 await self.handle(scope, receive, send, admitted)
             finally:
-                if admitted:
+                if lease is not None:
+                    from anyio import CancelScope  # type: ignore[import-not-found]
+
+                    with CancelScope(shield=True), suppress(Exception):
+                        async with asyncio.timeout(2):
+                            await store._call("release_http_request", UUID(str(lease)))
+                if local_admitted:
                     if is_stream:
                         self.streams -= 1
                     else:
@@ -825,6 +845,7 @@ def create_app(
                         for k, v in message.get("headers", [])
                         if k.lower() not in {h[0] for h in security}
                     ] + security
-                await send(message)
+                async with asyncio.timeout(2):
+                    await send(message)
 
     return Envelope()

@@ -2,7 +2,7 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.15
+version: 0.3.16
 owner: Mark Schulz
 created: 2026-11-10
 updated: 2026-11-13
@@ -286,3 +286,8 @@ PR #22 is merged. [[MarkOS v0.3 M1-E Web and CLI]] records the `4cb4d7b` main re
 ## Merged M1-E and M1-F review status
 
 PR #23 is merged. [[MarkOS v0.3 M1-F Governance and Synthetic Tools]] records the `231a018` main review, exact preserved M1-E tree and six green post-merge checks with 770 cases. The separately reviewable M1-F slice adds an explicit synthetic governance profile, fixed reviewed fixture grants, immutable exact approvals, slot-free durable waiting/fresh execution leases, atomic one-time dispatch/audit/reservations, bounded pinned MCP 2.3.0 / 2026-07-28 HTTPS reads and unknown-outcome reconciliation. Additive migration 0010 preserves 0001–0009; shared limits, scoped typed web/CLI controls and explicit privileged retention/tombstones are covered. Ordinary no-tool chat and archived code remain intact. Real accounts/OAuth/effects and deployment stay disabled. M1-G owns packaged processes, full restore/maintenance/operational closeout; earlier slice sections are chronological evidence. No merge or deployment.
+
+
+## Lean M1-G preview after PR 24
+
+PR #24 is merged. [[MarkOS v0.3 M1-G CI and Lean Preview]] records review of main `c590cb2` and green post-merge CI, plus the separately reviewable synthetic preview slice. The owner's lean-startup direction prioritizes runnable web/CLI feedback and essential CI. Independent optional image/processes, persisted synthetic issuer/MCP fixtures, shared HTTP admission and absolute socket/send deadlines extend the existing PostgreSQL/RabbitMQ path through additive migration 0011; migrations 0001–0010 and archived work stay intact. The machine-readable M1/MCP ledger explicitly leaves full operational closeout false: broader fault/resource/proxy evidence, automated cleanup/log/alert operations and independently current real deletion/revocation recovery are deferred. Real accounts/providers/models/effects, cloud/MacBook-off acceptance, merging and deployment remain separate gates. Earlier slice sections are chronological evidence.

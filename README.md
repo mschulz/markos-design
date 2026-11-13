@@ -12,6 +12,10 @@ Its preflight validates synthetic documents only. M0-B adds [explicit PostgreSQL
 
 MCP access for agents is proposed through a governed tool gateway with explicit owner/domain grants, scoped approvals and durable audit. It is not enabled by this documentation; RabbitMQ remains the event bus.
 
+## Synthetic MVP feedback preview
+
+The [lean M1-G preview and runbook](MarkOS%20v0.3%20M1-G%20CI%20and%20Lean%20Preview.md) packages the existing web/CLI, deterministic chat and exact synthetic approval flow for local feedback. It uses an explicit disposable Docker setup and synthetic credentials. No real account, model, production deployment or full operational closeout is claimed. Review the PR before running it; nothing starts on import or preflight.
+
 ## Read first
 
 - [Architecture reset decision](ADR-004%20Event-driven%20Architecture%20Supersedes%20Legacy%20MarkOS.md): accepted replacement of the legacy baseline, evidence and limits.

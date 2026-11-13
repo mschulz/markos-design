@@ -19,6 +19,7 @@ from uuid import UUID
 from markos_runtime.contracts.base import ContractError
 from markos_runtime.contracts.control import ControlValue
 from markos_runtime.control.api_config import SyntheticApiConfig
+from markos_runtime.http_bounds import bounded_connection
 
 
 class ClientError(ValueError):
@@ -201,38 +202,39 @@ class HttpClient:
             headers["Content-Type"] = "application/json"
         connection = self._connection()
         try:
-            connection.request(
-                "POST" if payload is not None else "GET", path, body=payload, headers=headers
-            )
-            response = connection.getresponse()
-            raw = response.read(262145)
-            if len(raw) > 262144:
-                raise ClientError("too-large", 413)
-            if response.status not in {200, 201, 202}:
-                error = document(raw)
-                code = error.get("code", "unavailable")
-                if code not in {
-                    "invalid",
-                    "unauthenticated",
-                    "forbidden",
-                    "not-found",
-                    "conflict",
-                    "too-large",
-                    "limited",
-                    "unavailable",
-                    "resync-required",
-                }:
-                    code = "unavailable"
-                raise ClientError(str(code), response.status)
-            if response.getheader("Content-Type", "").split(";")[0] != "application/json":
+            with bounded_connection(connection, time.monotonic() + 10):
+                connection.request(
+                    "POST" if payload is not None else "GET", path, body=payload, headers=headers
+                )
+                response = connection.getresponse()
+                raw = response.read(262145)
+                if len(raw) > 262144:
+                    raise ClientError("too-large", 413)
+                if response.status not in {200, 201, 202}:
+                    error = document(raw)
+                    code = error.get("code", "unavailable")
+                    if code not in {
+                        "invalid",
+                        "unauthenticated",
+                        "forbidden",
+                        "not-found",
+                        "conflict",
+                        "too-large",
+                        "limited",
+                        "unavailable",
+                        "resync-required",
+                    }:
+                        code = "unavailable"
+                    raise ClientError(str(code), response.status)
+                if response.getheader("Content-Type", "").split(";")[0] != "application/json":
+                    raise ClientError("invalid-response")
+
+                value = parse_json(raw)
+                if isinstance(value, dict):
+                    return document(raw)
+                if isinstance(value, list) or value is None:
+                    return value
                 raise ClientError("invalid-response")
-            # Lists/null are existing typed API responses; JSON decoding remains bounded and strict.
-            value = parse_json(raw)
-            if isinstance(value, dict):
-                return document(raw)
-            if isinstance(value, list) or value is None:
-                return value
-            raise ClientError("invalid-response")
         except (OSError, ValueError, http.client.HTTPException) as error:
             if isinstance(error, ClientError):
                 raise
@@ -262,58 +264,59 @@ class HttpClient:
         total = 0
         count = 0
         try:
-            connection.request("GET", path, headers=headers)
-            response = connection.getresponse()
-            if response.status != 200:
-                code = document(response.read(4097)).get("code", "unavailable")
-                if code not in {
-                    "invalid",
-                    "unauthenticated",
-                    "forbidden",
-                    "not-found",
-                    "conflict",
-                    "too-large",
-                    "limited",
-                    "unavailable",
-                    "resync-required",
-                }:
-                    code = "unavailable"
-                raise ClientError(str(code), response.status)
-            if response.getheader("Content-Type", "").split(";")[0] != "text/event-stream":
-                raise ClientError("invalid-response")
-            frame = bytearray()
-            while time.monotonic() < deadline and count < max_events:
-                if connection.sock is not None:
-                    connection.sock.settimeout(max(0.01, min(10, deadline - time.monotonic())))
-                try:
-                    line = response.readline(8193)
-                except TimeoutError:
-                    if time.monotonic() >= deadline:
+            with bounded_connection(connection, deadline):
+                connection.request("GET", path, headers=headers)
+                response = connection.getresponse()
+                if response.status != 200:
+                    code = document(response.read(4097)).get("code", "unavailable")
+                    if code not in {
+                        "invalid",
+                        "unauthenticated",
+                        "forbidden",
+                        "not-found",
+                        "conflict",
+                        "too-large",
+                        "limited",
+                        "unavailable",
+                        "resync-required",
+                    }:
+                        code = "unavailable"
+                    raise ClientError(str(code), response.status)
+                if response.getheader("Content-Type", "").split(";")[0] != "text/event-stream":
+                    raise ClientError("invalid-response")
+                frame = bytearray()
+                while time.monotonic() < deadline and count < max_events:
+                    if connection.sock is not None:
+                        connection.sock.settimeout(max(0.01, min(10, deadline - time.monotonic())))
+                    try:
+                        line = response.readline(8193)
+                    except TimeoutError:
+                        if time.monotonic() >= deadline:
+                            return
+                        raise
+                    if not line:
                         return
-                    raise
-                if not line:
-                    return
-                frame.extend(line)
-                total += len(line)
-                if len(frame) > 8192 or total > 262144:
-                    raise ClientError("too-large", 413)
-                if line != b"\n":
-                    continue
-                fields: dict[str, str] = {}
-                for part in frame.decode().splitlines():
-                    if ": " in part:
-                        key, value = part.split(": ", 1)
-                        if key in fields:
+                    frame.extend(line)
+                    total += len(line)
+                    if len(frame) > 8192 or total > 262144:
+                        raise ClientError("too-large", 413)
+                    if line != b"\n":
+                        continue
+                    fields: dict[str, str] = {}
+                    for part in frame.decode().splitlines():
+                        if ": " in part:
+                            key, value = part.split(": ", 1)
+                            if key in fields:
+                                raise ClientError("invalid-response")
+                            fields[key] = value
+                    frame.clear()
+                    if fields.get("event") == "resync-required":
+                        raise ClientError("resync-required", 409)
+                    if fields.get("event") == "activity":
+                        if not fields.get("id"):
                             raise ClientError("invalid-response")
-                        fields[key] = value
-                frame.clear()
-                if fields.get("event") == "resync-required":
-                    raise ClientError("resync-required", 409)
-                if fields.get("event") == "activity":
-                    if not fields.get("id"):
-                        raise ClientError("invalid-response")
-                    yield {"cursor": fields["id"], "item": document(fields["data"].encode())}
-                    count += 1
+                        yield {"cursor": fields["id"], "item": document(fields["data"].encode())}
+                        count += 1
         except (OSError, ValueError, KeyError, http.client.HTTPException) as error:
             if isinstance(error, ClientError):
                 raise

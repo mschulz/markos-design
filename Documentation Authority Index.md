@@ -2,7 +2,7 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.13
+version: 1.14
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-13
@@ -35,6 +35,7 @@ This table covers every Markdown file in this PR's repository tree, including hi
 | [MarkOS v0.3 M1-D Durable Test Agent Conversation](MarkOS%20v0.3%20M1-D%20Durable%20Test%20Agent%20Conversation.md) | Current M1-D synthetic durable conversation review/evidence; real providers, tools and production remain disabled |
 | [MarkOS v0.3 M1-E Web and CLI](MarkOS%20v0.3%20M1-E%20Web%20and%20CLI.md) | Current synthetic M1-E web/CLI and durable SSE review evidence; no real accounts, tools or deployment |
 | [MarkOS v0.3 M1-F Governance and Synthetic Tools](MarkOS%20v0.3%20M1-F%20Governance%20and%20Synthetic%20Tools.md) | Current synthetic M1-F governance/SDK/approval/audit/retention review evidence; real connectors and operational closeout remain gated |
+| [MarkOS v0.3 M1-G CI and Lean Preview](MarkOS%20v0.3%20M1-G%20CI%20and%20Lean%20Preview.md) | Current lean synthetic preview/runbook and evidence gaps; full M1 operational closeout remains open |
 | [AGENTS](AGENTS.md) | Current agent instructions; overrides historical project memory |
 | [CHANGELOG](CHANGELOG.md) | Chronological evidence; earlier accepted plans may now be superseded |
 | [CLAUDE](CLAUDE.md) | Current pointer to shared instructions |

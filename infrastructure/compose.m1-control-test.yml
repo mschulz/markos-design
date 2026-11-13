@@ -1,0 +1,178 @@
+# Disposable synthetic preview and CI only. No cloud/production credentials.
+x-control: &control
+  build:
+    context: ../services/runtime
+    dockerfile: Dockerfile.control
+  image: markos-m1g-test:${MARKOS_TEST_COMPOSE_PROJECT:?explicit owned project required}
+  init: true
+  user: '10001:10001'
+  read_only: true
+  tmpfs: ['/tmp:size=16m,noexec,nosuid']
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  mem_limit: 256m
+  cpus: 0.25
+  pids_limit: 64
+  ulimits:
+    nofile: {soft: 1024, hard: 1024}
+  stop_grace_period: 15s
+  logging: {driver: none}
+  volumes:
+    - ./.m1g-preview/config:/etc/markos:ro
+    - ./.test-certs/ca.pem:/etc/test-ca/ca.pem:ro
+    - ./.test-certs/server.pem:/etc/test-ca/server.pem:ro
+    - ./.test-certs/server.key:/etc/test-ca/server.key:ro
+  healthcheck:
+    interval: 3s
+    timeout: 5s
+    retries: 5
+    start_period: 20s
+services:
+  postgres:
+    extends: {file: compose.m0-replay-test.yml, service: postgres}
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 256
+    logging: {driver: none}
+  rabbitmq:
+    extends: {file: compose.m0-replay-test.yml, service: rabbitmq}
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 256
+    logging: {driver: none}
+    volumes:
+      - ./.test-certs:/etc/rabbitmq/test-certs:ro
+      - ./rabbitmq/m0-test.conf:/etc/rabbitmq/rabbitmq.conf:ro
+  gateway:
+    <<: *control
+    env_file: ./.m1g-preview/gateway.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/gateway.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8780']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    cpus: 0.5
+    ports: ['127.0.0.1:18443:18443', '127.0.0.1:19444:19444', '127.0.0.1:19443:19443']
+    depends_on:
+      postgres: {condition: service_healthy}
+  issuer:
+    <<: *control
+    env_file: ./.m1g-preview/issuer.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/issuer.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8781']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+    volumes:
+      - ./.m1g-preview/config:/etc/markos:ro
+      - ./.test-certs/ca.pem:/etc/test-ca/ca.pem:ro
+      - ./.test-certs/server.pem:/etc/test-ca/server.pem:ro
+      - ./.test-certs/server.key:/etc/test-ca/server.key:ro
+      - ./.m1g-preview/issuer-state:/fixture
+  mcp:
+    <<: *control
+    env_file: ./.m1g-preview/mcp.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/mcp.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8782']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+    volumes:
+      - ./.m1g-preview/config:/etc/markos:ro
+      - ./.test-certs/ca.pem:/etc/test-ca/ca.pem:ro
+      - ./.test-certs/server.pem:/etc/test-ca/server.pem:ro
+      - ./.test-certs/server.key:/etc/test-ca/server.key:ro
+      - ./.m1g-preview/mcp-state:/fixture
+  publisher:
+    <<: *control
+    env_file: ./.m1g-preview/publisher.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/publisher.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8783']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+  consumer:
+    <<: *control
+    env_file: ./.m1g-preview/consumer.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/consumer.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8784']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+  worker:
+    <<: *control
+    env_file: ./.m1g-preview/worker.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/worker.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8785']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+  worker-two:
+    <<: *control
+    env_file: ./.m1g-preview/worker-two.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/worker-two.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8786']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+  completion-publisher:
+    <<: *control
+    env_file: ./.m1g-preview/completion-publisher.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/completion-publisher.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8787']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+  activity:
+    <<: *control
+    env_file: ./.m1g-preview/activity.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/activity.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8788']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+volumes:
+  postgres-data:
+  rabbitmq-data:

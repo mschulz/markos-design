@@ -767,6 +767,7 @@ def test_explicit_factory_and_no_queued_request_admission() -> None:
             "method": "GET",
             "scheme": "https",
             "headers": [(b"host", b"127.0.0.1:18443")],
+            "path": "/live",
         }
         tasks = [asyncio.create_task(app(scope, receive, send)) for _ in range(16)]
         try:
@@ -802,7 +803,7 @@ def test_schema_incompatibility_blocks_readiness_and_api(
             else:
                 conn.execute(
                     "INSERT INTO markos_runtime.schema_migrations(version,sha256) "
-                    "VALUES(11,repeat('0',64))"
+                    "VALUES(12,repeat('0',64))"
                 )
         assert (await c.call("GET", "/live"))[0] == 200
         assert (await c.call("GET", "/ready")) == (503, {"ready": False})

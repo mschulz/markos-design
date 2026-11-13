@@ -22,3 +22,6 @@ venv
 
 # Personal Claude Code instructions
 CLAUDE.local.md
+
+# Disposable synthetic control preview credentials/state
+infrastructure/.m1g-preview/

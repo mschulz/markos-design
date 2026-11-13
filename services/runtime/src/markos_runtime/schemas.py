@@ -48,11 +48,13 @@ from markos_runtime.control.api_config import (
     SyntheticWebApiConfig,
 )
 from markos_runtime.control.config import ControlConfig, ControlLimits
+from markos_runtime.control_lifecycle.config import ControlServiceConfig
 from markos_runtime.lifecycle.config import ServiceConfig
 
 
 def models() -> dict[str, type[ValueModel]]:
     return {
+        "control-process": ControlServiceConfig,
         "control-api": SyntheticApiConfig,
         "control-governed-approval": GovernedApproval,
         "control-governed-dispatch": GovernedDispatch,
