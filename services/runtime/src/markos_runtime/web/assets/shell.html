@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ title }} · MarkOS</title><link rel="stylesheet" href="/app/assets/app.css"><script src="/app/assets/app.js" defer></script></head>
+<body data-page="{{ page }}"><a class="skip" href="#main">Skip to content</a><header><a class="brand" href="/app/conversations">MarkOS</a><span class="badge">Test workspace</span><div id="account"></div></header>
+<nav aria-label="Main navigation"><a href="/app/conversations">Conversations</a><a href="/app/agents">Agents and health</a><a href="/app/activity">Activity</a><a href="/app/approvals">Approvals</a><a href="/app/configuration">Configuration</a></nav>
+<div class="scope" id="scope-bar" hidden><label for="scope">Workspace</label><select id="scope"></select><span id="roles"></span></div>
+<main id="main" tabindex="-1"><h1>{{ title }}</h1><p id="notice" role="status" aria-live="polite"></p><section id="view" aria-label="{{ title }}">
+{% if page == 'sign-in' %}<p>Sign in to the synthetic test workspace. Real accounts are disabled.</p><button id="begin-login">Sign in</button>
+{% elif page == 'authorize' %}<p>Use the temporary fixture credential provided for this test. This does not connect a real account.</p><form id="authorize"><input type="hidden" name="request" value="{{ request }}"><input type="hidden" name="proof" value="{{ proof }}"><label for="credential">Fixture credential</label><input id="credential" type="password" name="credential" autocomplete="off" required minlength="43" maxlength="43"><button type="submit">Continue</button></form><div id="authorization-result"></div>
+{% else %}<p>Checking your session…</p>{% endif %}
+</section></main><footer>Synthetic data only. Models, tools and real accounts are disabled.</footer>
+<dialog id="preview" aria-labelledby="preview-title"><h2 id="preview-title">Review change</h2><div id="preview-body"></div><div class="actions"><button id="preview-cancel" type="button">Cancel</button><button id="preview-apply" type="button">Apply change</button></div></dialog>
+</body></html>

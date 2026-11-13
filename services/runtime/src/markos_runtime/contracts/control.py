@@ -409,6 +409,7 @@ class AuditRecord(ScopedValue):
 class ApiError(ControlValue):
     request_id: UUID
     code: Literal[
+        "resync-required",
         "invalid",
         "unauthenticated",
         "forbidden",
@@ -422,6 +423,7 @@ class ApiError(ControlValue):
     @property
     def status(self) -> int:
         return {
+            "resync-required": 409,
             "invalid": 400,
             "unauthenticated": 401,
             "forbidden": 403,
@@ -457,3 +459,4 @@ class ChatStatus(ControlValue):
     )
     reply_id: UUID | None
     completion_id: UUID | None
+    can_cancel: bool = False

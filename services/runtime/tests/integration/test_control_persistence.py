@@ -636,7 +636,7 @@ def test_migration_upgrade_preserves_populated_m0_and_checksums(
             )
             assert conn.execute(
                 "SELECT count(*) FROM markos_runtime.schema_migrations"
-            ).fetchone() == (8,)
+            ).fetchone() == (9,)
 
     asyncio.run(scenario())
 
@@ -960,14 +960,15 @@ def test_gateway_cannot_hide_elevated_privileges_in_an_inherited_role(
             conn.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(elevated)))
 
 
-def test_upgrade_populated_m1c_preserves_sessions_and_held_work(
-    control: dict[str, Any], tmp_path: Path
+@pytest.mark.parametrize("previous", [7, 8])
+def test_upgrade_populated_control_preserves_sessions_and_held_work(
+    control: dict[str, Any], tmp_path: Path, previous: int
 ) -> None:
     from tests.integration.conftest import ROLES
 
     async def scenario() -> None:
         directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
-        for file in sorted(directory.glob("*.sql"))[:7]:
+        for file in sorted(directory.glob("*.sql"))[:previous]:
             (tmp_path / file.name).write_bytes(file.read_bytes())
         with psycopg.connect(control["migration"], autocommit=True) as conn:
             conn.execute("DROP SCHEMA markos_control CASCADE")

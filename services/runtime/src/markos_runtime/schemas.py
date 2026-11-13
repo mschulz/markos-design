@@ -32,7 +32,11 @@ from markos_runtime.contracts.policy import Manifest
 from markos_runtime.contracts.replay import ReplayRequest
 from markos_runtime.contracts.review import ReviewReference
 from markos_runtime.contracts.schedules import ScheduleDefinition
-from markos_runtime.control.api_config import SyntheticApiConfig, SyntheticConversationApiConfig
+from markos_runtime.control.api_config import (
+    SyntheticApiConfig,
+    SyntheticConversationApiConfig,
+    SyntheticWebApiConfig,
+)
 from markos_runtime.control.config import ControlConfig, ControlLimits
 from markos_runtime.lifecycle.config import ServiceConfig
 
@@ -41,6 +45,7 @@ def models() -> dict[str, type[ValueModel]]:
     return {
         "control-api": SyntheticApiConfig,
         "control-conversation-api": SyntheticConversationApiConfig,
+        "control-web-api": SyntheticWebApiConfig,
         "control-conversation-request": ConversationRequest,
         "control-chat-admission": ChatAdmission,
         "control-chat-status": ChatStatus,

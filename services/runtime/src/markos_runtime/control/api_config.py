@@ -66,3 +66,9 @@ class SyntheticConversationApiConfig(_ApiProfile):
         if type(value) is not bool or value is not True:
             raise ValueError("fixed synthetic conversation switch required")
         return value
+
+
+class SyntheticWebApiConfig(SyntheticConversationApiConfig):
+    """Explicit M1-E local fixture UI; no production or tool enablement."""
+
+    web_profile: Literal["synthetic-web-cli-v1"]

@@ -2,7 +2,7 @@
 title: ADR-006 Control Plane Identity and Trust Boundary
 type: architecture-decision
 status: proposed
-version: 1.3
+version: 1.4
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-13
@@ -18,7 +18,7 @@ tags:
 
 Use one trusted interaction gateway to authenticate humans and delegate narrowly scoped operations to PostgreSQL. Keep human identity separate from agent/service login identity. Implement the versioned synthetic contract profile in [[MarkOS v0.3 M1-A Contracts and Identity]] first; authentication, database authority, API routes, sessions and dispatch remain later slices. This ADR is proposed for review, not production enablement. It follows [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] and [[ADR-005 Governed MCP Access for Agents]] without changing RabbitMQ, PostgreSQL authority, source objects, derived Markdown or rules-first M3 routing.
 
-The owner authorized M1-A after review of PR #18. That M1-A authorization covered contracts, explicit inert configuration, tests and identity decisions. The owner has subsequently authorized M1-B persistence separately; see [[MarkOS v0.3 M1-B Control Plane Persistence]]. The owner separately authorized M1-C authentication/API; see the review record below. The owner has separately authorized M1-D synthetic conversations; see its review record below. M1-E–M1-G, real accounts, tools, merging and deployment require separate authorization. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
+The owner authorized M1-A after review of PR #18. That M1-A authorization covered contracts, explicit inert configuration, tests and identity decisions. The owner has subsequently authorized M1-B persistence separately; see [[MarkOS v0.3 M1-B Control Plane Persistence]]. The owner separately authorized M1-C authentication/API; see the review record below. The owner has separately authorized M1-D synthetic conversations; see its review record below. The owner separately authorized M1-E web/CLI; see [[MarkOS v0.3 M1-E Web and CLI]]. M1-F–M1-G, real accounts, tools, merging and deployment require separate authorization. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
 
 ## Authentication and session profile
 
@@ -106,3 +106,8 @@ PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a8
 ## Merged M1-C and M1-D review status
 
 PR #21 is merged. [[MarkOS v0.3 M1-D Durable Test Agent Conversation]] records the `8311f01` main review, six green post-merge checks and a separately reviewable durable synthetic conversation. The explicit conversation API profile adds atomic message/event/outbox admission, fixed checksum acknowledgement, durable reply/completion/activity, scoped polling/cursors, cancellation and current-authority/epoch/fence checks. It shares PostgreSQL/RabbitMQ and the two global execution slots with the unchanged no-op path; migration 0008 is additive. M1-C/preflight configurations remain execution-disabled. Real identity adapters, interactive clients/SSE, governance/tools, scheduled cleanup and packaged process/restore/production gates remain separate work. No merge or deployment.
+
+
+## Merged M1-D and M1-E review status
+
+PR #22 is merged. [[MarkOS v0.3 M1-E Web and CLI]] records the `4cb4d7b` main review, six green post-merge checks covering 706 tests, and the separately reviewable client slice. It fixes activity cursor-purpose binding and adds an explicit fixture-only web profile with five pages, a shared-HTTPS CLI, exact typed write previews, private explicit CLI session storage and durable scoped SSE with shared 1/4/20 lease limits, current-authority checks and restore-aware cursors. Additive migration 0009 preserves 0001–0008; existing dependency pins and archived work remain intact. Browser acceptance is required in CI. Approvals/tools remain disabled for M1-F; packaged process/restore/operational closeout remains M1-G. Real accounts and deployment remain disabled. Earlier slice sections below/above are chronological evidence; this section describes the latest review state. No merge or deployment.

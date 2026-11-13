@@ -8,6 +8,13 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M1-E web and CLI prepared for review — 13 November 2026
+
+- Reviewed merged PR #22/main `4cb4d7b`; exact tree/history preserved and all six post-merge checks pass with 706 tests. Fixed a same-scope activity cursor-purpose consistency defect and added regression coverage.
+- Added an explicit synthetic web profile, five accessible responsive pages, exact typed previews, private CLI PKCE session storage and shared authenticated HTTPS commands; approval/tool actions remain disabled.
+- Added bounded durable SSE with actor/scope/resource/epoch cursors and shared expiring 1/4/20 admission leases in additive migration 0009. Preserved migrations 0001–0008, base/control dependency pins, archived work and PostgreSQL/RabbitMQ authority.
+- Added required disposable Chromium browser acceptance, client/stream security/fault tests, schema/example and [[MarkOS v0.3 M1-E Web and CLI]]. M1-F/G, real identities, packaged process/restore/production gates remain separate. No merge or deployment.
+
 ### M1-D durable test agent conversation prepared for review — 13 November 2026
 
 - Reviewed merged main `8311f01` after PR #21; exact reviewed tree/history preserved, six post-merge checks green with 623 tests. No blocking issue in M1-C's synthetic API scope.

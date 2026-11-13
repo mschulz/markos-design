@@ -4,6 +4,7 @@
   "properties": {
     "code": {
       "enum": [
+        "resync-required",
         "invalid",
         "unauthenticated",
         "forbidden",

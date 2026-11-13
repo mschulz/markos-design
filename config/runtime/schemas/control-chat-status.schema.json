@@ -2,6 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
+    "can_cancel": {
+      "default": false,
+      "title": "Can Cancel",
+      "type": "boolean"
+    },
     "completion_id": {
       "anyOf": [
         {
