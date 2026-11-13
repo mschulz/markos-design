@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-13 — Explain cancelled approval requests
+
+- Show Request cancelled with a plain reason and a clear retry action. Record cancellation facts at the transition rather than guessing from later session/settings changes.
+- Add optional typed cancellation reasons to the existing scoped approval readers through additive migration 0012. Preserve authentication, immutable intent, decision/dispatch behavior and migrations 0001–0011.
+- Recover old signed-out reasons only where retained timestamps prove them; other unrecorded causes get an honest fallback. No request is reactivated.
+
+
 ## 2026-11-13 — Plain preview labels
 
 - Applied first MVP feedback: Sign-in code, Test label, Review test request and Test service access replace visible fixture/credential/grant jargon. Login help and demo notices use plain language.

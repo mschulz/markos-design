@@ -98,6 +98,20 @@ class GovernedApproval(ScopedValue):
     approver_id: UUID | None
     dispatch_id: UUID | None
     requires_human: bool
+    cancellation_reason: (
+        Literal[
+            "test-service-check-failed",
+            "requester-signed-out",
+            "sign-in-expired",
+            "access-changed",
+            "settings-changed",
+            "preview-restored",
+            "request-cancelled",
+            "approval-withdrawn",
+            "unknown",
+        ]
+        | None
+    ) = None
     expires_at: Utc
     intent: CallIntent | None
     endpoint: str
@@ -106,6 +120,8 @@ class GovernedApproval(ScopedValue):
 
     @model_validator(mode="after")
     def identity(self) -> Self:
+        if self.cancellation_reason is not None and self.status != "revoked":
+            raise ValueError("cancellation reason requires cancelled approval")
         if self.approval_id != self.intent_id:
             raise ValueError("exact approval identity required")
         if self.intent is not None and self.intent.intent_sha256() != self.intent_sha256:
