@@ -122,7 +122,8 @@ def test_packaged_preview_restart_outages_and_fresh_database_restore(tmp_path: P
             == receipt
         )
         # Gateway and issuer restart preserve the committed reply and CLI session.
-        await asyncio.to_thread(compose, "restart", "gateway", "issuer")
+        await asyncio.to_thread(compose, "stop", *APPS)
+        await asyncio.to_thread(compose, "up", "-d", "--no-build", "--force-recreate", *APPS)
         await asyncio.to_thread(wait_healthy)
         assert (await asyncio.to_thread(client.request, "/api/v1/agents" + SCOPE))["items"]
 
@@ -142,7 +143,8 @@ def test_packaged_preview_restart_outages_and_fresh_database_restore(tmp_path: P
             scalar("SELECT count(*) FROM markos_runtime.execution_slots WHERE task_id IS NOT NULL")
             == 0
         )
-        await asyncio.to_thread(compose, "restart", "worker", "worker-two", "gateway")
+        await asyncio.to_thread(compose, "stop", *APPS)
+        await asyncio.to_thread(compose, "up", "-d", "--no-build", "--force-recreate", *APPS)
         await asyncio.to_thread(wait_healthy)
         approvals = await asyncio.to_thread(approver.request, "/api/v1/approvals" + SCOPE)
         item = approvals["items"][0]

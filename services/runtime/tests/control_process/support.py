@@ -414,7 +414,7 @@ def main() -> None:
                 "/opt/runtime/.venv/bin/python",
                 role,
                 "-c",
-                "import os;os.chown('/fixture',10001,10001);os.chmod('/fixture',0o700);"
+                "import os;os.chown('/fixture',10001,10001);"
                 "os.chown('/fixture/seed.json',10001,10001)",
             )
         compose("up", "-d", "--no-build", *APPS)
