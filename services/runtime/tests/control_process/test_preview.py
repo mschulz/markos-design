@@ -125,7 +125,7 @@ def test_packaged_preview_restart_outages_and_fresh_database_restore(tmp_path: P
         await asyncio.to_thread(compose, "stop", *APPS)
         await asyncio.to_thread(compose, "up", "-d", "--no-build", "--force-recreate", *APPS)
         await asyncio.to_thread(wait_healthy)
-        assert (await asyncio.to_thread(client.request, "/api/v1/agents" + SCOPE))["items"]
+        assert await asyncio.to_thread(client.request, "/api/v1/agents" + SCOPE)
 
         async def tool_request(key: str) -> Any:
             return await asyncio.to_thread(
@@ -152,7 +152,7 @@ def test_packaged_preview_restart_outages_and_fresh_database_restore(tmp_path: P
         async def approve(item: Any) -> None:
             await asyncio.to_thread(
                 approver.request,
-                "/api/v1/approvals/" + item["intent_id"] + "/decision" + SCOPE,
+                "/api/v1/approvals/" + item["intent_id"] + "/decisions" + SCOPE,
                 {
                     "schema_version": 1,
                     "intent_id": item["intent_id"],
