@@ -252,6 +252,7 @@ jobs:
     env:
       MARKOS_TEST_COMPOSE_PROJECT: markos-m1g-${{ github.run_id }}-${{ github.run_attempt }}
       MARKOS_REQUIRE_CONTROL_PROCESS: '1'
+      MARKOS_PREVIEW_POSTGRES_PORT: '15432'
       PLAYWRIGHT_BROWSERS_PATH: /tmp/markos-ci-browsers
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M1-G CI and Lean Preview
 type: implementation-record
 status: implemented-synthetic-preview
-version: 1.0
+version: 1.1
 owner: Mark Schulz
 created: 2026-11-13
 updated: 2026-11-13
@@ -41,7 +41,7 @@ Runtime access/debug logs are disabled; Docker log persistence is disabled for t
 
 ## Try the preview after review
 
-Prerequisites: a separate checkout, Python 3.13, uv, OpenSSL and local Docker Compose. No cloud account is needed. The commands below are instructions for the owner; this PR does not start a service on the owner's machine. Use a fresh checkout/folder if a previous preview exists: setup refuses to overwrite its private state. Ports 5432, 5672, 15672, 18443, 19443 and 19444 must be free. The fixture TLS certificate expires after two days; recreate the disposable preview rather than treating it as production PKI.
+Prerequisites: a separate checkout, Python 3.13, uv, OpenSSL and local Docker Compose. No cloud account is needed. The commands below are instructions for the owner; this PR does not start a service on the owner's machine. Use a fresh checkout/folder if a previous preview exists: setup refuses to overwrite its private state. Ports 5672, 15672, 18443, 19443 and 19444 must be free. PostgreSQL publishes on 5432 by default; if another local database uses it, set `MARKOS_PREVIEW_POSTGRES_PORT=15432` before every setup/start/stop command. This selects a loopback-only host port; containers still connect to PostgreSQL on 5432. Never stop an existing database to make room for this preview. The fixture TLS certificate expires after two days; recreate the disposable preview rather than treating it as production PKI.
 
 From `services/runtime`:
 
@@ -81,3 +81,8 @@ The restore drill keeps independent issuer/MCP state current, rotates the SQL ep
 ## Next review decision
 
 Review this bounded preview PR, then collect product feedback before expanding infrastructure or starting another milestone. Do not block local synthetic feedback on production-only gates, and do not waive applicable safety gates before connecting real accounts. Decide the first useful end-to-end task and whether to prioritize UI changes or the separately reviewed native M2 vertical slice. No merge, deployment or real integration is implied.
+
+
+## Post-merge local setup review
+
+Merged PR #25 main `c29a9ea` has the exact reviewed preview tree `416a45d2107a478652842431a9d129ab786e5636`. Local setup found an existing PostgreSQL on the Mac's port 5432. The small follow-up adds a strictly validated host-port override with owned-container port verification, retaining the internal 5432 listener and all role boundaries. The post-merge main runtime workflow also exposed a fixture-test readiness race: it waited only 0.3 seconds for the MCP subprocess after checking the issuer alone. The test now checks both private readiness endpoints within the existing 15-second startup limit, including after restart; protocol/deadline checks stay intact. The failed main API job is retried independently, and the fix is separately reviewable. The dedicated hosted preview job uses 15432 to exercise the same path; the original default remains compatible. Existing databases, archive, migrations and dependency pins are unchanged. The local preview uses synthetic accounts/data only; it is not a deployment or production closeout.
