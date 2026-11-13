@@ -61,7 +61,7 @@ class WebRoutes:
             "/app/sign-in": "Sign in",
         }
         context: dict[str, Any] = {
-            "title": pages.get(path, "Fixture sign-in"),
+            "title": pages.get(path, "Sign in"),
             "page": path.removeprefix("/app/") if path != "/app" else "conversations",
             "request": "",
             "proof": "",

@@ -38,27 +38,25 @@ def test_mobile_exact_approval_and_inert_result(
         ):
             await login(page, server)
             await page.get_by_role("link", name="Configuration", exact=True).click()
-            await page.get_by_label("Fixture HTTPS endpoint", exact=True).fill(remote["endpoint"])
-            await page.get_by_label("Reason for fixture grant", exact=True).fill(
+            await page.get_by_label("Test service address", exact=True).fill(remote["endpoint"])
+            await page.get_by_label("Reason for access", exact=True).fill(
                 "Synthetic browser review"
             )
-            await page.get_by_label("Enable this reviewed fixture grant", exact=True).check()
-            await page.get_by_role("button", name="Review fixture grant", exact=True).click()
+            await page.get_by_label("Allow this test service", exact=True).check()
+            await page.get_by_role("button", name="Review test access", exact=True).click()
             await expect(page.get_by_role("dialog")).to_contain_text(remote["endpoint"])
             await page.locator("#preview-cancel").click()
             assert rows(conversation, "SELECT count(*) FROM markos_control.tool_grants") == [(0,)]
-            await page.get_by_role("button", name="Review fixture grant", exact=True).click()
+            await page.get_by_role("button", name="Review test access", exact=True).click()
             await page.locator("#preview-apply").click()
-            await expect(page.locator("#notice")).to_contain_text("Fixture grant revision recorded")
+            await expect(page.locator("#notice")).to_contain_text("Test access updated")
             await page.get_by_role("link", name="Conversations", exact=True).click()
             await page.get_by_label("Message", exact=True).fill(
                 "Synthetic governed browser request"
             )
             label = '<img src=x onerror="window.toolInjected=1">'
-            await page.get_by_label("Synthetic fixture label", exact=True).fill(label)
-            await page.get_by_role(
-                "button", name="Review synthetic read request", exact=True
-            ).click()
+            await page.get_by_label("Test label", exact=True).fill(label)
+            await page.get_by_role("button", name="Review test request", exact=True).click()
             await expect(page.get_by_role("dialog")).to_contain_text(label)
             async with page.expect_response(
                 lambda r: "/api/v1/tool-requests?" in r.url and r.status == 202
