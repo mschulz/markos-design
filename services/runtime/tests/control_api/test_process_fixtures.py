@@ -9,6 +9,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, cast
+from urllib.request import urlopen
 from uuid import UUID, uuid4
 
 from markos_runtime.api.identity import challenge, opaque
@@ -40,6 +41,7 @@ def test_persisted_issuer_and_mcp_launch_from_independent_package(tmp_path: Path
         "MARKOS_CONTROL_FIXTURE_ADMIN_TOKEN": control,
     }
     files = []
+    health_ports = []
     for component, service in [("issuer", "control-gateway"), ("mcp", "control-test-agent")]:
         folder = tmp_path / component
         folder.mkdir(mode=0o700)
@@ -47,6 +49,8 @@ def test_persisted_issuer_and_mcp_launch_from_independent_package(tmp_path: Path
             folder / "seed.json",
             {"schema_version": 1, "accounts": [{"subject": "both", "credential": credential}]},
         )
+        health_port = port()
+        health_ports.append(health_port)
         profile = ControlServiceConfig(
             schema_version=1,
             profile="control-process-fixture-v1",
@@ -54,7 +58,7 @@ def test_persisted_issuer_and_mcp_launch_from_independent_package(tmp_path: Path
             service_id=cast(Any, service),
             owner_id=owner,
             domain="personal",
-            health_port=port(),
+            health_port=health_port,
             issuer_endpoint=f"https://127.0.0.1:{issuer_port}/fixture",
             tool_endpoint=f"https://127.0.0.1:{tool_port}/mcp",
             ca_file=str(cert),
@@ -89,14 +93,24 @@ def test_persisted_issuer_and_mcp_launch_from_independent_package(tmp_path: Path
     processes = [start(file) for file in files]
     remote = RemoteFixtureIssuer(f"https://127.0.0.1:{issuer_port}/fixture", cert, api)
 
+    def healthy(port: int) -> bool:
+        try:
+            with urlopen(f"http://127.0.0.1:{port}/ready", timeout=0.5) as response:
+                return bool(json.loads(response.read(4096)).get("ready"))
+        except (OSError, ValueError):
+            return False
+
     async def ready() -> None:
         async with asyncio.timeout(15):
             while True:
-                try:
-                    await remote.remote("health", {})
+                if any(process.poll() is not None for process in processes):
+                    raise AssertionError("synthetic fixture exited before readiness")
+                checks = await asyncio.gather(
+                    *(asyncio.to_thread(healthy, port) for port in health_ports)
+                )
+                if all(checks):
                     return
-                except Exception:
-                    await asyncio.sleep(0.1)
+                await asyncio.sleep(0.1)
 
     async def scenario() -> None:
         await ready()
@@ -108,7 +122,6 @@ def test_persisted_issuer_and_mcp_launch_from_independent_package(tmp_path: Path
             FixtureConnection(f"https://127.0.0.1:{tool_port}/mcp", owner, "personal", cert, tool),
             confirm_synthetic=True,
         )
-        await asyncio.sleep(0.3)
         await transport.inspect(time.monotonic() + 5)
         operation = uuid4()
         result = await transport.call("Synthetic process read", operation, time.monotonic() + 5)
