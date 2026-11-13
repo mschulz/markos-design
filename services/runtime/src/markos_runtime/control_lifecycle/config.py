@@ -12,7 +12,6 @@ from markos_runtime.contracts.base import ContractError, Domain
 from markos_runtime.contracts.control import ControlValue
 from markos_runtime.contracts.governance import fixture_endpoint
 
-
 ControlSecretRef = Annotated[str, Field(pattern=r"^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$")]
 
 
