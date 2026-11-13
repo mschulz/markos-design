@@ -289,7 +289,7 @@ class ControlService:
                                 handled = await worker.run_once()
                                 if not handled and plain_worker:
                                     await plain_worker.run_once()
-                            if consumer and not consumer.ready:
+                            if consumer and not consumer.ready.is_set():
                                 raise StorageError("broker unavailable")
                             role = (
                                 "worker"
@@ -298,7 +298,12 @@ class ControlService:
                                 if cfg.component in {"publisher", "completion-publisher"}
                                 else "consumer"
                             )
-                            await store.heartbeat(role, epoch, self.instance, "ready")
+                            await store.heartbeat(
+                                component=role,
+                                instance_id=self.instance,
+                                epoch=epoch,
+                                status="ready",
+                            )
                             self.health.ready = True
                         self.health.passes += 1
                         self.health.touch()

@@ -191,6 +191,14 @@ def prepare_files() -> None:
 async def bootstrap() -> None:
     project()
     state = data()
+    for role in ("postgres", "rabbitmq"):
+        meta = json.loads(command(["docker", "inspect", container(role)]))[0]
+        port = "5432/tcp" if role == "postgres" else "15672/tcp"
+        expected = "5432" if role == "postgres" else "15672"
+        if not meta["State"]["Running"] or meta["NetworkSettings"]["Ports"].get(port) != [
+            {"HostIp": "127.0.0.1", "HostPort": expected}
+        ]:
+            raise RuntimeError("owned loopback dependency required before provisioning")
     # Only the new project's private PostgreSQL service is reachable here.
     with psycopg.connect(make_conninfo(admin(), dbname="postgres"), autocommit=True) as conn:
         for role in (
@@ -384,7 +392,15 @@ def wait_healthy(seconds: int = 120) -> None:
         if all(x["State"].get("Health", {}).get("Status") == "healthy" for x in metadata):
             return
         time.sleep(1)
-    raise RuntimeError("synthetic preview readiness deadline exceeded")
+    states = {}
+    for role in APPS:
+        item = json.loads(command(["docker", "inspect", container(role)]))[0]["State"]
+        states[role] = {
+            "status": item["Status"],
+            "health": item.get("Health", {}).get("Status"),
+            "exit_code": item["ExitCode"],
+        }
+    raise RuntimeError("synthetic preview readiness deadline exceeded: " + json.dumps(states))
 
 
 def main() -> None:

@@ -168,3 +168,30 @@ def test_issuer_restart_preserves_provider_session_rotation_and_revocation(tmp_p
     state.chmod(0o644)
     with pytest.raises(ValueError):
         private_json(state)
+
+
+def test_runtime_readiness_and_heartbeat_share_the_current_epoch(control: dict[str, Any]) -> None:
+    from uuid import uuid4
+
+    from psycopg.types.json import Jsonb
+
+    from markos_runtime.api.schema import EXPECTED_MIGRATIONS
+    from markos_runtime.store.database import DurableStore
+
+    async def scenario() -> None:
+        async with DurableStore.connect(control["publisher"], max_connections=2) as store:
+            async with store._transaction() as conn:
+                row = await (
+                    await conn.execute(
+                        "SELECT markos_control.runtime_process_probe(%s) AS epoch",
+                        (Jsonb(EXPECTED_MIGRATIONS),),
+                    )
+                ).fetchone()
+            assert row is not None
+            epoch = row["epoch"]
+            assert epoch == await store.current_epoch()
+            await store.heartbeat(
+                component="publisher", instance_id=uuid4(), epoch=epoch, status="ready"
+            )
+
+    asyncio.run(scenario())
