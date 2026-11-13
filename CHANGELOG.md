@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-13 — Local synthetic preview setup
+
+- Reviewed main after PR #25; preserved the exact reviewed merge tree.
+- Added an optional loopback PostgreSQL host-port override so the preview can coexist with an existing local database. Internal ports, owned-service checks, scopes and defaults remain intact; the hosted preview job exercises the alternate port.
+- Replaced a fixed 0.3-second MCP fixture startup sleep with checks of both private readiness endpoints after initial start and restart; protocol/deadline checks remain intact.
+- This is a local synthetic setup correction, not a cloud deployment or production-readiness claim.
+
+
 ## 2026-11-13 — M1-G lean synthetic preview (review PR)
 
 - Reviewed PR #24 merged main `c590cb2`; both post-merge workflows passed. Preserved its exact tree/history and the archive.
