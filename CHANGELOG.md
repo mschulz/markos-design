@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-13 — M1-G lean synthetic preview (review PR)
+
+- Reviewed PR #24 merged main `c590cb2`; both post-merge workflows passed. Preserved its exact tree/history and the archive.
+- Prioritized startup/MVP feedback: optional independent image/process preview, scoped persisted synthetic issuer/MCP fixtures and owned local/CI setup; no real integrations or deployment.
+- Bounded final HTTP sends and actual blocking-reader socket lifetime; additive migration 0011 shares short-request admission across replicas.
+- Added essential packaged browser/CLI/restart/uncertain-effect/dependency/fresh-restore CI and a runbook plus explicit M1/MCP evidence/gap ledger. Full operational closeout remains open; automated maintenance/alerts, broad fault/resource and cloud gates are deferred.
+
+
 All notable changes to the MarkOS Design repository will be documented in this file.
 
 The format is inspired by *Keep a Changelog*, but organised around design milestones rather than software releases.

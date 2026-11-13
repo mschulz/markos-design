@@ -8,6 +8,7 @@ on:
       - 'infrastructure/rabbitmq/**'
       - 'infrastructure/compose.m0-replay-test.yml'
       - 'infrastructure/compose.m0-test.yml'
+      - 'infrastructure/compose.m1-control-test.yml'
       - '.github/workflows/runtime-contracts.yml'
   push:
     branches: [main]
@@ -18,6 +19,7 @@ on:
       - 'infrastructure/rabbitmq/**'
       - 'infrastructure/compose.m0-replay-test.yml'
       - 'infrastructure/compose.m0-test.yml'
+      - 'infrastructure/compose.m1-control-test.yml'
       - '.github/workflows/runtime-contracts.yml'
 permissions:
   contents: read
@@ -74,7 +76,7 @@ jobs:
       - run: uv run --no-sync ruff check .
       - run: uv run --no-sync ruff format --check .
       - run: uv run --no-sync mypy
-      - run: uv run --no-sync pytest --ignore=tests/control_api --ignore=tests/browser --ignore=tests/integration/test_volume_loss.py --ignore=tests/integration/test_lifecycle_harness.py
+      - run: uv run --no-sync pytest --ignore=tests/control_api --ignore=tests/browser --ignore=tests/control_process --ignore=tests/integration/test_volume_loss.py --ignore=tests/integration/test_lifecycle_harness.py
       - run: uv run --no-sync python -m markos_runtime.schemas --output-dir ../../config/runtime/schemas
       - name: Verify standalone wheel outside checkout
         run: |
@@ -242,3 +244,50 @@ jobs:
       - name: Remove only owned synthetic project and volumes
         if: always()
         run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m0-test.yml down -v --remove-orphans
+
+  control-process:
+    name: Synthetic control preview and restore
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      MARKOS_TEST_COMPOSE_PROJECT: markos-m1g-${{ github.run_id }}-${{ github.run_attempt }}
+      MARKOS_REQUIRE_CONTROL_PROCESS: '1'
+      PLAYWRIGHT_BROWSERS_PATH: /tmp/markos-ci-browsers
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13.14'
+      - run: python -m pip install uv==0.13.6
+      - run: echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/markos-control-process" >> "$GITHUB_ENV"
+      - run: uv sync --project services/runtime --locked --extra control --extra tools --group browser
+      - name: Prepare owned synthetic preview and TLS
+        working-directory: services/runtime
+        run: uv run --no-sync python -m tests.control_process.support prepare --confirm-synthetic
+      - name: Start disposable dependencies
+        run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml up -d --wait --wait-timeout 120 postgres rabbitmq
+      - name: Explicit migrations, fixture accounts and reviewed topology
+        working-directory: services/runtime
+        run: uv run --no-sync python -m tests.control_process.support bootstrap --confirm-synthetic
+      - name: Build independent optional profile
+        run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml build gateway
+      - name: Verify optional image and packaged assets without runtime credentials
+        run: |
+          docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml run --rm --no-deps --entrypoint /opt/runtime/.venv/bin/python gateway -I -c 'import importlib.util; from importlib.resources import files; assert importlib.util.find_spec("markos") is None; assert importlib.util.find_spec("pytest") is None; import mcp; from markos_runtime.api.application import create_app; assert files("markos_runtime.web").joinpath("assets/shell.html").read_bytes(); print("independent optional image verified")'
+      - name: Start bounded synthetic preview roles
+        working-directory: services/runtime
+        run: uv run --no-sync python -m tests.control_process.support start --confirm-synthetic
+      - name: Install pinned disposable Chromium
+        working-directory: services/runtime
+        run: uv run --no-sync python -m playwright install --with-deps chromium --only-shell
+      - name: Browser, CLI, process restart, uncertainty and fresh restore
+        working-directory: services/runtime
+        run: uv run --no-sync pytest -q tests/control_process --basetemp "$RUNNER_TEMP/control-preview-results" --junitxml "$RUNNER_TEMP/control-preview-results.xml"
+      - name: Show coarse synthetic measurements
+        run: find "$RUNNER_TEMP/control-preview-results" -name measurements.json -exec cat {} ";"
+      - name: Owned container status on failure
+        if: failure()
+        run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml ps -a
+      - name: Remove only this disposable project and volumes
+        if: always()
+        run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml down -v --remove-orphans

@@ -23,6 +23,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     service.add_argument("--config", type=Path, required=True)
     service.add_argument("--confirm-synthetic", action="store_true")
+    process = subcommands.add_parser(
+        "serve-control-synthetic", help="Run an explicitly configured isolated control fixture"
+    )
+    process.add_argument("--config", type=Path, required=True)
+    process.add_argument("--confirm-synthetic", action="store_true")
     health = subcommands.add_parser(
         "health", help="Check private local synthetic service readiness"
     )
@@ -55,6 +60,21 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         print("Control preflight passed (validation only; no authentication or connections).")
         return 0
+    if args.command == "serve-control-synthetic":
+        if not args.confirm_synthetic:
+            print("Explicit synthetic confirmation required.", file=sys.stderr)
+            return 2
+        import os
+
+        from markos_runtime.control_lifecycle.config import load_process
+
+        try:
+            process_config = load_process(args.config)
+            from markos_runtime.control_lifecycle.service import run_control
+        except (ContractError, ImportError):
+            print("Invalid isolated control profile or optional installation.", file=sys.stderr)
+            return 2
+        return run_control(process_config, dict(os.environ))
     if args.command == "serve-synthetic":
         if not args.confirm_synthetic:
             print("Explicit synthetic confirmation required.", file=sys.stderr)

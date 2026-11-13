@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "api_origin": {
+      "default": "https://127.0.0.1:18443",
+      "title": "Api Origin",
+      "type": "string"
+    },
+    "audit_password_secret_ref": {
+      "default": "MARKOS_CONTROL_AUDIT_PASSWORD",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Audit Password Secret Ref",
+      "type": "string"
+    },
+    "audit_url": {
+      "default": "https://rabbitmq:15671",
+      "title": "Audit Url",
+      "type": "string"
+    },
+    "audit_user_secret_ref": {
+      "default": "MARKOS_CONTROL_AUDIT_USER",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Audit User Secret Ref",
+      "type": "string"
+    },
+    "broker_publisher_user": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Broker Publisher User",
+      "type": "string"
+    },
+    "broker_secret_ref": {
+      "default": "MARKOS_CONTROL_BROKER_DSN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Broker Secret Ref",
+      "type": "string"
+    },
+    "ca_file": {
+      "title": "Ca File",
+      "type": "string"
+    },
+    "certificate_file": {
+      "title": "Certificate File",
+      "type": "string"
+    },
+    "component": {
+      "enum": [
+        "gateway",
+        "issuer",
+        "mcp",
+        "publisher",
+        "completion-publisher",
+        "consumer",
+        "activity",
+        "worker"
+      ],
+      "title": "Component",
+      "type": "string"
+    },
+    "database_secret_ref": {
+      "default": "MARKOS_CONTROL_DATABASE_DSN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Database Secret Ref",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "environment": {
+      "const": "test",
+      "default": "test",
+      "title": "Environment",
+      "type": "string"
+    },
+    "fixture_admin_secret_ref": {
+      "default": "MARKOS_CONTROL_FIXTURE_ADMIN_TOKEN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Fixture Admin Secret Ref",
+      "type": "string"
+    },
+    "fixture_seed_file": {
+      "title": "Fixture Seed File",
+      "type": "string"
+    },
+    "fixture_state_file": {
+      "title": "Fixture State File",
+      "type": "string"
+    },
+    "health_port": {
+      "maximum": 65535,
+      "minimum": 1024,
+      "title": "Health Port",
+      "type": "integer"
+    },
+    "issuer_admin_secret_ref": {
+      "default": "MARKOS_CONTROL_ISSUER_ADMIN_TOKEN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Issuer Admin Secret Ref",
+      "type": "string"
+    },
+    "issuer_api_secret_ref": {
+      "default": "MARKOS_CONTROL_ISSUER_API_TOKEN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Issuer Api Secret Ref",
+      "type": "string"
+    },
+    "issuer_endpoint": {
+      "default": "https://127.0.0.1:19444/fixture",
+      "title": "Issuer Endpoint",
+      "type": "string"
+    },
+    "issuer_worker_secret_ref": {
+      "default": "MARKOS_CONTROL_ISSUER_WORKER_TOKEN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Issuer Worker Secret Ref",
+      "type": "string"
+    },
+    "listen_host": {
+      "default": "127.0.0.1",
+      "enum": [
+        "127.0.0.1",
+        "0.0.0.0"
+      ],
+      "title": "Listen Host",
+      "type": "string"
+    },
+    "migrate_on_start": {
+      "const": false,
+      "default": false,
+      "title": "Migrate On Start",
+      "type": "boolean"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "private_key_file": {
+      "title": "Private Key File",
+      "type": "string"
+    },
+    "profile": {
+      "const": "control-process-fixture-v1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "real_accounts_enabled": {
+      "const": false,
+      "default": false,
+      "title": "Real Accounts Enabled",
+      "type": "boolean"
+    },
+    "real_tools_enabled": {
+      "const": false,
+      "default": false,
+      "title": "Real Tools Enabled",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "service_id": {
+      "enum": [
+        "control-gateway",
+        "control-test-agent",
+        "control-activity"
+      ],
+      "title": "Service Id",
+      "type": "string"
+    },
+    "session_key_secret_ref": {
+      "default": "MARKOS_CONTROL_SESSION_KEY",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Session Key Secret Ref",
+      "type": "string"
+    },
+    "shutdown_seconds": {
+      "const": 15,
+      "default": 15,
+      "title": "Shutdown Seconds",
+      "type": "integer"
+    },
+    "tool_endpoint": {
+      "default": "https://127.0.0.1:19443/mcp",
+      "title": "Tool Endpoint",
+      "type": "string"
+    },
+    "tool_secret_ref": {
+      "default": "MARKOS_CONTROL_TOOL_TOKEN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Tool Secret Ref",
+      "type": "string"
+    },
+    "work_seconds": {
+      "const": 10,
+      "default": 10,
+      "title": "Work Seconds",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile",
+    "component",
+    "owner_id",
+    "domain",
+    "service_id",
+    "health_port",
+    "ca_file",
+    "certificate_file",
+    "private_key_file",
+    "fixture_state_file",
+    "fixture_seed_file",
+    "broker_publisher_user"
+  ],
+  "title": "ControlServiceConfig",
+  "type": "object"
+}

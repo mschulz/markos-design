@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M1 Control Plane Implementation Plan
 type: implementation-plan
 status: proposed
-version: 1.2
+version: 1.3
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-13
@@ -103,9 +103,9 @@ Proposed test starting bounds: 64-KiB HTTP body, 16-KiB UTF-8 chat text, 256-KiB
 | **M1-D Durable test-agent conversation** | After C: typed event/topology/store extensions and deterministic executor; transactional message admission and epoch-fenced completion/activity; recovery and cancellation semantics. Preserve strict M0 no-op path. | M1-05/10/11/12 and chat-history/restore portion of M1-20 with real PostgreSQL/RabbitMQ and two competing workers; zero provider/model calls. |
 | **M1-E Web and CLI** | After D: five minimal pages, shared client commands, durable resumable SSE/polling and typed decision previews. Approval buttons remain unavailable until F's durable policy path passes. | M1-08/09/13/14/17 browser/CLI equivalence, accessibility, XSS/CSRF, reconnect and outage tests. |
 | **M1-F Governance and synthetic tools** | After B–E: immutable intents, grants, approvals, append-only audit, durable wait/resume and dispatch admission/reconciliation. Add only an allowlisted authenticated HTTPS synthetic read-only MCP server after SDK/protocol review. Prove fake mutations/unknown outcomes in a fixture ledger; expose no real effect adapter. | M1-15/16/18/19/20/21/22 and ADR-005 MCP-01–MCP-09 synthetic cases, plus isolated interoperability portion of MCP-10. Cloud/MacBook-off evidence remains a separate unpassed gate. |
-| **M1-G CI and closeout** | After F: independent API/web image assets, isolated issuer/MCP fixtures and Compose extension, browser/CLI/process/restore fault job, redacted telemetry, runbook and machine-readable evidence/gap ledger. | All M1-01–M1-22 and existing M0 gates green; no skipped required integration cases. No deployment or production-ready claim. |
+| **M1-G CI and closeout** | After F: lean synthetic feedback preview, independent API/web image, isolated issuer/MCP fixtures, essential browser/CLI/process/restore CI and a precise evidence/gap ledger. See the later lean delivery refinement; broader operational matrix stays open. | Existing M0 and selected required M1 preview gates green without skips. Account for every M1/MCP family; do not claim full synthetic/operational closeout while gaps remain. No deployment or production-ready claim. |
 
-Where an acceptance ID spans slices, each slice records its exact covered subset; only M1-G claims the completed synthetic matrix. Each slice records precisely what is implemented versus proposed and keeps subsequent features disabled. Do not merge automatically. Start with M1-A only after the owner authorizes implementation; do not turn this planning PR into an unreviewed gateway build.
+Where an acceptance ID spans slices, each slice records its exact covered subset; M1-G may claim a completed synthetic matrix only when its evidence ledger has no applicable open gaps; the lean preview refinement below currently leaves operational closeout open. Each slice records precisely what is implemented versus proposed and keeps subsequent features disabled. Do not merge automatically. Start with M1-A only after the owner authorizes implementation; do not turn this planning PR into an unreviewed gateway build.
 
 ## Acceptance matrix
 
@@ -183,3 +183,8 @@ PR #22 is merged. [[MarkOS v0.3 M1-E Web and CLI]] records the `4cb4d7b` main re
 ## Merged M1-E and M1-F review status
 
 PR #23 is merged. [[MarkOS v0.3 M1-F Governance and Synthetic Tools]] records the `231a018` main review, exact preserved M1-E tree and six green post-merge checks with 770 cases. The separately reviewable M1-F slice adds an explicit synthetic governance profile, fixed reviewed fixture grants, immutable exact approvals, slot-free durable waiting/fresh execution leases, atomic one-time dispatch/audit/reservations, bounded pinned MCP 2.3.0 / 2026-07-28 HTTPS reads and unknown-outcome reconciliation. Additive migration 0010 preserves 0001–0009; shared limits, scoped typed web/CLI controls and explicit privileged retention/tombstones are covered. Ordinary no-tool chat and archived code remain intact. Real accounts/OAuth/effects and deployment stay disabled. M1-G owns packaged processes, full restore/maintenance/operational closeout; earlier slice sections are chronological evidence. No merge or deployment.
+
+
+## Lean M1-G preview after PR 24
+
+PR #24 is merged. [[MarkOS v0.3 M1-G CI and Lean Preview]] records review of main `c590cb2` and green post-merge CI, plus the separately reviewable synthetic preview slice. The owner's lean-startup direction prioritizes runnable web/CLI feedback and essential CI. Independent optional image/processes, persisted synthetic issuer/MCP fixtures, shared HTTP admission and absolute socket/send deadlines extend the existing PostgreSQL/RabbitMQ path through additive migration 0011; migrations 0001–0010 and archived work stay intact. The machine-readable M1/MCP ledger explicitly leaves full operational closeout false: broader fault/resource/proxy evidence, automated cleanup/log/alert operations and independently current real deletion/revocation recovery are deferred. Real accounts/providers/models/effects, cloud/MacBook-off acceptance, merging and deployment remain separate gates. Earlier slice sections are chronological evidence.

@@ -1,4 +1,4 @@
-# Independent MarkOS runtime — M0-A through M0-F
+# Independent MarkOS runtime — synthetic M0/M1 preview
 
 This standalone project provides strict synthetic contracts and validation-only
 preflight. The explicit PostgreSQL and M0-C RabbitMQ libraries connect only when called with DSNs.
@@ -95,3 +95,15 @@ PR #22 is merged. [[MarkOS v0.3 M1-E Web and CLI]] records the `4cb4d7b` main re
 ## Merged M1-E and M1-F review status
 
 PR #23 is merged. [[MarkOS v0.3 M1-F Governance and Synthetic Tools]] records the `231a018` main review, exact preserved M1-E tree and six green post-merge checks with 770 cases. The separately reviewable M1-F slice adds an explicit synthetic governance profile, fixed reviewed fixture grants, immutable exact approvals, slot-free durable waiting/fresh execution leases, atomic one-time dispatch/audit/reservations, bounded pinned MCP 2.3.0 / 2026-07-28 HTTPS reads and unknown-outcome reconciliation. Additive migration 0010 preserves 0001–0009; shared limits, scoped typed web/CLI controls and explicit privileged retention/tombstones are covered. Ordinary no-tool chat and archived code remain intact. Real accounts/OAuth/effects and deployment stay disabled. M1-G owns packaged processes, full restore/maintenance/operational closeout; earlier slice sections are chronological evidence. No merge or deployment.
+
+
+## Lean M1-G process preview
+
+The optional `Dockerfile.control`, closed `serve-control-synthetic --confirm-synthetic`
+command and `../../infrastructure/compose.m1-control-test.yml` package the existing
+web/CLI and fixed synthetic agent. Follow the explicit setup, feedback walkthrough,
+owned cleanup and recovery limits in
+[the M1-G record](../../MarkOS%20v0.3%20M1-G%20CI%20and%20Lean%20Preview.md).
+The base installation remains independent; process/browser tests live in separate
+optional jobs. When running the base suite, exclude `tests/control_api`,
+`tests/browser` and `tests/control_process`. Real integrations and deployment remain disabled.

@@ -141,6 +141,9 @@ class FixtureIssuer:
         self._codes[code] = (subject, pkce_challenge, nonce, uuid4(), time.monotonic() + 60)
         return code
 
+    async def authorize_async(self, credential: str, pkce_challenge: str, nonce: str) -> str:
+        return self.authorize(credential, pkce_challenge, nonce)
+
     async def exchange(self, code: str, verifier: str) -> tuple[str, str]:
         entry = self._codes.pop(code, None)
         if (

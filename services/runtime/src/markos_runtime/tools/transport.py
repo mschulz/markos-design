@@ -20,6 +20,7 @@ from markos_runtime.contracts.governance import (
     FixtureResult,
     fixture_endpoint,
 )
+from markos_runtime.http_bounds import bounded_connection
 
 
 class ToolProtocolError(ValueError):
@@ -124,94 +125,110 @@ class FixtureTransport:
                 raise ToolProtocolError()
             headers["Mcp-Name"] = "fixture.read"
         try:
-            connection.request("POST", "/mcp", body=body, headers=headers)
-            if connection.sock:
-                connection.sock.settimeout(max(0.001, min(10, deadline - time.monotonic())))
-            response = connection.getresponse()
-            if (
-                response.status != 200
-                or response.getheader("Content-Encoding", "identity") != "identity"
-            ):
-                raise ToolProtocolError()
-            kind = response.getheader("Content-Type", "").split(";")[0]
-            if kind not in {"application/json", "text/event-stream"}:
-                raise ToolProtocolError()
-            size, buffer = 0, bytearray()
-            final: dict[str, Any] | None = None
-            while True:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    raise ToolProtocolError()
+            with bounded_connection(connection, deadline):
+                connection.request("POST", "/mcp", body=body, headers=headers)
                 if connection.sock:
-                    connection.sock.settimeout(min(10, remaining))
-                chunk = (
-                    response.readline(8193) if kind == "text/event-stream" else response.read(8192)
-                )
-                if not chunk:
-                    break
-                size += len(chunk)
-                if size > 1048576:
+                    connection.sock.settimeout(max(0.001, min(10, deadline - time.monotonic())))
+                response = connection.getresponse()
+                if (
+                    response.status != 200
+                    or response.getheader("Content-Encoding", "identity") != "identity"
+                ):
                     raise ToolProtocolError()
-                buffer.extend(chunk)
-                if kind == "text/event-stream":
-                    if len(buffer) > 65536:
+                kind = response.getheader("Content-Type", "").split(";")[0]
+                if kind not in {"application/json", "text/event-stream"}:
+                    raise ToolProtocolError()
+                size, buffer = 0, bytearray()
+                final: dict[str, Any] | None = None
+                while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
                         raise ToolProtocolError()
-                    if chunk not in {b"\n", b"\r\n"}:
-                        continue
-                    lines = bytes(buffer).replace(b"\r\n", b"\n").splitlines()
-                    data = b"\n".join(
-                        line[5:].lstrip() for line in lines if line.startswith(b"data:")
+                    if connection.sock:
+                        connection.sock.settimeout(min(10, remaining))
+                    chunk = (
+                        response.readline(8193)
+                        if kind == "text/event-stream"
+                        else response.read(8192)
                     )
-                    buffer.clear()
-                    if not data:
-                        continue
-                    value = strict_json(data)
-                    if value.get("method") == "notifications/progress" and "id" not in value:
-                        continue
-                    if final is not None:
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > 1048576:
                         raise ToolProtocolError()
-                    final = value
-                    # The request is complete; never follow a subscription or server-requested URL.
-                    break
-            if kind == "application/json":
-                final = strict_json(bytes(buffer))
-            if (
-                not final
-                or set(final) != {"jsonrpc", "id", "result"}
-                or final["jsonrpc"] != "2.0"
-                or final["id"] != ident
-                or not isinstance(final["result"], dict)
-            ):
-                raise ToolProtocolError()
-            result = dict(final["result"])
-            expected_meta = {
-                "io.modelcontextprotocol/serverInfo": {
-                    "name": "synthetic-mcp-fixture",
-                    "version": "1",
+                    buffer.extend(chunk)
+                    if kind == "text/event-stream":
+                        if len(buffer) > 65536:
+                            raise ToolProtocolError()
+                        if chunk not in {b"\n", b"\r\n"}:
+                            continue
+                        lines = bytes(buffer).replace(b"\r\n", b"\n").splitlines()
+                        data = b"\n".join(
+                            line[5:].lstrip() for line in lines if line.startswith(b"data:")
+                        )
+                        buffer.clear()
+                        if not data:
+                            continue
+                        value = strict_json(data)
+                        if value.get("method") == "notifications/progress" and "id" not in value:
+                            continue
+                        if final is not None:
+                            raise ToolProtocolError()
+                        final = value
+
+                        break
+                if kind == "application/json":
+                    final = strict_json(bytes(buffer))
+                if (
+                    not final
+                    or set(final) != {"jsonrpc", "id", "result"}
+                    or final["jsonrpc"] != "2.0"
+                    or final["id"] != ident
+                    or not isinstance(final["result"], dict)
+                ):
+                    raise ToolProtocolError()
+                result = dict(final["result"])
+                expected_meta = {
+                    "io.modelcontextprotocol/serverInfo": {
+                        "name": "synthetic-mcp-fixture",
+                        "version": "1",
+                    }
                 }
-            }
-            allowed_keys = {
-                "server/discover": {
-                    "_meta",
-                    "ttlMs",
-                    "cacheScope",
-                    "supportedVersions",
-                    "capabilities",
-                    "instructions",
-                    "resultType",
-                },
-                "tools/list": {"_meta", "ttlMs", "cacheScope", "nextCursor", "tools", "resultType"},
-                "tools/call": {"_meta", "content", "structuredContent", "isError", "resultType"},
-            }[method]
-            if (
-                result.get("_meta") != expected_meta
-                or not set(result) <= allowed_keys
-                or result.get("cacheScope", "private") != "private"
-            ):
-                raise ToolProtocolError()
-            if result.get("resultType", "complete") != "complete":
-                raise ToolProtocolError()
-            return result
+                allowed_keys = {
+                    "server/discover": {
+                        "_meta",
+                        "ttlMs",
+                        "cacheScope",
+                        "supportedVersions",
+                        "capabilities",
+                        "instructions",
+                        "resultType",
+                    },
+                    "tools/list": {
+                        "_meta",
+                        "ttlMs",
+                        "cacheScope",
+                        "nextCursor",
+                        "tools",
+                        "resultType",
+                    },
+                    "tools/call": {
+                        "_meta",
+                        "content",
+                        "structuredContent",
+                        "isError",
+                        "resultType",
+                    },
+                }[method]
+                if (
+                    result.get("_meta") != expected_meta
+                    or not set(result) <= allowed_keys
+                    or result.get("cacheScope", "private") != "private"
+                ):
+                    raise ToolProtocolError()
+                if result.get("resultType", "complete") != "complete":
+                    raise ToolProtocolError()
+                return result
         except (OSError, ValueError, http.client.HTTPException):
             raise ToolProtocolError() from None
         finally:
