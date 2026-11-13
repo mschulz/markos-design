@@ -398,6 +398,7 @@ def main() -> None:
     elif args.action == "bootstrap":
         asyncio.run(bootstrap())
     elif args.action == "start":
+        compose("up", "-d", "--no-build", "gateway")
         for role in ("issuer", "mcp"):
             compose(
                 "run",
@@ -405,6 +406,10 @@ def main() -> None:
                 "--no-deps",
                 "--user",
                 "0:0",
+                "--cap-add",
+                "CHOWN",
+                "--cap-add",
+                "DAC_OVERRIDE",
                 "--entrypoint",
                 "/opt/runtime/.venv/bin/python",
                 role,

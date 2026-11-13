@@ -38,6 +38,8 @@ def bounded_connection(connection: http.client.HTTPSConnection, deadline: float)
         if expired.is_set() or time.monotonic() >= deadline:
             raise TimeoutError
         yield
+        if expired.is_set() or time.monotonic() >= deadline:
+            raise TimeoutError
     finally:
         timer.cancel()
         abort()
