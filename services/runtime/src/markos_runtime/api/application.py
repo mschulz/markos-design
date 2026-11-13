@@ -40,6 +40,7 @@ from markos_runtime.contracts.control import (
 from markos_runtime.control.api_config import (
     SyntheticApiConfig,
     SyntheticConversationApiConfig,
+    SyntheticGovernanceApiConfig,
     SyntheticWebApiConfig,
 )
 from markos_runtime.control.store import (
@@ -308,6 +309,9 @@ def create_app(
     from markos_runtime.web.routes import WebRoutes
 
     web = WebRoutes(api) if isinstance(config, SyntheticWebApiConfig) else None
+    from markos_runtime.api.governance import GovernanceRoutes
+
+    governance = GovernanceRoutes(api) if isinstance(config, SyntheticGovernanceApiConfig) else None
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False)
 
     def page(
@@ -379,6 +383,8 @@ def create_app(
             return JSONResponse({"ready": ready}, status_code=200 if ready else 503)
         if not await store._call("api_ready", Jsonb(EXPECTED_MIGRATIONS)):
             raise ApiFault("unavailable", 503)
+        if governance is not None and governance.accepts(path):
+            return await governance.handle(request, data)
         if path.startswith("/auth/") and path != "/auth/callback":
             api.query(request, set())
         if path in {"/auth/login", "/auth/cli/start"} and method == "POST":
@@ -561,6 +567,10 @@ def create_app(
             result = await store._call("api_me", ctx.session_id, ctx.lookup_hash)
             if binding["kind"] == "browser":
                 result["csrf_token"] = api.codec.lookup("csrf", raw)
+            if governance is not None:
+                from markos_runtime.contracts.governance import SCHEMA_SHA256
+
+                result["synthetic_tool_schema_sha256"] = SCHEMA_SHA256
             return JSONResponse(result)
         if path == "/api/v1/session/logout" and method == "POST":
             ControlValue.from_wire(data)

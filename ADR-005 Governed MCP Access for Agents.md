@@ -2,11 +2,11 @@
 title: ADR-005 Governed MCP Access for Agents
 type: architecture-decision
 status: proposed
-version: 1.2
+version: 1.3
 owner: Mark Schulz
 created: 2026-11-12
-updated: 2026-11-12
-reviewed: 2026-11-12
+updated: 2026-11-13
+reviewed: 2026-11-13
 tags:
   - architecture
   - security
@@ -16,7 +16,7 @@ tags:
 
 ## Context and status
 
-The owner requested MCP access for agents, documented in the specification and roadmap with permissions, domain isolation, approvals and audit. This ADR proposes the implementation boundary and acceptance gates. It enables no server, credential or tool and completes no runtime milestone. Review it independently of the merged M0-A–M0-C foundation and subsequent M0 implementation slices.
+The owner requested MCP access for agents, documented in the specification and roadmap with permissions, domain isolation, approvals and audit. This ADR proposes the implementation boundary and acceptance gates. The original ADR enabled no server or credential. [[MarkOS v0.3 M1-F Governance and Synthetic Tools]] now implements a separately reviewable synthetic subset; real servers/accounts/effects and operational closeout remain gated. Review it independently of the merged M0-A–M0-C foundation and subsequent M0 implementation slices.
 
 MCP connects agents to approved tools and data sources. RabbitMQ remains the internal event bus; PostgreSQL remains authoritative for durable tasks, knowledge, approvals and audit. Immutable originals remain in object storage; Markdown is a derived export. Follow [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]]: no PARA, Obsidian, legacy application dependency or MacBook-dependent production service.
 
@@ -32,7 +32,7 @@ The implementation PR must pin a supported SDK and explicit protocol-version all
 
 ### Proposed SDK and execution profile
 
-All choices in this profile remain **proposed**, unmeasured starting values. This PR installs no dependency and applies no runtime configuration. Revalidate release/security status, resolve the independent runtime lock, prove compatibility and measure shared-VM contention in the implementation PR before enablement.
+All choices in this profile remain **proposed**, unmeasured starting values. The original proposal installed no dependency. M1-F now locks the optional SDK/protocol and implements a narrower fixed synthetic profile; deployment resource ceilings and real-provider choices remain proposed and unmeasured. Revalidate release/security status, resolve the independent runtime lock, prove compatibility and measure shared-VM contention in the implementation PR before enablement.
 
 | Area | Proposed choice and semantics |
 |---|---|
@@ -148,3 +148,10 @@ Reviewed 12 November 2026. These sources describe MCP; the stricter permissions,
 - [SDK transport controls](https://py.sdk.modelcontextprotocol.io/client/transports/) and [protocol version selection](https://py.sdk.modelcontextprotocol.io/protocol-versions/): size/timeout coverage and pinning limitations.
 
 Related: [[MarkOS v0.3 Specification]], [[MarkOS v0.3 Roadmap]], [[ADR-0002 GitHub as Canonical Project Record]], [[ADR-003 RabbitMQ Internal Event Bus]].
+
+
+## M1-F synthetic implementation disposition
+
+[[MarkOS v0.3 M1-F Governance and Synthetic Tools]] records the pinned mcp 2.3.0 / 2026-07-28 lower-level controlled wire path, actual SDK HTTPS JSON/request-SSE interoperability, exact scoped fixture grants/approvals, fresh fenced resume, audit/reservations, unknown outcomes and privileged retention. It permits one fixed synthetic read/attempt per run with no automatic tool retry; the ten-second parent run further restricts the general proposed deadlines above. Discovery/authentication has a shared four-operation budget and bounded two-request inspection. General tool and real-account flags remain false outside this explicit fixture profile.
+
+The synthetic opaque credential is separately configured and bound to resource/owner/domain by the test server before data access; it is not a production OAuth adapter. Private resources/transfers, real provider tokens/audiences/accounts, consequential/paid effects and remote/cloud enablement remain unpassed. The acceptance table in the implementation record assigns exact synthetic evidence and remaining gates to every MCP-01–MCP-10 family; it does not claim full provider or M1 closeout. Scheduled cleanup/log/alert operations, process backup/restore, deletion reapplication, VM resource/proxy measurement and MacBook-off evidence remain M1-G/real-connector work.

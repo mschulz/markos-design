@@ -69,6 +69,8 @@
       "enum": [
         "queued",
         "working",
+        "awaiting-decision",
+        "unknown",
         "succeeded",
         "failed",
         "cancelled"

@@ -72,3 +72,9 @@ class SyntheticWebApiConfig(SyntheticConversationApiConfig):
     """Explicit M1-E local fixture UI; no production or tool enablement."""
 
     web_profile: Literal["synthetic-web-cli-v1"]
+
+
+class SyntheticGovernanceApiConfig(SyntheticWebApiConfig):
+    """Separately selected fixed synthetic fixture path; general tool execution stays false."""
+
+    governance_profile: Literal["synthetic-governance-v1"]

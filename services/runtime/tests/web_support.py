@@ -11,7 +11,7 @@ import uvicorn  # type: ignore[import-not-found]
 
 from markos_runtime.api.application import create_app
 from markos_runtime.api.identity import FixtureIssuer, opaque
-from markos_runtime.control.api_config import SyntheticWebApiConfig
+from markos_runtime.control.api_config import SyntheticGovernanceApiConfig, SyntheticWebApiConfig
 from markos_runtime.control.store import ControlStore
 from tests.control_api.test_https import HttpClient as FixtureBrowserClient
 from tests.control_api.test_https import certificate
@@ -20,7 +20,7 @@ from tests.integration.test_control_persistence import prepare, session
 
 @asynccontextmanager
 async def web_server(
-    data: dict[str, Any], directory: Path, *, prepare_agent: bool = True
+    data: dict[str, Any], directory: Path, *, prepare_agent: bool = True, governance: bool = False
 ) -> AsyncIterator[dict[str, Any]]:
     cert, key = certificate(directory)
     listener = socket.socket()
@@ -34,11 +34,16 @@ async def web_server(
     async with ControlStore.connect(data["gateway"]) as store:
         if prepare_agent:
             await prepare(store, await session(store))
-        profile = SyntheticWebApiConfig(
+        profile_type = SyntheticGovernanceApiConfig if governance else SyntheticWebApiConfig
+        extra: dict[str, Any] = (
+            {"governance_profile": "synthetic-governance-v1"} if governance else {}
+        )
+        profile = profile_type(
             schema_version=1,
             api_origin=origin,
             conversation_profile="deterministic-conversation-v1",
             web_profile="synthetic-web-cli-v1",
+            **extra,
         )
         app = create_app(profile, store, issuer, session_key=b"s" * 32, confirm_synthetic=True)
         server = uvicorn.Server(

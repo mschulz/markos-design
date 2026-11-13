@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Separately selected fixed synthetic fixture path; general tool execution stays false.",
+  "properties": {
+    "api_origin": {
+      "title": "Api Origin",
+      "type": "string"
+    },
+    "chat_execution_enabled": {
+      "const": true,
+      "default": true,
+      "title": "Chat Execution Enabled",
+      "type": "boolean"
+    },
+    "conversation_profile": {
+      "const": "deterministic-conversation-v1",
+      "title": "Conversation Profile",
+      "type": "string"
+    },
+    "environment": {
+      "const": "test",
+      "default": "test",
+      "title": "Environment",
+      "type": "string"
+    },
+    "governance_profile": {
+      "const": "synthetic-governance-v1",
+      "title": "Governance Profile",
+      "type": "string"
+    },
+    "identity_profile": {
+      "const": "synthetic-pkce",
+      "default": "synthetic-pkce",
+      "title": "Identity Profile",
+      "type": "string"
+    },
+    "real_accounts_enabled": {
+      "const": false,
+      "default": false,
+      "title": "Real Accounts Enabled",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "tool_execution_enabled": {
+      "const": false,
+      "default": false,
+      "title": "Tool Execution Enabled",
+      "type": "boolean"
+    },
+    "web_profile": {
+      "const": "synthetic-web-cli-v1",
+      "title": "Web Profile",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "api_origin",
+    "conversation_profile",
+    "web_profile",
+    "governance_profile"
+  ],
+  "title": "SyntheticGovernanceApiConfig",
+  "type": "object"
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent_id": {
+      "const": "control-test-agent",
+      "default": "control-test-agent",
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "data_class": {
+      "const": "synthetic",
+      "default": "synthetic",
+      "title": "Data Class",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "effect": {
+      "const": "read",
+      "default": "read",
+      "title": "Effect",
+      "type": "string"
+    },
+    "enabled": {
+      "default": false,
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "endpoint": {
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "grant_id": {
+      "format": "uuid",
+      "title": "Grant Id",
+      "type": "string"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "previous_revision": {
+      "minimum": 0,
+      "title": "Previous Revision",
+      "type": "integer"
+    },
+    "protocol": {
+      "const": "2026-07-28",
+      "default": "2026-07-28",
+      "title": "Protocol",
+      "type": "string"
+    },
+    "reason": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "recipient": {
+      "const": "synthetic-mcp-fixture",
+      "default": "synthetic-mcp-fixture",
+      "title": "Recipient",
+      "type": "string"
+    },
+    "require_approval": {
+      "default": true,
+      "title": "Require Approval",
+      "type": "boolean"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "server_id": {
+      "const": "synthetic-mcp-fixture",
+      "default": "synthetic-mcp-fixture",
+      "title": "Server Id",
+      "type": "string"
+    },
+    "tool": {
+      "const": "fixture.read",
+      "default": "fixture.read",
+      "title": "Tool",
+      "type": "string"
+    },
+    "tool_schema_sha256": {
+      "default": "3d6fe221d21e0c10a08064edb93ed60724fa850e6da7d1dc7df7da5bb6738483",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Tool Schema Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner_id",
+    "domain",
+    "grant_id",
+    "revision",
+    "previous_revision",
+    "endpoint",
+    "reason"
+  ],
+  "title": "ReviewedFixtureGrant",
+  "type": "object"
+}

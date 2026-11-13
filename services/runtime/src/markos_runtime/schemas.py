@@ -28,6 +28,15 @@ from markos_runtime.contracts.control import (
     ToolGrant,
 )
 from markos_runtime.contracts.events import EventEnvelope, TaskRequest
+from markos_runtime.contracts.governance import (
+    FixtureResult,
+    GovernanceAudit,
+    GovernedApproval,
+    GovernedChatRequest,
+    GovernedDispatch,
+    ReconciliationRequest,
+    ReviewedFixtureGrant,
+)
 from markos_runtime.contracts.policy import Manifest
 from markos_runtime.contracts.replay import ReplayRequest
 from markos_runtime.contracts.review import ReviewReference
@@ -35,6 +44,7 @@ from markos_runtime.contracts.schedules import ScheduleDefinition
 from markos_runtime.control.api_config import (
     SyntheticApiConfig,
     SyntheticConversationApiConfig,
+    SyntheticGovernanceApiConfig,
     SyntheticWebApiConfig,
 )
 from markos_runtime.control.config import ControlConfig, ControlLimits
@@ -44,6 +54,14 @@ from markos_runtime.lifecycle.config import ServiceConfig
 def models() -> dict[str, type[ValueModel]]:
     return {
         "control-api": SyntheticApiConfig,
+        "control-governed-approval": GovernedApproval,
+        "control-governed-dispatch": GovernedDispatch,
+        "control-governance-audit": GovernanceAudit,
+        "control-governance-api": SyntheticGovernanceApiConfig,
+        "control-reviewed-fixture-grant": ReviewedFixtureGrant,
+        "control-governed-chat-request": GovernedChatRequest,
+        "control-fixture-result": FixtureResult,
+        "control-reconciliation": ReconciliationRequest,
         "control-conversation-api": SyntheticConversationApiConfig,
         "control-web-api": SyntheticWebApiConfig,
         "control-conversation-request": ConversationRequest,

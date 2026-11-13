@@ -65,6 +65,7 @@ class WebRoutes:
             "page": path.removeprefix("/app/") if path != "/app" else "conversations",
             "request": "",
             "proof": "",
+            "synthetic_governance": hasattr(self.api.config, "governance_profile"),
         }
         response_cookie = None
         if path == "/app/authorize" and method == "GET":
