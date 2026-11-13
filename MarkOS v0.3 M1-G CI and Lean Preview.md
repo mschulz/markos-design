@@ -81,3 +81,10 @@ The restore drill keeps independent issuer/MCP state current, rotates the SQL ep
 ## Next review decision
 
 Review this bounded preview PR, then collect product feedback before expanding infrastructure or starting another milestone. Do not block local synthetic feedback on production-only gates, and do not waive applicable safety gates before connecting real accounts. Decide the first useful end-to-end task and whether to prioritize UI changes or the separately reviewed native M2 vertical slice. No merge, deployment or real integration is implied.
+
+
+## Approval cancellation feedback
+
+The preview now labels a revoked approval **Request cancelled**, explains recorded causes in plain language and tells the user to send a new request. Reasons are captured when cancellation occurs: sender sign-out or sign-in expiry, permission/settings changes, restored preview, sender cancellation or withdrawn approval. An optional typed reason is exposed through the existing scope-checked readers; intent hashes and approval/execution decisions stay unchanged. Additive migration 0012 preserves 0001–0011. Historical sign-out reasons are backfilled only where the retained sign-out timestamp predates cancellation, with definitive human/access audit facts taking precedence; other unknown historical causes are identified as unrecorded. Cancelling or signing out later cannot rewrite a reason already recorded.
+
+For the demo, use **Chrome for the requester and Safari for the approver**, keeping both signed in. Ordinary windows in the same browser can share a sign-in. Signing out the sender cancels pending requests and requires a new request; this remains an intentional authority check.

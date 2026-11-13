@@ -803,7 +803,7 @@ def test_schema_incompatibility_blocks_readiness_and_api(
             else:
                 conn.execute(
                     "INSERT INTO markos_runtime.schema_migrations(version,sha256) "
-                    "VALUES(12,repeat('0',64))"
+                    "VALUES(13,repeat('0',64))"
                 )
         assert (await c.call("GET", "/live"))[0] == 200
         assert (await c.call("GET", "/ready")) == (503, {"ready": False})
