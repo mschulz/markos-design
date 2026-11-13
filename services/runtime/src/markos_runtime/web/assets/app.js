@@ -145,14 +145,57 @@
       const first = await api(scoped("/api/v1/activity") + "&limit=100");
       first.items.forEach(addActivity); currentCursor = first.next_cursor;
       watch();
-    } else if (page === "approvals") {
-      const value = await api(scoped("/api/v1/approvals"));
-      view.replaceChildren(node("p", value.available ? "Approval records" : "Approvals are unavailable in this test release."));
+    } else if (page === "approvals") await approvalsPage();
+  }
+  async function approvalsPage(cursor) {
+    const value = await api(scoped("/api/v1/approvals") + (cursor ? "&cursor=" + encodeURIComponent(cursor) : ""));
+    view.replaceChildren(node("p", value.available ? "Approval records. Decisions never dispatch a call directly." : "Approvals are unavailable in this test release."));
+    if (!value.available) {
       const disabled = button("Approve", async () => {}); disabled.disabled = true;
       disabled.setAttribute("aria-describedby", "approval-note");
-      view.append(node("p", "No tool dispatch or effect can be authorized here.", {id: "approval-note"}), disabled);
+      view.append(node("p", "No tool dispatch or effect can be authorized here.", {id: "approval-note"}), disabled); return;
+    }
+    view.append(button("Refresh approvals", () => approvalsPage()));
+    for (const item of value.items) {
+      const card = node("article"), intent = item.intent;
+      card.append(node("h2", "Approval · " + item.status), node("p", item.intent_id));
+      if (intent) {
+        card.append(node("p", intent.preview), node("pre", JSON.stringify(intent.arguments, null, 2)),
+          node("p", "Destination: " + item.endpoint), node("p", "Intent digest: " + item.intent_sha256));
+        if (can("approver") && ["awaiting", "approved"].includes(item.status)) {
+          const actions = item.status === "awaiting" ? ["approve", "reject"] : ["revoke"];
+          for (const decision of actions) card.append(button("Review " + decision, async () => {
+            const body = {schema_version: 1, intent_id: item.intent_id, intent_sha256: item.intent_sha256, expected_revision: item.revision, decision};
+            review("Review exact " + decision + " decision", [["Workspace", scope.owner_id + " · " + scope.domain], ["Arguments", JSON.stringify(intent.arguments)], ["Preview", intent.preview], ["Destination", item.endpoint], ["Recipient", intent.recipient], ["Effect and classification", intent.effect + " · " + intent.data_class], ["Tool and schema", intent.tool + " · " + intent.tool_schema_sha256], ["Grant and policy revisions", intent.grant_revision + " · " + intent.policy_revision], ["Task / suspension fence", intent.task_id + " · " + intent.task_fence], ["Expiry", item.expires_at], ["Attempts", intent.max_attempts], ["Intent digest", item.intent_sha256]], async () => {
+              await api(scoped("/api/v1/approvals/" + item.intent_id + "/decisions"), body);
+              await approvalsPage(); message("Decision recorded. A worker must recheck current authority before dispatch.");
+            });
+          }));
+        }
+      } else card.append(node("p", "Sensitive preview has been purged under the test retention policy."));
+      view.append(card);
+    }
+    if (!value.items.length) view.append(node("p", "No approvals on this page."));
+    if (cursor) view.append(button("First approval page", () => approvalsPage()));
+    if (value.items.length === 50) view.append(button("Next approval page", () => approvalsPage(value.next_cursor)));
+    const attempts = await api(scoped("/api/v1/tool-dispatches"));
+    view.append(node("h2", "Dispatch outcomes"));
+    for (const attempt of attempts.items) {
+      const card = node("article"); card.append(node("p", "Outcome: " + attempt.state), node("p", "Operation: " + attempt.operation_id));
+      if (attempt.result) card.append(node("pre", JSON.stringify(attempt.result, null, 2)));
+      if (attempt.state === "unknown" && can("approver")) {
+        card.append(node("p", "Review the synthetic ledger before recording a finding. This never retries the call."));
+        for (const outcome of ["observed-succeeded", "not-observed", "unresolved"]) card.append(button("Review " + outcome, async () => {
+          const body = {schema_version: 1, dispatch_id: attempt.dispatch_id, expected_revision: attempt.revision, outcome, evidence: "synthetic-ledger-reviewed"};
+          review("Record synthetic ledger finding", [["Operation", attempt.operation_id], ["Outcome", outcome], ["Authority", "Human attestation after ledger review; no automatic retry or reply"]], async () => {
+            await api(scoped("/api/v1/tool-dispatches/" + attempt.dispatch_id + "/reconcile"), body); await approvalsPage();
+          });
+        }));
+      }
+      view.append(card);
     }
   }
+
   async function conversations() {
     const result = await api(scoped("/api/v1/conversations") + "&limit=100" + (conversationCursor ? "&cursor=" + encodeURIComponent(conversationCursor) : ""));
     const chooser = node("select", undefined, {id: "conversation"});
@@ -222,7 +265,7 @@
       }
       text.readOnly = true; send.disabled = true;
       try {
-        const receipt = await api(scoped("/api/v1/conversations/" + conversation + "/messages"), pending);
+        const receipt = await api(scoped(pending.fixture_arguments ? "/api/v1/tool-requests" : "/api/v1/conversations/" + conversation + "/messages"), pending);
         pending = undefined; message("Message stored. Waiting for the test agent."); await showMessages();
         pollRun(receipt);
       } catch (error) {
@@ -230,6 +273,17 @@
         throw error;
       } finally { send.disabled = false; send.textContent = pending ? "Retry pending send" : "Send message"; text.readOnly = !!pending; }
     }); }; region.append(form);
+    if (me.synthetic_tool_schema_sha256) {
+      const label = field(form, "Synthetic fixture label", "fixture-label", "text", 256); label.required = false;
+      form.append(button("Review synthetic read request", async () => {
+        if (pending) { message("Retry the pending send first."); return; }
+        if (!text.value.trim() || !label.value.trim() || new TextEncoder().encode(text.value).length > 16384) { message("Enter a message and synthetic label before review."); return; }
+        const grant = await api(scoped("/api/v1/tools/grant"));
+        if (!grant?.enabled) { message("No reviewed fixture grant is enabled in this workspace."); return; }
+        const body = {schema_version: 1, domain: scope.domain, conversation_id: conversation, operation_key: "message:" + crypto.randomUUID(), agent_id: "control-test-agent", expected_agent_revision: agent.manifest.revision, text: text.value, fixture_arguments: {schema_version: 1, label: label.value}};
+        review("Request a synthetic fixture read", [["Message", body.text], ["Label", body.fixture_arguments.label], ["Destination", grant.endpoint], ["Approval", grant.require_approval ? "Separate exact human decision required" : "Reviewed standing grant; worker still reauthorizes"], ["Effect", "Synthetic read only"]], async () => { pending = body; form.requestSubmit(); });
+      }));
+    }
   }
   async function pollRun(receipt) {
     const selectedConversation = conversation, expectedGeneration = generation;
@@ -241,7 +295,7 @@
         const value = await api(scoped(path + "/status"));
         if (expectedGeneration !== generation || selectedConversation !== conversation) return;
         message("Message state: " + value.state + (value.reason ? " (" + value.reason + ")" : ""));
-        if (["succeeded", "failed", "cancelled"].includes(value.state)) { await showMessages(); return; }
+        if (["succeeded", "failed", "cancelled", "awaiting-decision", "unknown"].includes(value.state)) { await showMessages(); return; }
       } catch (error) { problem(error); return; }
     }
     message("The request remains stored. Refresh messages to check its result.");
@@ -278,11 +332,25 @@
       for (const [label, value] of [["Agent revision", configuration.agent.revision], ["Description", configuration.agent.description], ["Reason", configuration.reason], ["Model and tools", "None"]]) details.append(node("dt", label), node("dd", String(value)));
       view.append(details);
     }
+    if (me.synthetic_tool_schema_sha256) await grantPage();
     if (!agent || !can("administrator")) { view.append(node("p", "An administrator and a registered test agent are required to change configuration.")); return; }
     const form = node("form"), reason = field(form, "Reason for configuration revision", "reason");
     form.append(node("button", "Review configuration", {type: "submit"}));
     form.onsubmit = event => { event.preventDefault(); const body = {schema_version: 1, owner_id: scope.owner_id, domain: scope.domain, revision: (configuration?.revision || 0) + 1, previous_revision: configuration?.revision || 0, agent: agent.manifest, reason: reason.value};
       review("Apply configuration revision " + body.revision, [["Workspace", scope.domain], ["Previous revision", body.previous_revision], ["Agent revision", body.agent.revision], ["Description", body.agent.description], ["Reason", body.reason], ["Model and tools", "None"]], async () => { await api("/api/v1/configuration/revisions", body); await load(); message("Configuration revision applied."); });
+    }; view.append(form);
+  }
+  async function grantPage() {
+    const current = await api(scoped("/api/v1/tools/grant"));
+    view.append(node("h2", "Synthetic fixture grant"), node("p", current ? (current.enabled ? "Enabled" : "Disabled") + " · revision " + current.revision + " · " + current.endpoint : "No fixture grant has been reviewed."));
+    if (!can("administrator")) return;
+    const form = node("form"), endpoint = field(form, "Fixture HTTPS endpoint", "fixture-endpoint", "url", 256), reason = field(form, "Reason for fixture grant", "fixture-reason");
+    endpoint.value = current?.endpoint || "";
+    const enabled = node("input", undefined, {id: "fixture-enabled", type: "checkbox"}), approval = node("input", undefined, {id: "fixture-approval", type: "checkbox"});
+    enabled.checked = !!current?.enabled; approval.checked = current?.require_approval ?? true;
+    form.append(enabled, node("label", "Enable this reviewed fixture grant", {for: "fixture-enabled"}), approval, node("label", "Require a separate exact human approval", {for: "fixture-approval"}), node("button", "Review fixture grant", {type: "submit"}));
+    form.onsubmit = event => { event.preventDefault(); const body = {schema_version: 1, owner_id: scope.owner_id, domain: scope.domain, grant_id: current?.grant_id || crypto.randomUUID(), revision: (current?.revision || 0) + 1, previous_revision: current?.revision || 0, agent_id: "control-test-agent", server_id: "synthetic-mcp-fixture", endpoint: endpoint.value, protocol: "2026-07-28", tool: "fixture.read", tool_schema_sha256: me.synthetic_tool_schema_sha256, data_class: "synthetic", recipient: "synthetic-mcp-fixture", effect: "read", require_approval: approval.checked, enabled: enabled.checked, reason: reason.value};
+      review("Review synthetic fixture permission", [["Destination", body.endpoint], ["Grant revision", body.revision], ["Enabled", body.enabled], ["Separate approval", body.require_approval], ["Tool", body.tool], ["Data and effect", "Synthetic read only; no paid or real tools"], ["Reason", body.reason]], async () => { await api(scoped("/api/v1/tools/grant"), body); await load(); message("Fixture grant revision recorded. Previous pending approvals are invalidated."); });
     }; view.append(form);
   }
   function addActivity(item) {

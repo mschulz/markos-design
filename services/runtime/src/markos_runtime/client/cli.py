@@ -77,6 +77,14 @@ def main(argv: list[str] | None = None) -> int:
         "configuration-preview",
         "configuration-apply",
         "approvals",
+        "tool-grant",
+        "tool-grant-preview",
+        "tool-grant-apply",
+        "tool-send",
+        "approval-decide",
+        "tool-dispatches",
+        "tool-audit",
+        "tool-reconcile",
     ]
     for name in commands:
         item = sub.add_parser(name)
@@ -92,19 +100,39 @@ def main(argv: list[str] | None = None) -> int:
             "send",
             "configuration-preview",
             "configuration-apply",
+            "tool-grant-preview",
+            "tool-grant-apply",
+            "tool-send",
+            "approval-decide",
+            "tool-reconcile",
         }:
             item.add_argument(
                 "--input",
                 required=True,
                 help="Explicit JSON file or - for stdin; never message text in arguments",
             )
-        if name in {"agent-register", "agent-state", "configuration-apply"}:
+        if name in {
+            "agent-register",
+            "agent-state",
+            "configuration-apply",
+            "tool-grant-apply",
+            "approval-decide",
+            "tool-reconcile",
+        }:
             item.add_argument("--confirm-digest")
         if name in {"messages", "send", "message-status", "cancel"}:
             item.add_argument("--conversation-id", type=UUID, required=True)
         if name in {"message-status", "cancel"}:
             item.add_argument("--message-id", type=UUID, required=True)
-        if name in {"conversations", "messages", "activity", "watch"}:
+        if name in {
+            "conversations",
+            "messages",
+            "activity",
+            "watch",
+            "approvals",
+            "tool-dispatches",
+            "tool-audit",
+        }:
             item.add_argument("--cursor")
             item.add_argument("--limit", type=int, default=50)
         if name == "watch":
@@ -201,6 +229,19 @@ def main(argv: list[str] | None = None) -> int:
         def scoped(path: str) -> str:
             return path + "?" + urlencode(query)
 
+        if command in {
+            "tool-grant",
+            "tool-grant-preview",
+            "tool-grant-apply",
+            "tool-send",
+            "approval-decide",
+            "tool-dispatches",
+            "tool-audit",
+            "tool-reconcile",
+        }:
+            from markos_runtime.client.governance import execute
+
+            return execute(client, args, owner, query, load, output)
         if command == "watch":
             if not 1 <= args.max_events <= 100 or not 1 <= args.seconds <= 600:
                 raise ClientError("invalid-stream-bound", 400)
@@ -234,6 +275,11 @@ def main(argv: list[str] | None = None) -> int:
             "configuration-apply",
             "conversation-create",
             "send",
+            "tool-grant-preview",
+            "tool-grant-apply",
+            "tool-send",
+            "approval-decide",
+            "tool-reconcile",
         }:
             models: dict[str, type[ControlValue]] = {
                 "agent-register": AgentRevision,
@@ -300,7 +346,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
         else:
             path = paths[command]
-        if command in {"messages", "conversations", "activity"}:
+        if command in {"messages", "conversations", "activity", "approvals"}:
             if not 1 <= args.limit <= 100:
                 raise ClientError("invalid-page-bound", 400)
             query["limit"] = str(args.limit)

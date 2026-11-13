@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "FixtureArguments": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "label"
+      ],
+      "title": "FixtureArguments",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent_id": {
+      "const": "control-test-agent",
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "conversation_id": {
+      "format": "uuid",
+      "title": "Conversation Id",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "expected_agent_revision": {
+      "minimum": 1,
+      "title": "Expected Agent Revision",
+      "type": "integer"
+    },
+    "fixture_arguments": {
+      "$ref": "#/$defs/FixtureArguments"
+    },
+    "operation_key": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._:-]*$",
+      "title": "Operation Key",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "text": {
+      "maxLength": 16384,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string",
+      "x-max-utf8-bytes": 16384
+    }
+  },
+  "required": [
+    "schema_version",
+    "domain",
+    "conversation_id",
+    "operation_key",
+    "agent_id",
+    "expected_agent_revision",
+    "text",
+    "fixture_arguments"
+  ],
+  "title": "GovernedChatRequest",
+  "type": "object"
+}

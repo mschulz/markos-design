@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "environment": "test",
+  "identity_profile": "synthetic-pkce",
+  "api_origin": "https://127.0.0.1:18443",
+  "real_accounts_enabled": false,
+  "tool_execution_enabled": false,
+  "conversation_profile": "deterministic-conversation-v1",
+  "chat_execution_enabled": true,
+  "web_profile": "synthetic-web-cli-v1",
+  "governance_profile": "synthetic-governance-v1"
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "dispatch_id": {
+      "format": "uuid",
+      "title": "Dispatch Id",
+      "type": "string"
+    },
+    "evidence": {
+      "const": "synthetic-ledger-reviewed",
+      "title": "Evidence",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "outcome": {
+      "enum": [
+        "observed-succeeded",
+        "not-observed",
+        "unresolved"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "dispatch_id",
+    "expected_revision",
+    "outcome",
+    "evidence"
+  ],
+  "title": "ReconciliationRequest",
+  "type": "object"
+}

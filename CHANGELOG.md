@@ -8,6 +8,14 @@ The format is inspired by *Keep a Changelog*, but organised around design milest
 
 ## Unreleased
 
+### M1-F governance and synthetic tools prepared for review — 13 November 2026
+
+- Reviewed main `231a018` after PR #23; exact M1-E tree/history preserved and all six post-merge checks pass with 770 cases.
+- Added an explicit fixed governance profile, reviewed scoped grants, immutable exact approval previews, nonhierarchical approver decisions and durable slot-free waiting with fresh execution mapping.
+- Added additive migration 0010, shared capacity/rate/one-time reservations, append-only metadata/reference activity, fenced dispatch/results, durable unknown outcomes and explicit human ledger reconciliation; original no-tool conversation/broker contracts and migrations 0001–0009 remain intact.
+- Locked the optional official MCP 2.3.0 / 2026-07-28 profile with strict local HTTPS JSON/request-SSE interoperability and no SDK automatic negotiation/retry/OAuth drivers. Added scoped web/CLI controls, 40 schemas/examples, privileged bounded seven/365-day cleanup/tombstones and governance/limit/retention/protocol/broker/browser fault acceptance.
+- Real accounts/OAuth/effects and source/transfer access remain disabled. M1-G still owns packaged process/restore/maintenance/operational closeout. No merge, deployment or personal data access.
+
 ### M1-E web and CLI prepared for review — 13 November 2026
 
 - Reviewed merged PR #22/main `4cb4d7b`; exact tree/history preserved and all six post-merge checks pass with 706 tests. Fixed a same-scope activity cursor-purpose consistency defect and added regression coverage.

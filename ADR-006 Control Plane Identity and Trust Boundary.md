@@ -2,7 +2,7 @@
 title: ADR-006 Control Plane Identity and Trust Boundary
 type: architecture-decision
 status: proposed
-version: 1.4
+version: 1.5
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-13
@@ -18,7 +18,7 @@ tags:
 
 Use one trusted interaction gateway to authenticate humans and delegate narrowly scoped operations to PostgreSQL. Keep human identity separate from agent/service login identity. Implement the versioned synthetic contract profile in [[MarkOS v0.3 M1-A Contracts and Identity]] first; authentication, database authority, API routes, sessions and dispatch remain later slices. This ADR is proposed for review, not production enablement. It follows [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] and [[ADR-005 Governed MCP Access for Agents]] without changing RabbitMQ, PostgreSQL authority, source objects, derived Markdown or rules-first M3 routing.
 
-The owner authorized M1-A after review of PR #18. That M1-A authorization covered contracts, explicit inert configuration, tests and identity decisions. The owner has subsequently authorized M1-B persistence separately; see [[MarkOS v0.3 M1-B Control Plane Persistence]]. The owner separately authorized M1-C authentication/API; see the review record below. The owner has separately authorized M1-D synthetic conversations; see its review record below. The owner separately authorized M1-E web/CLI; see [[MarkOS v0.3 M1-E Web and CLI]]. M1-F–M1-G, real accounts, tools, merging and deployment require separate authorization. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
+The owner authorized M1-A after review of PR #18. That M1-A authorization covered contracts, explicit inert configuration, tests and identity decisions. The owner has subsequently authorized M1-B persistence separately; see [[MarkOS v0.3 M1-B Control Plane Persistence]]. The owner separately authorized M1-C authentication/API; see the review record below. The owner has separately authorized M1-D synthetic conversations; see its review record below. The owner separately authorized M1-E web/CLI; see [[MarkOS v0.3 M1-E Web and CLI]]. The owner separately authorized M1-F governance and synthetic tools; see [[MarkOS v0.3 M1-F Governance and Synthetic Tools]]. M1-G, real accounts, real tools, merging and deployment require separate authorization. Passing a `HumanPrincipal` model proves only that a descriptor has the right shape. Neither a principal descriptor, a role snapshot, an intent digest nor successful preflight authenticates a person or confers runtime authority.
 
 ## Authentication and session profile
 
@@ -111,3 +111,15 @@ PR #21 is merged. [[MarkOS v0.3 M1-D Durable Test Agent Conversation]] records t
 ## Merged M1-D and M1-E review status
 
 PR #22 is merged. [[MarkOS v0.3 M1-E Web and CLI]] records the `4cb4d7b` main review, six green post-merge checks covering 706 tests, and the separately reviewable client slice. It fixes activity cursor-purpose binding and adds an explicit fixture-only web profile with five pages, a shared-HTTPS CLI, exact typed write previews, private explicit CLI session storage and durable scoped SSE with shared 1/4/20 lease limits, current-authority checks and restore-aware cursors. Additive migration 0009 preserves 0001–0008; existing dependency pins and archived work remain intact. Browser acceptance is required in CI. Approvals/tools remain disabled for M1-F; packaged process/restore/operational closeout remains M1-G. Real accounts and deployment remain disabled. Earlier slice sections below/above are chronological evidence; this section describes the latest review state. No merge or deployment.
+
+
+## M1-F immutable approval and fresh-lease decision
+
+[[MarkOS v0.3 M1-F Governance and Synthetic Tools]] refines durable resume semantics: the approved CallIntent task_fence is its immutable suspension-generation binding. A private resume_fence maps it to the freshly authorized current task/executor/fence/epoch lease at each resume. Dispatch checks both; arguments, versions, intent hash, requester authority and one-time consumption remain unchanged requirements. Capacity deferral releases the slot immediately and cannot reset an existing dispatch. A recorded uncertain attempt is never automatically retried.
+
+The separate ReviewedFixtureGrant contract permits a scoped administrator's explicitly reviewed enablement/standing synthetic-read choice in the governance profile; original inert ToolGrant and ApprovalRecord models remain unchanged. New typed views distinguish human, standing and automatic revocation states. Fixed general tool/real-account flags remain false. The fixture credential profile is resource/owner/domain-bound opaque HTTPS authentication, not production OAuth. Explicit privileged seven/365-day cleanup and minimal anti-replay tombstones do not settle real privacy/erasure/backup or scheduled-service policy.
+
+
+## Merged M1-E and M1-F review status
+
+PR #23 is merged. [[MarkOS v0.3 M1-F Governance and Synthetic Tools]] records the `231a018` main review, exact preserved M1-E tree and six green post-merge checks with 770 cases. The separately reviewable M1-F slice adds an explicit synthetic governance profile, fixed reviewed fixture grants, immutable exact approvals, slot-free durable waiting/fresh execution leases, atomic one-time dispatch/audit/reservations, bounded pinned MCP 2.3.0 / 2026-07-28 HTTPS reads and unknown-outcome reconciliation. Additive migration 0010 preserves 0001–0009; shared limits, scoped typed web/CLI controls and explicit privileged retention/tombstones are covered. Ordinary no-tool chat and archived code remain intact. Real accounts/OAuth/effects and deployment stay disabled. M1-G owns packaged processes, full restore/maintenance/operational closeout; earlier slice sections are chronological evidence. No merge or deployment.

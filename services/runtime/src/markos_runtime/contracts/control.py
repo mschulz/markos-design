@@ -453,7 +453,9 @@ class ChatAdmission(ControlValue):
 class ChatStatus(ControlValue):
     message_id: UUID
     event_id: UUID
-    state: Literal["queued", "working", "succeeded", "failed", "cancelled"]
+    state: Literal[
+        "queued", "working", "awaiting-decision", "unknown", "succeeded", "failed", "cancelled"
+    ]
     reason: (
         Literal["authority", "cancelled", "execution", "timeout", "dependency", "abandoned"] | None
     )

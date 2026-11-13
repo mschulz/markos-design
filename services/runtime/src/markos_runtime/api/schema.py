@@ -10,4 +10,5 @@ EXPECTED_MIGRATIONS = {
     "7": "6c4667dea1c37434cbce8458b488c2dc5d228cf854a1af5f97fcc61eff0745ba",
     "8": "08cf65e1cdc2112d29ef66dbe522f6fd8bba404e22e1e542f32226719e53d9bf",
     "9": "6615c697336a6e9b5eb5a2d326c4c7767a9871cd374dfa60af327dce5ae5c7c6",
+    "10": "2da1d26840e00db13f4eff64ef78efb197756f832e256ed5d57c5f945acb16de",
 }

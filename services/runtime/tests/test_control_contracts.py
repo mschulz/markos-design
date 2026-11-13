@@ -24,6 +24,7 @@ from markos_runtime.contracts.control import (
     digest_document,
 )
 from markos_runtime.contracts.events import EventEnvelope
+from markos_runtime.contracts.governance import GovernedChatRequest, ReconciliationRequest
 from markos_runtime.control.config import ControlConfig, ControlLimits
 from markos_runtime.schemas import artifacts, models
 
@@ -55,7 +56,13 @@ def test_control_examples_validate_against_generated_schemas(name: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "model,name", [(ChatRequest, "chat-request"), (ApprovalDecisionRequest, "approval-decision")]
+    "model,name",
+    [
+        (ChatRequest, "chat-request"),
+        (ApprovalDecisionRequest, "approval-decision"),
+        (GovernedChatRequest, "governed-chat-request"),
+        (ReconciliationRequest, "reconciliation"),
+    ],
 )
 @pytest.mark.parametrize(
     "field", ["owner_id", "actor_id", "roles", "verified", "token", "secret", "tool", "server_url"]
