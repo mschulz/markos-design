@@ -12,12 +12,76 @@ from psycopg.types.json import Jsonb
 from markos_runtime.contracts.governance import GovernedApproval
 from markos_runtime.control.store import ControlDenied
 from tests.control_api.test_conversation import conversation, mutate
-from tests.control_api.test_governance import approve, claim, ready_flow
+from tests.control_api.test_governance import admit_tool, approve, claim, ready_flow
 from tests.integration.conftest import OTHER, OWNER
 from tests.integration.test_control_persistence import session
 
 __all__ = ["conversation"]
 OWN = UUID(OWNER)
+
+
+def test_service_failure_preserves_reason_recorded_while_waiting_for_lock(
+    conversation: dict[str, Any],
+) -> None:
+    async def scenario() -> None:
+        async with ready_flow(conversation, decide=False) as flow:
+            store, worker = flow["store"], flow["worker"]
+            other = await session(store, "operator")
+            await admit_tool(conversation, store, other, key="reason:other-request")
+            _, identity = await claim(worker)
+            other_intent = await worker._call("wait_tool", *identity)
+            await approve(store, flow["approver"], flow["item"])
+            _, identity = await claim(worker)
+
+            with psycopg.connect(conversation["admin"]) as lock:
+                lock.execute("SELECT pg_advisory_xact_lock(712093482)")
+                pending = asyncio.create_task(worker._call("invalidate_tool_grant", *identity))
+                try:
+                    # Wait for an observed lock wait, rather than depending on task timing.
+                    async with asyncio.timeout(5):
+                        while True:
+                            with psycopg.connect(conversation["admin"]) as observer:
+                                row = observer.execute(
+                                    "SELECT EXISTS(SELECT 1 FROM pg_stat_activity "
+                                    "WHERE datname=current_database() AND wait_event='advisory' "
+                                    "AND query LIKE '%invalidate_tool_grant%')"
+                                ).fetchone()
+                            assert row is not None
+                            if row[0]:
+                                break
+                            await asyncio.sleep(0.01)
+                    lock.execute(
+                        "DELETE FROM markos_control.memberships "
+                        "WHERE principal_id=%s AND owner_id=%s AND domain='personal'",
+                        (conversation["principals"]["operator"], OWN),
+                    )
+                    lock.execute("SELECT markos_control.tool_sweep()")
+                    row = lock.execute(
+                        "SELECT cancellation_reason FROM markos_control.tool_intents "
+                        "WHERE intent_id=%s",
+                        (other_intent["intent_id"],),
+                    ).fetchone()
+                    assert row == ("access-changed",)
+                    lock.commit()
+                finally:
+                    lock.rollback()
+                    await pending
+
+            assert (await read(flow))["cancellation_reason"] == "test-service-check-failed"
+            approver = flow["approver"]
+            other_record = await store._call(
+                "read_tool_object",
+                approver.session_id,
+                approver.lookup_hash,
+                OWN,
+                "personal",
+                "approvals",
+                UUID(other_intent["intent_id"]),
+            )
+            assert other_record["status"] == "revoked"
+            assert other_record["cancellation_reason"] == "access-changed"
+
+    asyncio.run(scenario())
 
 
 async def read(flow: dict[str, Any]) -> dict[str, Any]:

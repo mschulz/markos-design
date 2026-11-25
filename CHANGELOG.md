@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-25 — Preserve cancellation reasons during concurrent service failures
+
+- Fix PR #28’s service-check handler so it cannot overwrite another request’s saved cancellation reason while waiting for the execution fence.
+- Add migration 0013, preserving migrations 0001–0012 and the existing fail-closed authority checks. Select locked, eligible request IDs instead of a time window.
+- Add a regression test that observes the competing lock wait and verifies both requests retain the correct explanation.
+
 ## 2026-11-13 — Explain cancelled approval requests
 
 - Show Request cancelled with a plain reason and a clear retry action. Record cancellation facts at the transition rather than guessing from later session/settings changes.
