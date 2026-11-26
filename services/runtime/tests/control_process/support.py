@@ -109,8 +109,26 @@ def container(role: str) -> str:
     return ident
 
 
+def postgres_port() -> int:
+    raw = os.environ.get("MARKOS_PREVIEW_POSTGRES_PORT", "5432")
+    if not re.fullmatch(r"[1-9][0-9]{3,4}", raw) or not 1024 <= int(raw) <= 65535:
+        raise ValueError("bounded local preview PostgreSQL port required")
+    return int(raw)
+
+
 def admin() -> str:
-    return "host=127.0.0.1 port=5432 dbname=markos_m1g user=postgres password=synthetic-test-only"
+    return make_conninfo(
+        host="127.0.0.1",
+        port=postgres_port(),
+        dbname="markos_m1g",
+        user="postgres",
+        password="synthetic-test-only",
+    )
+
+
+def container_database(login: str) -> str:
+    # Publishing on another Mac port must never change PostgreSQL's internal listener.
+    return make_conninfo(admin(), host="postgres", port=5432, user=login)
 
 
 def data() -> dict[str, Any]:
@@ -154,6 +172,7 @@ def certificates() -> None:
 
 def prepare_files() -> None:
     project()
+    postgres_port()
     if FOLDER.exists():
         raise RuntimeError(
             "existing preview preserved; use its recorded project or choose a fresh checkout"
@@ -194,7 +213,7 @@ async def bootstrap() -> None:
     for role in ("postgres", "rabbitmq"):
         meta = json.loads(command(["docker", "inspect", container(role)]))[0]
         port = "5432/tcp" if role == "postgres" else "15672/tcp"
-        expected = "5432" if role == "postgres" else "15672"
+        expected = str(postgres_port()) if role == "postgres" else "15672"
         if not meta["State"]["Running"] or meta["NetworkSettings"]["Ports"].get(port) != [
             {"HostIp": "127.0.0.1", "HostPort": expected}
         ]:
@@ -349,7 +368,7 @@ async def bootstrap() -> None:
                 if component == "activity"
                 else "m1g_worker"
             )
-            env["MARKOS_CONTROL_DATABASE_DSN"] = make_conninfo(admin(), host="postgres", user=login)
+            env["MARKOS_CONTROL_DATABASE_DSN"] = container_database(login)
         if component in {"publisher", "consumer", "completion-publisher", "activity"}:
             broker_role = (
                 "chatpub"
