@@ -32,6 +32,7 @@ def test_values_are_normalised_or_rejected() -> None:
     assert normalise("usage_kwh", "400") == "400.000"
     assert normalise("due_date", "2026-12-10") == "2026-12-10"
     assert normalise("brought_forward", "-12.30") == "-12.30"
+    assert normalise("total_due", "-5.00") == "-5.00"  # a credit bill
     assert normalise("period", "2026-11-01 to 2026-11-30") == "2026-11-01 to 2026-11-30"
     for key, value in [
         ("usage_charge", "-1.00"),

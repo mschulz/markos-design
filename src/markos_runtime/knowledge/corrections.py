@@ -16,7 +16,7 @@ from markos_runtime.knowledge import amber, origin
 from markos_runtime.knowledge.bills import BillCorrection, BillFacts, BillKey, plain_text
 
 MAX_REASON = 200
-SIGNED: set[BillKey] = {"brought_forward", "total_owed"}  # A credit balance is negative.
+SIGNED: set[BillKey] = {"brought_forward", "total_owed", "total_due"}  # Credits are negative.
 # Per profile: money facts, the ones the arithmetic needs, and the arithmetic itself.
 CHECKS: dict[
     str, tuple[set[BillKey], set[BillKey], Callable[[dict[BillKey, Decimal]], list[str]]]

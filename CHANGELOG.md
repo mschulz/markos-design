@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-26 — Origin balance sign fix
+
+- The Origin profile kept no sign on any amount. A credit brought forward or a credit bill would fail the totals check and show as unreconciled. Now only exports and credits are stored as positive credits, and every other amount keeps its sign.
+- A credit brought forward adds the notice "The amount due is reduced by a credit from an earlier bill."
+- Corrections accept a negative bill total, for credit bills.
+- Reports for bills without credit balances are unchanged, so stored bills still pass the read-time recheck.
+
 ## 2026-11-26 — K1-C1 bill corrections
 
 - Added `POST /api/v1/bills/{id}/corrections`. Operators correct any fact with a reason of up to 200 characters, or withdraw a correction with a null value. Viewers cannot correct.
