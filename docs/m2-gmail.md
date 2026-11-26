@@ -1,6 +1,6 @@
 # M2 Gmail ingestion plan
 
-Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. Owner decisions are under "Decisions".
+Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. Owner decisions are under "Decisions".
 
 M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and keeps a processing status for each one. The "message ingested" event moves to M3. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
 

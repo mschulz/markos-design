@@ -336,6 +336,7 @@ def create_app(
     session_key: bytes,
     confirm_synthetic: bool = False,
     bill_objects: Any = None,
+    mail_alerts: Any = None,
 ) -> Any:
     # Imports are optional and occur only after an explicit factory invocation.
     api = SyntheticApi(config, store, issuer, session_key, confirm_synthetic=confirm_synthetic)
@@ -364,6 +365,11 @@ def create_app(
         bills = BillRoutes(api, bill_objects)
     elif bill_objects is not None:
         raise ValueError("bill objects require the explicit bill profile")
+    from markos_runtime.api.mail_alerts import ALERT_PATH, MailAlerts
+
+    # The Gmail alert route is off unless an explicit adapter is given.
+    if mail_alerts is not None and not isinstance(mail_alerts, MailAlerts):
+        raise ValueError("explicit mail alert adapter required")
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False)
 
     def page(
@@ -526,6 +532,8 @@ def create_app(
             raise ApiFault("unavailable", 503)
         if bills is not None and (path == "/api/v1/bills" or path.startswith("/api/v1/bills/")):
             return await bills.handle(request, data)
+        if mail_alerts is not None and path == ALERT_PATH:
+            return await mail_alerts.handle(request, data)
         if governance is not None and governance.accepts(path):
             return await governance.handle(request, data)
         if path.startswith("/auth/") and path != "/auth/callback":
