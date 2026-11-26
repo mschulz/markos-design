@@ -2,7 +2,7 @@
 
 import hashlib
 import re
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -33,7 +33,8 @@ BillKey = Literal[
     "gst_included",
     "brought_forward",
 ]
-FactState = Literal["found", "missing", "conflicting", "invalid", "unreconciled"]
+# "corrected" appears only in the effective view (knowledge/corrections.py), never when stored.
+FactState = Literal["found", "missing", "conflicting", "invalid", "unreconciled", "corrected"]
 KEYS: dict[BillKey, str] = {
     "period": "Billing period",
     "usage_kwh": "Electricity used",
@@ -117,11 +118,20 @@ class BillFacts(ControlValue):
     notices: list[str]
 
 
+class BillCorrection(ControlValue):
+    correction_id: int
+    key: BillKey
+    value: str | None  # None withdraws earlier corrections of this fact.
+    reason: str
+    created_at: datetime
+
+
 class BillRecord(ControlValue):
     bill_id: UUID
     name: str
     source_sha256: str
     report: BillFacts
+    corrections: list[BillCorrection] = []
 
 
 def extract(text: str) -> BillFacts:
@@ -253,10 +263,12 @@ def answer(report: BillFacts, question: str) -> dict[str, object]:
     for fact in report.facts:
         if fact.key not in selected:
             continue
-        if fact.state != "found":
+        if fact.state not in {"found", "corrected"}:
             parts.append(f"{fact.label}: not established ({fact.state}). Check the original text.")
         else:
             parts.append(f"{fact.label}: {fact.value} {fact.unit}.".replace(" .", "."))
+            if fact.state == "corrected":
+                parts.append("You corrected this figure. The citation shows what the bill says.")
             citations.extend(
                 {"line": e.line, "quote": e.quote, **({"page": e.page} if e.page else {})}
                 for e in fact.evidence

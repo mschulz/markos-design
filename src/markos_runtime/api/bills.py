@@ -22,6 +22,7 @@ from markos_runtime.knowledge.bills import (
     extract,
     plain_text,
 )
+from markos_runtime.knowledge.corrections import CorrectionRequest, effective, normalise
 from markos_runtime.knowledge.objects import BillObjectError, BillObjects
 from markos_runtime.knowledge.origin import extract_origin, is_origin
 from markos_runtime.knowledge.pdf import PdfError, read_pages
@@ -35,6 +36,13 @@ PDF_PROFILES: dict[
     "amber-pdf-v1": (is_amber, extract_amber),
     "origin-pdf-v1": (is_origin, extract_origin),
 }
+
+
+def present(record: dict[str, Any]) -> dict[str, Any]:
+    """A stored bill plus its effective view: corrections applied, totals checked again."""
+    bill = BillRecord.from_wire(json.dumps(record).encode())
+    view = effective(bill.report, bill.corrections)
+    return {**record, "effective": view.model_dump(mode="json")}
 
 
 class BillRoutes:
@@ -59,7 +67,8 @@ class BillRoutes:
             ctx.lookup_hash,
             owner,
             domain,
-            method == "POST" and path in {"/api/v1/bills", PDF_PATH},
+            method == "POST"
+            and (path in {"/api/v1/bills", PDF_PATH} or path.endswith("/corrections")),
         )
         if path == PDF_PATH:
             if method != "POST":
@@ -93,8 +102,10 @@ class BillRoutes:
                 digest,
                 Jsonb(report.model_dump(mode="json")),
             )
-            return JSONResponse(result, status_code=201)
-        match = re.fullmatch(r"/api/v1/bills/([a-f0-9-]{36})(/source|/questions)?", path)
+            return JSONResponse(present(result), status_code=201)
+        match = re.fullmatch(
+            r"/api/v1/bills/([a-f0-9-]{36})(/source|/questions|/corrections)?", path
+        )
         if not match:
             raise ApiFault("not-found", 404)
         try:
@@ -128,7 +139,27 @@ class BillRoutes:
             raise ApiFault("bill-evidence-unavailable", 503)
         if match[2] == "/questions" and method == "POST":
             question = BillQuestion.from_wire(body)
-            return JSONResponse(answer(bill.report, question.question))
+            return JSONResponse(answer(effective(bill.report, bill.corrections), question.question))
+        if match[2] == "/corrections" and method == "POST":
+            change = CorrectionRequest.from_wire(body)
+            if change.key not in {f.key for f in bill.report.facts}:
+                raise ApiFault("invalid", 400)
+            try:
+                corrected = None if change.value is None else normalise(change.key, change.value)
+            except ValueError:
+                raise ApiFault("invalid", 400) from None
+            result = await api.store._call(
+                "correct_bill",
+                ctx.session_id,
+                ctx.lookup_hash,
+                owner,
+                domain,
+                bill_id,
+                change.key,
+                corrected,
+                change.reason.strip(),
+            )
+            return JSONResponse(present(result), status_code=201)
         if method != "GET":
             raise ApiFault("not-found", 404)
         if match[2] == "/source" and pdf:
@@ -146,7 +177,7 @@ class BillRoutes:
             )
         if match[2]:
             raise ApiFault("not-found", 404)
-        return JSONResponse(record)
+        return JSONResponse(present(record))
 
     async def import_pdf(self, ctx: Any, owner: UUID, domain: str, name: str, body: bytes) -> Any:
         from fastapi.responses import JSONResponse
@@ -182,4 +213,4 @@ class BillRoutes:
             digest,
             Jsonb(report.model_dump(mode="json")),
         )
-        return JSONResponse(result, status_code=201)
+        return JSONResponse(present(result), status_code=201)

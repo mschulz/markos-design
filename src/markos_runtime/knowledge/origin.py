@@ -317,6 +317,21 @@ SUMMED: set[BillKey] = {
 }
 
 
+def totals_problems(values: dict[BillKey, Decimal]) -> list[str]:
+    """The summary arithmetic. A bill without a solar meter charge has none."""
+    problems = []
+    meter = values.get("meter_charge", Decimal(0))
+    lines = values["usage_charge"] + values["supply_charge"] + meter
+    if lines != values["charges_total"]:
+        problems.append("the charge rows do not add up to the charges total")
+    net = values["charges_total"] - values["export_credit"] - values["concessions"]
+    if net != values["total_due"]:
+        problems.append("charges minus exports and credits is not the bill total")
+    if values["total_due"] + values["brought_forward"] != values["total_owed"]:
+        problems.append("the amount due is not this bill's total plus the balance forward")
+    return problems
+
+
 def extract_origin(pages: list[str], source_sha256: str) -> BillFacts:
     reader = Reader(pages)
     reader.read()
@@ -336,15 +351,7 @@ def extract_origin(pages: list[str], source_sha256: str) -> BillFacts:
     if not problems and not values.keys() >= required:
         problems.append("some figures are missing or unclear, so the totals were not checked")
     if not problems:
-        meter = values.get("meter_charge", Decimal(0))
-        lines = values["usage_charge"] + values["supply_charge"] + meter
-        if lines != values["charges_total"]:
-            problems.append("the charge rows do not add up to the charges total")
-        net = values["charges_total"] - values["export_credit"] - values["concessions"]
-        if net != values["total_due"]:
-            problems.append("charges minus exports and credits is not the bill total")
-        if values["total_due"] + values["brought_forward"] != values["total_owed"]:
-            problems.append("the amount due is not this bill's total plus the balance forward")
+        problems = totals_problems(values)
     if problems:
         notices.extend("Needs review: " + problem + "." for problem in problems)
         facts = [

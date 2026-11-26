@@ -1,5 +1,73 @@
 {
   "$defs": {
+    "BillCorrection": {
+      "additionalProperties": false,
+      "properties": {
+        "correction_id": {
+          "title": "Correction Id",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "key": {
+          "enum": [
+            "period",
+            "usage_kwh",
+            "usage_charge",
+            "supply_charge",
+            "export_credit",
+            "total_due",
+            "demand_charge",
+            "subscription",
+            "charges_gst",
+            "charges_total",
+            "concessions",
+            "credits_gst",
+            "credits_total",
+            "total_owed",
+            "due_date",
+            "meter_charge",
+            "gst_included",
+            "brought_forward"
+          ],
+          "title": "Key",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "schema_version",
+        "correction_id",
+        "key",
+        "value",
+        "reason",
+        "created_at"
+      ],
+      "title": "BillCorrection",
+      "type": "object"
+    },
     "BillFacts": {
       "additionalProperties": false,
       "properties": {
@@ -135,7 +203,8 @@
             "missing",
             "conflicting",
             "invalid",
-            "unreconciled"
+            "unreconciled",
+            "corrected"
           ],
           "title": "State",
           "type": "string"
@@ -176,6 +245,14 @@
       "format": "uuid",
       "title": "Bill Id",
       "type": "string"
+    },
+    "corrections": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/BillCorrection"
+      },
+      "title": "Corrections",
+      "type": "array"
     },
     "name": {
       "title": "Name",

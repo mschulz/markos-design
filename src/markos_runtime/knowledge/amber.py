@@ -169,6 +169,18 @@ def fact(key: BillKey, found: list[tuple[str | None, Evidence]]) -> Fact:
     )
 
 
+def totals_problems(values: dict[BillKey, Decimal]) -> list[str]:
+    """The summary arithmetic. Corrections rerun it on effective values."""
+    problems = []
+    if sum(values[k] for k in CHARGE_LINES) != values["charges_total"]:
+        problems.append("the charge lines do not add up to the charges total")
+    if sum(values[k] for k in CREDIT_LINES) != values["credits_total"]:
+        problems.append("the credit lines do not add up to the credits total")
+    if values["charges_total"] - values["credits_total"] != values["total_due"]:
+        problems.append("charges total minus credits total is not the bill total")
+    return problems
+
+
 def reconcile(facts: list[Fact], notices: list[str], unknown: list[str]) -> list[Fact]:
     """Check every total. On any failure, money facts become unreconciled."""
     values = {f.key: Decimal(f.value) for f in facts if f.key in MONEY and f.value is not None}
@@ -178,12 +190,7 @@ def reconcile(facts: list[Fact], notices: list[str], unknown: list[str]) -> list
     elif not values.keys() >= MONEY:
         problems.append("some figures are missing or unclear, so the totals were not checked")
     else:
-        if sum(values[k] for k in CHARGE_LINES) != values["charges_total"]:
-            problems.append("the charge lines do not add up to the charges total")
-        if sum(values[k] for k in CREDIT_LINES) != values["credits_total"]:
-            problems.append("the credit lines do not add up to the credits total")
-        if values["charges_total"] - values["credits_total"] != values["total_due"]:
-            problems.append("charges total minus credits total is not the bill total")
+        problems = totals_problems(values)
     if not problems:
         notices.append(
             "Every charge and credit line adds up to its total, and charges minus credits "

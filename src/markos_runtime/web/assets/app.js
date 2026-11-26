@@ -154,7 +154,7 @@
     if (can("operator")) {
       const form = node("form"), name = field(form, "Bill name", "bill-name", "text", 120);
       const text = field(form, "Bill text", "bill-text", "textarea", 16384);
-      form.append(node("p", "Paste a short bill’s selectable text, or upload an Amber Electric PDF below."));
+      form.append(node("p", "Paste a short bill’s selectable text, or upload an Amber Electric or Origin Energy PDF below."));
       form.append(button("Try sample bill", async () => {
         const sample = await api(scoped("/api/v1/bills/sample")); name.value = sample.name; text.value = sample.text;
       }));
@@ -168,7 +168,7 @@
       }); }; view.append(form);
       const upload = node("form"), pdfName = field(upload, "PDF bill name", "pdf-name", "text", 120);
       const file = field(upload, "PDF bill file", "bill-pdf", "file"); file.accept = "application/pdf";
-      upload.append(node("p", "Amber Electric PDF bills only, up to 2 MiB and 20 pages. Scanned bills are not supported."));
+      upload.append(node("p", "Amber Electric or Origin Energy PDF bills only, up to 2 MiB and 20 pages. Scanned bills are not supported."));
       const send = node("button", "Upload PDF bill", {type: "submit"}); upload.append(send);
       upload.onsubmit = event => { event.preventDefault(); run(async () => {
         send.disabled = true;
@@ -187,20 +187,42 @@
   function where(evidence) {
     return (evidence.page ? "Source page " + evidence.page + ", line " : "Source line ") + evidence.line;
   }
+  function correction(id, fact, corrected) {
+    const form = node("form"), key = "fix-" + fact.key;
+    const value = field(form, "Correct " + fact.label.toLowerCase() + " to", key, "text", 40);
+    const reason = field(form, "Reason for the correction", key + "-reason", "text", 200);
+    const send = body => review("Correct " + fact.label, [["New value", body.value === null ? "Use the extracted value" : body.value], ["Reason", body.reason]], async () => {
+      await api(scoped("/api/v1/bills/" + id + "/corrections"), body); await showBill(id); message("Correction saved. The bill and its citations are unchanged.");
+    });
+    form.append(node("button", "Review correction", {type: "submit"}));
+    form.onsubmit = event => { event.preventDefault(); send({schema_version: 1, key: fact.key, value: value.value, reason: reason.value}); };
+    if (corrected) form.append(button("Withdraw correction", () => {
+      if (reason.reportValidity()) send({schema_version: 1, key: fact.key, value: null, reason: reason.value});
+    }));
+    return form;
+  }
   async function showBill(id) {
     const region = document.getElementById("bill-detail");
     const bill = await api(scoped("/api/v1/bills/" + id));
     if (!region.isConnected) return;
     region.replaceChildren(node("h2", bill.name));
-    for (const notice of bill.report.notices) region.append(node("p", notice));
+    for (const notice of bill.effective.notices) region.append(node("p", notice));
     const source = node("section", undefined, {"aria-label": "Original bill text"});
-    region.append(node("h3", "Extracted figures"));
-    for (const fact of bill.report.facts) {
-      const card = node("article");
-      card.append(node("h4", fact.label), node("p", fact.state === "found" ? fact.value + " " + fact.unit : "Needs review: " + fact.state));
+    region.append(node("h3", "Figures"));
+    const shown = fact => ["found", "corrected"].includes(fact.state) ? (fact.value + " " + fact.unit).trim() : "Needs review: " + fact.state;
+    bill.effective.facts.forEach((fact, index) => {
+      const card = node("article"), extracted = bill.report.facts[index];
+      card.append(node("h4", fact.label), node("p", shown(fact)));
+      const history = bill.corrections.filter(item => item.key === fact.key);
+      if (history.length) {
+        card.append(node("p", "Extracted from the bill: " + shown(extracted)));
+        for (const item of history)
+          card.append(node("p", new Date(item.created_at).toLocaleString() + ": " + (item.value === null ? "withdrawn" : "corrected to " + item.value) + " (" + item.reason + ")"));
+      }
       for (const evidence of fact.evidence) card.append(node("p", where(evidence) + ": " + evidence.quote));
+      if (can("operator")) card.append(correction(id, fact, history.length && history[history.length - 1].value !== null));
       region.append(card);
-    }
+    });
     const answers = node("section", undefined, {"aria-label": "Bill answer", "aria-live": "polite"});
     region.append(node("h3", "Ask about this bill"));
     const ask = async question => {

@@ -204,3 +204,49 @@ def test_origin_pdf_upload_is_stored_and_rechecked(control: dict[str, Any], tmp_
             assert status == 200 and reread == saved
 
     asyncio.run(scenario())
+
+
+def test_corrections_keep_the_report_and_change_answers(
+    control: dict[str, Any], tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        async with web_server(control, tmp_path, bills=True, prepare_agent=False) as server:
+            operator = WebBrowserClient(server["port"], server["cert"])
+            await operator.login(server["issuer"], server["credentials"]["both"])
+            status, saved = await operator.call(
+                "POST",
+                "/api/v1/bills" + SCOPE,
+                {"schema_version": 1, "name": "fix", "text": SAMPLE},
+            )
+            assert status == 201 and saved["corrections"] == []
+            assert saved["effective"] == saved["report"]
+            path = "/api/v1/bills/" + saved["bill_id"]
+            fix = {"schema_version": 1, "key": "total_due", "value": "150", "reason": "Paper copy"}
+            status, fixed = await operator.call("POST", path + "/corrections" + SCOPE, fix)
+            assert status == 201, fixed
+            assert fixed["report"] == saved["report"]  # the extracted report never changes
+            assert [(c["key"], c["value"]) for c in fixed["corrections"]] == [
+                ("total_due", "150.00")
+            ]
+            total = next(f for f in fixed["effective"]["facts"] if f["key"] == "total_due")
+            assert (total["state"], total["value"]) == ("corrected", "150.00")
+            for bad in ({**fix, "key": "demand_charge"}, {**fix, "value": "-1"}):
+                assert (await operator.call("POST", path + "/corrections" + SCOPE, bad))[0] == 400
+            viewer = WebBrowserClient(server["port"], server["cert"])
+            await viewer.login(server["issuer"], server["credentials"]["viewer"])
+            assert (await viewer.call("POST", path + "/corrections" + SCOPE, fix))[0] == 403
+            status, reread = await viewer.call("GET", path + SCOPE)
+            assert status == 200 and reread == fixed
+            status, result = await viewer.call(
+                "POST",
+                path + "/questions" + SCOPE,
+                {"schema_version": 1, "question": "How much do I owe?"},
+            )
+            assert status == 200 and "150.00" in result["answer"]
+            assert "You corrected this figure" in result["answer"]
+            withdraw = {**fix, "value": None, "reason": "Paper copy was wrong"}
+            status, back = await operator.call("POST", path + "/corrections" + SCOPE, withdraw)
+            assert status == 201 and back["effective"] == back["report"]
+            assert len(back["corrections"]) == 2
+
+    asyncio.run(scenario())
