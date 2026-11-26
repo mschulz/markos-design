@@ -13,8 +13,10 @@ from markos_runtime.mail.gmail import (
     ListPage,
     MessageGone,
     MessageMeta,
+    Watch,
 )
 from markos_runtime.mail.ingest import Mailbox, Reason
+from markos_runtime.mail.worker import WorkClaim
 
 PDF = Attachment("1", "ANGjdJ_synthetic", "application/pdf", 2048)
 
@@ -27,6 +29,7 @@ class FakeGmail:
     messages: dict[str, MessageMeta] = field(default_factory=dict)
     changes: list[tuple[int, Change]] = field(default_factory=list)
     fetched: Counter[str] = field(default_factory=Counter)
+    watched: list[tuple[str, ...]] = field(default_factory=list)
 
     def deliver(
         self,
@@ -92,6 +95,14 @@ class FakeGmail:
             raise MessageGone
         return self.messages[message_id]
 
+    async def watch(self, label_ids: Sequence[str]) -> Watch:
+        self.watched.append(tuple(label_ids))
+        return Watch(self.history_id, datetime.now(UTC) + timedelta(days=7))
+
+    def alert(self) -> bytes:
+        """The Pub/Sub payload Gmail sends. The address is invented."""
+        return b'{"emailAddress": "owner@example.invalid", "historyId": %d}' % self.history_id
+
 
 @dataclass
 class MemoryRecords:
@@ -123,3 +134,29 @@ class MemoryRecords:
             self.resyncs.append(reason)
         self.box = replace(self.box, history_id=end)
         return count
+
+
+@dataclass
+class MemoryWork(MemoryRecords):
+    """Records alerts and finished work. Work is due only when a test sets `due`."""
+
+    due: WorkClaim | None = None
+    alerts: list[int] = field(default_factory=list)
+    finished: list[tuple[bool, datetime | None]] = field(default_factory=list)
+    broken: bool = False
+
+    async def note_alert(self, history_id: int) -> bool:
+        if self.broken:
+            raise OSError("database unavailable")
+        self.alerts.append(history_id)
+        return True
+
+    async def claim_work(self, lease_seconds: int) -> WorkClaim | None:
+        claim, self.due = self.due, None
+        return claim
+
+    async def finish_work(
+        self, claim: WorkClaim, synced: bool, watch_expires: datetime | None
+    ) -> bool:
+        self.finished.append((synced, watch_expires))
+        return True

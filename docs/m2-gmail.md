@@ -1,6 +1,6 @@
 # M2 Gmail ingestion plan
 
-Status: approved on 2026-11-26. M2-A is implemented in `src/markos_runtime/mail/` and migration 0019. Owner decisions are under "Decisions".
+Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. Owner decisions are under "Decisions".
 
 M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and keeps a processing status for each one. The "message ingested" event moves to M3. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
 
@@ -33,7 +33,7 @@ Roadmap acceptance: duplicate and out-of-order mailbox notifications create one 
 Six PRs, each reviewed and merged separately. M2-A to M2-D use only a fake Gmail and synthetic mail.
 
 1. **M2-A mailbox records and fake Gmail:** migration for the mailbox and message tables, a Gmail client interface with an in-memory fake, incremental reads and cursor-gap resync. A `can_ingest_mail` grant gates the mail functions. Until M2-C, the synthetic worker opens the mailbox itself with an address hash and label list.
-2. **M2-B schedules:** daily watch renewal and the 15-minute backstop poll, as due times on the mailbox with leases. Recording an alert makes the poll due now. The worker claims due work every few seconds.
+2. **M2-B schedules:** daily watch renewal and the 15-minute backstop poll, as due times on the mailbox with leases. Recording an alert makes the poll due now. The worker claims due work every few seconds. Owner decision on 2026-11-26: the schedules are due times on the mailbox row, claimed under a lease using database time. The generic scheduler only emits events, which would bring the M3-D event work forward.
 3. **M2-B2 push endpoint:** the alert route, the OIDC token check against Google's published keys, a config gate that is off by default, and a database login with only the `can_ingest_mail` grant. Tests sign tokens with a local test key and never call Google.
 4. **M2-C owner opt-in:** the OAuth connect and disconnect flow for operators, encrypted token storage, label allowlist settings and audit. Tests use a fixture OAuth provider.
 5. **M2-D bills from a label:** PDF attachments in one owner-chosen label go through the existing K1 PDF import. Size, type and page limits apply. Duplicates are skipped by SHA-256. Bills from an unknown supplier are counted and left for review.

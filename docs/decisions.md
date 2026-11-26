@@ -191,7 +191,7 @@ old bytes until consumed. Broker, object and backup erasure are not built.
 
 ## Migrations are append-only and checksummed
 
-`infrastructure/migrations/NNNN_name.sql`: 0001–0019 exist; next is 0020.
+`infrastructure/migrations/NNNN_name.sql`: 0001–0020 exist; next is 0021.
 
 - Never edit an applied migration. The ledger stores SQL checksums, and a changed
   file blocks migration and API readiness.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-26 — M2-B watch renewal and backstop poll
+
+- Migration 0020 adds due times to the mailbox: the next poll, the next watch renewal, the watch expiry, an alert counter and a lease with a fence. Database time is the only clock.
+- `note_mail_alert` makes the poll due now. Repeated or old alerts change nothing more.
+- `claim_mail_work` hands due work to one worker under a lease. A crashed worker's lease expires, and the next claim retries the work.
+- `finish_mail_work` records work only under the current fence. After a sync, the next poll is due in 15 minutes, or at once if an alert arrived during the sync. After a renewal, the next one is due in 1 day, or 1 day before the watch expires if that is sooner.
+- `markos_runtime.mail.worker` runs one pass. It renews the watch and syncs when due. `alert_history` reads only the history ID from a Gmail alert, never the email address. The M2-B2 push endpoint will use it.
+- There is no network Gmail client yet. Tests use fakes. Migrations 0001–0019 are unchanged.
+
 ## 2026-11-26 — M2 plan: Pub/Sub push delivery
 
 - Owner decision: Gmail alerts arrive by Pub/Sub push to an authenticated HTTPS endpoint, not by pull. The 15-minute backstop poll stays.
