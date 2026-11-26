@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-26 — K1-C2 bill history
+
+- Added `GET /api/v1/bills/history`: every bill in the scope, Amber, Origin and pasted text together, in billing-period order. Each row shows the supplier, days, bill total, kWh, export credit, cost per day and kWh per day.
+- Totals include GST for every profile. Days count both the first and last day of a period.
+- Gaps and overlaps between billing periods appear as notices. Bills without a clear period are listed last.
+- A figure that is not found or corrected shows as "not established", never as a number.
+- The history checks each original's SHA-256 but does not parse every PDF again. A bill whose original is missing or changed is listed without figures. The bill page still rechecks its report in full.
+- Added `POST /api/v1/bills/history/questions` for "How much electricity did I use each period?" and "How has my bill changed?". Answers name the bills they use.
+- The bills page adds a history table and the two questions.
+- Migration 0018 adds the read-only `bill_history` function. Migrations 0001–0017 are unchanged.
+
 ## 2026-11-26 — Origin balance sign fix
 
 - The Origin profile kept no sign on any amount. A credit brought forward or a credit bill would fail the totals check and show as unreconciled. Now only exports and credits are stored as positive credits, and every other amount keeps its sign.

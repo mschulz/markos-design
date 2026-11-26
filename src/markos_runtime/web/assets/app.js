@@ -180,6 +180,7 @@
     }
     const list = await api(scoped("/api/v1/bills"));
     view.append(node("h2", "Saved bills"));
+    if (list.items.length) view.append(button("Show bill history", () => showHistory()));
     for (const bill of list.items) view.append(button(bill.name, () => showBill(bill.bill_id)));
     if (!list.items.length) view.append(node("p", "No saved bills yet. Start with the sample or paste bill text."));
     view.append(node("section", undefined, {id: "bill-detail", "aria-label": "Bill details"}));
@@ -200,6 +201,44 @@
       if (reason.reportValidity()) send({schema_version: 1, key: fact.key, value: null, reason: reason.value});
     }));
     return form;
+  }
+  async function showHistory() {
+    const region = document.getElementById("bill-detail");
+    const history = await api(scoped("/api/v1/bills/history"));
+    if (!region.isConnected) return;
+    region.replaceChildren(node("h2", "Bill history"), node("p", "Costs include GST. Per-day figures count the first and last day of each period."));
+    for (const notice of history.notices) region.append(node("p", notice));
+    const table = node("table"), head = node("tr");
+    for (const title of ["Bill", "Supplier", "Period", "Days", "Bill total", "Per day", "Used", "kWh a day", "Export credit"]) head.append(node("th", title, {scope: "col"}));
+    table.append(head);
+    const figure = (item, name, unit) => {
+      const value = item.figures[name];
+      if (!value) return "";
+      return value.value === null ? (value.state === "missing" ? "None" : "Not established") : (unit === "AUD" ? "$" + value.value : value.value + " " + unit);
+    };
+    for (const item of history.items) {
+      const tr = node("tr"), name = node("td");
+      name.append(button(item.name + (item.corrected ? " (corrected)" : ""), () => showBill(item.bill_id)));
+      tr.append(name);
+      if (!item.available) { tr.append(node("td", "Original failed its check", {colspan: "8"})); table.append(tr); continue; }
+      const cells = [item.supplier, item.start ? item.start + " to " + item.end : "Not established", item.days ?? "",
+        figure(item, "bill_total", "AUD"), item.cost_per_day === null ? "Not established" : "$" + item.cost_per_day,
+        figure(item, "usage_kwh", "kWh"), item.kwh_per_day ?? "Not established", figure(item, "export_credit", "AUD")];
+      for (const cell of cells) tr.append(node("td", String(cell)));
+      table.append(tr);
+    }
+    region.append(table);
+    const answers = node("section", undefined, {"aria-label": "History answer", "aria-live": "polite"});
+    region.append(node("h3", "Ask about your bill history"));
+    const ask = async question => {
+      const result = await api(scoped("/api/v1/bills/history/questions"), {schema_version: 1, question});
+      if (!answers.isConnected) return;
+      answers.replaceChildren(node("p", result.answer));
+      for (const citation of result.citations) answers.append(node("p", "Source: " + citation.name + ", " + citation.period));
+    };
+    for (const question of ["How much electricity did I use each period?", "How has my bill changed?"])
+      region.append(button(question, () => ask(question)));
+    region.append(answers);
   }
   async function showBill(id) {
     const region = document.getElementById("bill-detail");

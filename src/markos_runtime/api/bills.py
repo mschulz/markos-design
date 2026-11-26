@@ -23,11 +23,14 @@ from markos_runtime.knowledge.bills import (
     plain_text,
 )
 from markos_runtime.knowledge.corrections import CorrectionRequest, effective, normalise
+from markos_runtime.knowledge.history import answer as history_answer
+from markos_runtime.knowledge.history import history, row
 from markos_runtime.knowledge.objects import BillObjectError, BillObjects
 from markos_runtime.knowledge.origin import extract_origin, is_origin
 from markos_runtime.knowledge.pdf import PdfError, read_pages
 
 PDF_PATH = "/api/v1/bills/pdf"
+HISTORY_PATH = "/api/v1/bills/history"
 
 # Supplier PDF profiles by extractor name: (recognises the pages, extracts the facts).
 PDF_PROFILES: dict[
@@ -103,6 +106,12 @@ class BillRoutes:
                 Jsonb(report.model_dump(mode="json")),
             )
             return JSONResponse(present(result), status_code=201)
+        if path == HISTORY_PATH and method == "GET":
+            return JSONResponse(await self.history(ctx, owner, domain))
+        if path == HISTORY_PATH + "/questions" and method == "POST":
+            question = BillQuestion.from_wire(body)
+            view = await self.history(ctx, owner, domain)
+            return JSONResponse(history_answer(view, question.question))
         match = re.fullmatch(
             r"/api/v1/bills/([a-f0-9-]{36})(/source|/questions|/corrections)?", path
         )
@@ -178,6 +187,30 @@ class BillRoutes:
         if match[2]:
             raise ApiFault("not-found", 404)
         return JSONResponse(present(record))
+
+    async def history(self, ctx: Any, owner: UUID, domain: str) -> dict[str, Any]:
+        """All bills in period order. Each original must pass its integrity check.
+
+        The history does not parse every PDF again: one request may cover 500 bills. A bill whose
+        original is missing or changed is listed without figures. The bill page still rechecks its
+        report against the original in full.
+        """
+        records = await self.api.store._call(
+            "bill_history", ctx.session_id, ctx.lookup_hash, owner, domain
+        )
+        rows = []
+        for record in records:
+            bill = BillRecord.from_wire(json.dumps(record).encode())
+            suffix = ".pdf" if bill.report.extractor in PDF_PROFILES else ".txt"
+            try:
+                await asyncio.to_thread(
+                    self.objects.read, owner, domain, bill.source_sha256, suffix
+                )
+                view: BillFacts | None = effective(bill.report, bill.corrections)
+            except (BillObjectError, OSError):
+                view = None
+            rows.append(row(bill.bill_id, bill.name, view))
+        return history(rows)
 
     async def import_pdf(self, ctx: Any, owner: UUID, domain: str, name: str, body: bytes) -> Any:
         from fastapi.responses import JSONResponse
