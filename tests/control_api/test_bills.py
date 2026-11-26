@@ -230,7 +230,10 @@ def test_corrections_keep_the_report_and_change_answers(
             ]
             total = next(f for f in fixed["effective"]["facts"] if f["key"] == "total_due")
             assert (total["state"], total["value"]) == ("corrected", "150.00")
-            for bad in ({**fix, "key": "demand_charge"}, {**fix, "key": "usage_charge", "value": "-1"}):
+            for bad in (
+                {**fix, "key": "demand_charge"},
+                {**fix, "key": "usage_charge", "value": "-1"},
+            ):
                 assert (await operator.call("POST", path + "/corrections" + SCOPE, bad))[0] == 400
             viewer = WebBrowserClient(server["port"], server["cert"])
             await viewer.login(server["issuer"], server["credentials"]["viewer"])
