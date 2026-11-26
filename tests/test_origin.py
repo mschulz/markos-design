@@ -113,6 +113,17 @@ def test_balance_forward_is_added_and_flagged() -> None:
     assert any("balance brought forward" in notice for notice in report.notices)
 
 
+def test_credit_brought_forward_keeps_its_sign() -> None:
+    # Opening $200.00 less the $250.00 payment leaves a $50.00 credit.
+    pages = bill(opening="$200.00", forward="-$50.00", owed="$272.60")
+    report = extract_origin(pages, SHA)
+    found = {f.key: (f.state, f.value) for f in report.facts}
+    assert found["brought_forward"] == ("found", "-50.00")
+    assert found["total_owed"] == ("found", "272.60")
+    assert found["export_credit"] == ("found", "20.00")  # credits stay positive
+    assert any("reduced by a credit" in notice for notice in report.notices)
+
+
 def test_mismatch_or_unknown_row_marks_money_unreconciled() -> None:
     late = row("Late Payment Fee", "1 days", "$5.000000", "$5.00")
     for pages in (bill(bill_total="$330.00"), bill(extra=late), bill(forward="$9.00")):

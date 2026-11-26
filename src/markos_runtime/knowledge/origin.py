@@ -274,14 +274,22 @@ class Reader:
         return j + 3
 
 
+CREDITS: set[BillKey] = {"export_credit", "concessions"}
+
+
 def fact(key: BillKey, found: list[tuple[Decimal | str | None, Evidence]], summed: bool) -> Fact:
-    """Summed facts add their rows. Other facts must agree wherever they appear."""
+    """Summed facts add their rows. Other facts must agree wherever they appear.
+
+    Exports and credits print as negatives and are stored as positive credits. Every other
+    amount keeps its sign, so a credit balance or credit bill stays negative.
+    """
+    sign = abs if key in CREDITS else (lambda number: number)
     if summed:
         numbers = [v for v, _ in found if isinstance(v, Decimal)]
         state: FactState = (
             "invalid" if len(numbers) != len(found) else "found" if found else "missing"
         )
-        value: str | None = str(abs(sum(numbers))) if state == "found" else None
+        value: str | None = str(sign(sum(numbers))) if state == "found" else None
     else:
         distinct = {v for v, _ in found}
         state = (
@@ -294,7 +302,7 @@ def fact(key: BillKey, found: list[tuple[Decimal | str | None, Evidence]], summe
             else "missing"
         )
         first = found[0][0] if state == "found" else None
-        value = str(abs(first)) if isinstance(first, Decimal) else first
+        value = str(sign(first)) if isinstance(first, Decimal) else first
     unit = "kWh" if key == "usage_kwh" else "" if key in {"period", "due_date"} else "AUD"
     return Fact(
         schema_version=1,
@@ -365,10 +373,12 @@ def extract_origin(pages: list[str], source_sha256: str) -> BillFacts:
             "Every table adds up to its total, charges minus exports and credits equals the "
             "bill total, and the amount due equals that total plus the balance brought forward."
         )
-        if values["brought_forward"]:
+        if values["brought_forward"] > 0:
             notices.append(
                 "The amount due includes a balance brought forward from an earlier bill."
             )
+        elif values["brought_forward"] < 0:
+            notices.append("The amount due is reduced by a credit from an earlier bill.")
     return BillFacts(
         schema_version=1,
         extractor="origin-pdf-v1",
