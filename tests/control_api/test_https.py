@@ -20,8 +20,8 @@ from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID  # type: ignore[i
 from markos_runtime.api.application import create_app
 from markos_runtime.api.identity import FixtureIssuer, opaque
 from markos_runtime.control.api_config import SyntheticApiConfig
-from markos_runtime.control.store import ControlStore
 from tests.control_api.test_api import SCOPE, Client, agent
+from tests.control_store_support import HarnessStore
 
 
 def certificate(directory: Path) -> tuple[Path, Path]:
@@ -151,7 +151,7 @@ def test_actual_https_browser_cli_current_permissions_and_stale_writes(
         credential = opaque()
         issuer.add_account("both", credential)
         config = SyntheticApiConfig(schema_version=1, api_origin="https://127.0.0.1:" + str(port))
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             app = create_app(config, store, issuer, session_key=b"s" * 32, confirm_synthetic=True)
             server = uvicorn.Server(
                 uvicorn.Config(

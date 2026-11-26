@@ -13,7 +13,6 @@ from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from markos_runtime.contracts.control import digest_document
 from markos_runtime.contracts.governance import (
     INPUT_SCHEMA,
     PROTOCOL,
@@ -292,7 +291,3 @@ class FixtureTransport:
             return value
         except Exception:
             raise ToolProtocolError() from None
-
-    @staticmethod
-    def result_hash(value: FixtureResult) -> str:
-        return digest_document(value.model_dump(mode="json"))

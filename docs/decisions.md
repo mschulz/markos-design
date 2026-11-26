@@ -349,8 +349,8 @@ the constructed profile. No request, registry entry or config revision can pick 
 profile, enable execution or load code. `tool_execution_enabled` and
 `real_accounts_enabled` are fixed false.
 
-Preflight (`preflight`, `preflight-control`) only validates: no sockets, secrets,
-discovery or execution. `MARKOS_RUNTIME_CONFIG` is the only environment fallback.
+Control preflight (`preflight-control`) only validates: no sockets, secrets,
+discovery or execution. It reads only the file given by `--config`.
 
 ## Clients use the authenticated HTTPS API only
 
@@ -506,8 +506,16 @@ personal or production host. The fault controller stays out of every image.
 Profiles use synthetic data, fixture issuers and fixture tools. Service commands
 require `--confirm-synthetic`. Off until separately reviewed: real identity,
 accounts, Gmail, models, real MCP connectors, paid or consequential tools,
-personal data and deployment. `config/runtime/m0-closeout.json` and
-`config/runtime/control/m1-closeout.json` record `production_ready: false`.
+personal data and deployment. MarkOS is not production ready. These gates must
+pass before production:
+
+- real source provider permission, deletion and backup erasure
+- provider plans, region, cost, production secrets and TLS
+- host capacity, VM boot, measured RPO/RTO and restore owner
+- encrypted off-host backup and independently placed monitoring
+- real action approval expiry and unknown-effect reconciliation
+- MCP-01 to MCP-10 before enabling any real MCP connector
+
 Accepted architecture is not deployment authorization.
 
 ## Containers are minimal and health is private

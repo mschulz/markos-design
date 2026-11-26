@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-26 — Remove dead code found in the code review
+
+- Removed `RuntimeConfig`, `load_config`, the `preflight` command, its example and schema. `preflight-control` stays.
+- Replaced `ProposedLimits` with `TransportLimits`, which keeps only the 12 limits the transport reads.
+- Moved the test-only `ControlStore` session and staging methods to `tests/control_store_support.py`.
+- Removed `require_live`, `result_hash`, `Membership.supports`, `lifecycle/monitor.py` and two unused API routes.
+- Removed the closeout ledgers and `rabbitmq/profile.json`. The production gates now live in `docs/decisions.md`.
+
 ## 2026-11-26 — Safety and bug fixes from the code review
 
 - Database tests refuse ports 5432, 15432 and 25432 and host redirection. CI uses 55432.

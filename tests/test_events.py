@@ -1,5 +1,4 @@
 import json
-from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -130,16 +129,6 @@ def test_final_publication_revalidates_size(event_document: dict[str, Any]) -> N
     broken = event.model_copy(update={"domain": "admin"})
     with pytest.raises(ContractError):
         broken.to_wire()
-
-
-def test_expiry_at_boundary(event_document: dict[str, Any]) -> None:
-    event_document["expires_at"] = "2026-11-12T01:00:00Z"
-    event = EventEnvelope.from_wire(wire(event_document))
-    event.require_live(datetime(2026, 11, 12, 0, 59, tzinfo=UTC))
-    with pytest.raises(ContractError, match="expired"):
-        event.require_live(datetime(2026, 11, 12, 1, tzinfo=UTC))
-    with pytest.raises(ContractError, match="UTC"):
-        event.require_live(datetime(2026, 11, 12))
 
 
 def test_publication_rejects_multibyte_size_overflow(event_document: dict[str, Any]) -> None:

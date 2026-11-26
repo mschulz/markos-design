@@ -4,7 +4,6 @@ import argparse
 import json
 from pathlib import Path
 
-from markos_runtime.config import RuntimeConfig
 from markos_runtime.contracts.base import ValueModel
 from markos_runtime.contracts.control import (
     Activity,
@@ -98,7 +97,6 @@ def models() -> dict[str, type[ValueModel]]:
         "event": EventEnvelope,
         "task": TaskRequest,
         "manifest": Manifest,
-        "runtime-config": RuntimeConfig,
     }
 
 

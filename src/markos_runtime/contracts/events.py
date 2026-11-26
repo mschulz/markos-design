@@ -8,7 +8,6 @@ from pydantic import Field, field_validator, model_validator
 
 from markos_runtime.contracts.base import (
     MAX_EVENT_BYTES,
-    ContractError,
     Domain,
     EventType,
     Name,
@@ -99,12 +98,6 @@ class EventEnvelope(ValueModel):
         body = self.model_dump_json().encode("utf-8")
         self.from_wire(body)  # Revalidate even after unsafe model_copy/model_construct use.
         return body
-
-    def require_live(self, now: datetime) -> None:
-        if now.utcoffset() != timedelta(0):
-            raise ContractError("UTC clock required")
-        if self.expires_at is not None and now >= self.expires_at:
-            raise ContractError("event expired")
 
 
 class TaskRequest(ValueModel):

@@ -5,7 +5,7 @@ import asyncio
 from aio_pika.abc import AbstractRobustChannel
 
 from markos_runtime.backoff import backoff as backoff
-from markos_runtime.config import ProposedLimits
+from markos_runtime.config import TransportLimits
 from markos_runtime.contracts.control import ChatEvent
 from markos_runtime.contracts.wire import parse_event, routing_key
 from markos_runtime.store.database import DurableStore, OutboxClaim
@@ -21,13 +21,13 @@ class Publisher:
         store: DurableStore,
         audit: TopologyAudit,
         *,
-        limits: ProposedLimits | None = None,
+        limits: TransportLimits | None = None,
     ) -> None:
         if session.vhost != audit.vhost:
             raise TransportError("broker/audit namespace mismatch")
         self.session, self.channel, self.store, self.audit = session, channel, store, audit
         profile = limits if limits is not None else getattr(session, "limits", None)
-        self.limits = profile if isinstance(profile, ProposedLimits) else ProposedLimits()
+        self.limits = profile if isinstance(profile, TransportLimits) else TransportLimits()
         self.last_pass_failed = False
         self._inflight = asyncio.Semaphore(self.limits.max_inflight_confirms)
 

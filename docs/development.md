@@ -6,8 +6,7 @@ Python 3.13 and uv. Design rules and their reasons are in
 
 Entry points:
 
-- `markos-runtime`: `preflight` and `preflight-control` (validation only, no
-  connections), `serve-synthetic` and `serve-control-synthetic` (synthetic test
+- `markos-runtime`: `preflight-control` (validation only, no connections), `serve-synthetic` and `serve-control-synthetic` (synthetic test
   services, require `--confirm-synthetic`).
 - `markos-control`: the CLI client. It uses the HTTPS API only.
 

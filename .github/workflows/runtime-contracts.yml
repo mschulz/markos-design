@@ -101,7 +101,6 @@ jobs:
           cp -R config/runtime "$RUNNER_TEMP/runtime-examples"
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/runtime-clean/bin/python" -I -c 'import importlib.util; assert importlib.util.find_spec("markos") is None; assert importlib.util.find_spec("duckdb") is None; assert importlib.util.find_spec("pytest") is None; assert importlib.util.find_spec("mcp") is None'
-          "$RUNNER_TEMP/runtime-clean/bin/python" -I -m markos_runtime preflight --config runtime-examples/runtime.example.toml --event runtime-examples/noop.example.json
           "$RUNNER_TEMP/runtime-clean/bin/python" -I -m markos_runtime preflight-control --config runtime-examples/control/config.example.json --event runtime-examples/control/chat-event.example.json
 
   control-profile:

@@ -25,7 +25,7 @@ from markos_runtime.api.identity import (
     strict_json,
 )
 from markos_runtime.control.api_config import SyntheticApiConfig
-from markos_runtime.control.store import ControlStore
+from tests.control_store_support import HarnessStore
 from tests.integration.conftest import OTHER, OWNER
 
 ORIGIN = "https://127.0.0.1:18443"
@@ -150,14 +150,14 @@ class Client:
 
 async def run_api(
     data: dict[str, Any],
-    scenario: Callable[[Client, FixtureIssuer, dict[str, str], ControlStore], Awaitable[None]],
+    scenario: Callable[[Client, FixtureIssuer, dict[str, str], HarnessStore], Awaitable[None]],
 ) -> None:
     issuer = FixtureIssuer()
     accounts = {name: opaque() for name in data["principals"]}
     for name, credential in accounts.items():
         issuer.add_account(name, credential)
     config = SyntheticApiConfig(schema_version=1, api_origin=ORIGIN)
-    async with ControlStore.connect(data["gateway"]) as store:
+    async with HarnessStore.connect(data["gateway"]) as store:
         app = create_app(config, store, issuer, session_key=b"s" * 32, confirm_synthetic=True)
         await scenario(Client(app), issuer, accounts, store)
 
@@ -175,7 +175,7 @@ def agent() -> dict[str, Any]:
 
 def test_browser_cli_registry_configuration_status_and_logout(control: dict[str, Any]) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         old = await c.login(issuer, accounts["both"])
         assert (await c.call("GET", "/api/v1/status" + SCOPE))[1] == {
@@ -263,7 +263,7 @@ def test_browser_cli_registry_configuration_status_and_logout(control: dict[str,
 )
 def test_request_and_authority_rejections(control: dict[str, Any], case: str) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         token = await c.login(issuer, accounts["viewer"])
         method, path, value = "GET", "/api/v1/agents" + SCOPE, None
@@ -376,7 +376,7 @@ def test_request_and_authority_rejections(control: dict[str, Any], case: str) ->
 
 def test_current_membership_and_shared_rate(control: dict[str, Any]) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         await c.login(issuer, accounts["both"])
         with psycopg.connect(control["migration"], autocommit=True) as conn:
@@ -411,7 +411,7 @@ def test_current_membership_and_shared_rate(control: dict[str, Any]) -> None:
 @pytest.mark.parametrize("fault", ["state", "binding", "pkce", "code", "expired", "replay"])
 def test_one_use_pkce_flow(control: dict[str, Any], fault: str) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         verifier = opaque()
         status, flow = await c.call(
@@ -468,7 +468,7 @@ def test_one_use_pkce_flow(control: dict[str, Any], fault: str) -> None:
 )
 def test_signed_token_rejection(control: dict[str, Any], fault: str) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         nonce, verifier = opaque(), opaque()
         code = issuer.authorize(accounts["both"], challenge(verifier), nonce)
@@ -522,7 +522,7 @@ def test_signed_token_rejection(control: dict[str, Any], fault: str) -> None:
 
 def test_key_rotation_cache_and_auth_capacity(control: dict[str, Any]) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         verifier, nonce = opaque(), opaque()
         validator = IdentityVerifier(store, issuer)
@@ -592,7 +592,7 @@ def test_activity_cursor_is_bound_to_actor_and_scope(control: dict[str, Any]) ->
     from tests.integration.test_control_persistence import prepare, request, session
 
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         ctx = await session(store)
         conversation = await prepare(store, ctx)
@@ -623,7 +623,7 @@ def test_activity_cursor_is_bound_to_actor_and_scope(control: dict[str, Any]) ->
 @pytest.mark.parametrize("state", ["ready", "degraded", "stale", "old-epoch"])
 def test_scoped_status_freshness(control: dict[str, Any], state: str) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         with psycopg.connect(control["migration"], autocommit=True) as conn:
             conn.execute(
@@ -658,7 +658,7 @@ def test_scoped_status_freshness(control: dict[str, Any], state: str) -> None:
 
 def test_login_transaction_rollback_and_private_api_tables(control: dict[str, Any]) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         old = await c.login(issuer, accounts["both"])
         with psycopg.connect(control["migration"], autocommit=True) as conn:
@@ -695,7 +695,7 @@ def test_login_transaction_rollback_and_private_api_tables(control: dict[str, An
 @pytest.mark.parametrize("fault", ["provider", "cache", "database", "cipher"])
 def test_authority_outage_fails_closed_and_redacted(control: dict[str, Any], fault: str) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         await c.login(issuer, accounts["both"])
         if fault == "provider":
@@ -728,7 +728,7 @@ def test_authority_outage_fails_closed_and_redacted(control: dict[str, Any], fau
 
 def test_auth_flow_bound_and_unused_flow_restore_fencing(control: dict[str, Any]) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         config = {"schema_version": 1, "challenge": challenge(opaque())}
         for _ in range(100):
@@ -748,7 +748,7 @@ def test_explicit_factory_and_no_queued_request_admission() -> None:
 
     async def scenario() -> None:
         profile = SyntheticApiConfig(schema_version=1, api_origin=ORIGIN)
-        store = cast(ControlStore, object())
+        store = cast(HarnessStore, object())
         issuer = FixtureIssuer()
         with pytest.raises(ValueError):
             create_app(profile, store, issuer, session_key=b"s" * 32)
@@ -789,7 +789,7 @@ def test_schema_incompatibility_blocks_readiness_and_api(
     control: dict[str, Any], fault: str
 ) -> None:
     async def scenario(
-        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: ControlStore
+        c: Client, issuer: FixtureIssuer, accounts: dict[str, str], store: HarnessStore
     ) -> None:
         await c.login(issuer, accounts["both"])
         with psycopg.connect(control["migration"], autocommit=True) as conn:

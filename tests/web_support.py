@@ -16,9 +16,9 @@ from markos_runtime.control.api_config import (
     SyntheticGovernanceApiConfig,
     SyntheticWebApiConfig,
 )
-from markos_runtime.control.store import ControlStore
 from tests.control_api.test_https import HttpClient as FixtureBrowserClient
 from tests.control_api.test_https import certificate
+from tests.control_store_support import HarnessStore
 from tests.integration.test_control_persistence import prepare, session
 
 
@@ -40,7 +40,7 @@ async def web_server(
     credentials = {name: opaque() for name in data["principals"]}
     for name, credential in credentials.items():
         issuer.add_account(name, credential)
-    async with ControlStore.connect(data["gateway"]) as store:
+    async with HarnessStore.connect(data["gateway"]) as store:
         if prepare_agent:
             await prepare(store, await session(store))
         profile_type = (

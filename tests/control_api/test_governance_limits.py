@@ -11,7 +11,6 @@ from psycopg.types.json import Jsonb
 from markos_runtime.api.identity import FixtureIssuer
 from markos_runtime.contracts.control import digest_document
 from markos_runtime.control.conversation import ConversationWorker
-from markos_runtime.control.store import ControlStore
 from markos_runtime.store.database import DurableStore
 from tests.control_api.test_conversation import conversation, request_value, rows
 from tests.control_api.test_governance import (
@@ -22,6 +21,7 @@ from tests.control_api.test_governance import (
     install_grant,
     ready_flow,
 )
+from tests.control_store_support import HarnessStore
 from tests.integration.test_control_persistence import prepare, session
 
 __all__ = ["conversation"]
@@ -227,7 +227,7 @@ def test_approval_capacity_keeps_execution_slots_free(
 ) -> None:
     async def scenario() -> None:
         async with (
-            ControlStore.connect(conversation["gateway"]) as store,
+            HarnessStore.connect(conversation["gateway"]) as store,
             DurableStore.connect(conversation["chatworker"]) as runtime,
         ):
             ctx = await session(store)
@@ -264,7 +264,7 @@ def test_ready_backlog_preserves_idempotent_receipt_at_capacity(
     conversation: dict[str, Any],
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(conversation["gateway"]) as store:
+        async with HarnessStore.connect(conversation["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             await install_grant(store, ctx)

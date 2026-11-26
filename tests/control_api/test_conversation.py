@@ -18,9 +18,10 @@ from markos_runtime.contracts.control import ChatRequest
 from markos_runtime.contracts.wire import parse_event
 from markos_runtime.control.api_config import SyntheticConversationApiConfig
 from markos_runtime.control.conversation import ConversationWorker
-from markos_runtime.control.store import ControlStore, SessionContext
+from markos_runtime.control.store import SessionContext
 from markos_runtime.store.database import DurableStore, StorageError
 from tests.control_api.test_api import ORIGIN, SCOPE, Client
+from tests.control_store_support import HarnessStore
 from tests.integration.conftest import OTHER, OWNER
 from tests.integration.test_control_persistence import prepare, session
 
@@ -66,7 +67,7 @@ def conversation(control: dict[str, Any]) -> dict[str, Any]:
 
 async def scenario_api(
     data: dict[str, Any],
-    action: Callable[[Client, FixtureIssuer, ControlStore, UUID, SessionContext], Awaitable[None]],
+    action: Callable[[Client, FixtureIssuer, HarnessStore, UUID, SessionContext], Awaitable[None]],
 ) -> None:
     issuer = FixtureIssuer()
     credential = opaque()
@@ -74,7 +75,7 @@ async def scenario_api(
     profile = SyntheticConversationApiConfig(
         schema_version=1, api_origin=ORIGIN, conversation_profile="deterministic-conversation-v1"
     )
-    async with ControlStore.connect(data["gateway"]) as store:
+    async with HarnessStore.connect(data["gateway"]) as store:
         conversation_id = await prepare(store, await session(store))
         client = Client(
             create_app(profile, store, issuer, session_key=b"s" * 32, confirm_synthetic=True)
@@ -132,7 +133,7 @@ def mutate(data: dict[str, Any], query: str, values: tuple[object, ...] = ()) ->
 
 def test_atomic_admission_idempotency_and_exact_reply(conversation: dict[str, Any]) -> None:
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         first = await admit(client, conv)
         assert await admit(client, conv) == first
@@ -202,7 +203,7 @@ def test_admission_rollback_includes_every_durable_record(
     conversation: dict[str, Any], table: str
 ) -> None:
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         schema = (
             "markos_runtime"
@@ -242,7 +243,7 @@ def test_admission_rollback_includes_every_durable_record(
 )
 def test_current_authority_blocks_reply(conversation: dict[str, Any], change: str) -> None:
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         first = await admit(client, conv)
         await handoff(conversation, first)
@@ -297,7 +298,7 @@ def test_current_authority_blocks_reply(conversation: dict[str, Any], change: st
 
 def test_lease_takeover_and_late_result_preserve_one_reply(conversation: dict[str, Any]) -> None:
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         first = await admit(client, conv)
         await handoff(conversation, first)
@@ -345,7 +346,7 @@ def test_cancel_is_durable_idempotent_and_fences_completion(
     conversation: dict[str, Any], running: bool
 ) -> None:
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         first = await admit(client, conv)
         async with DurableStore.connect(conversation["chatworker"]) as target:
@@ -380,7 +381,7 @@ def test_cancel_is_durable_idempotent_and_fences_completion(
 )
 def test_reply_completion_transaction_rollback(conversation: dict[str, Any], table: str) -> None:
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         receipt = await admit(client, conv)
         await handoff(conversation, receipt)
@@ -439,7 +440,7 @@ def test_lost_admission_and_completion_responses_do_not_repeat_work(
             return result
 
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         request = ChatRequest.from_wire(json.dumps(request_value(conv)).encode())
         original = await store.admit_message(ctx, UUID(OWNER), request)
@@ -467,7 +468,7 @@ def test_pending_budget_is_shared_and_terminal_result_frees_capacity(
     from markos_runtime.control.store import ControlLimited
 
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         async def submit(index: int) -> Any:
             request = ChatRequest.from_wire(
@@ -511,7 +512,7 @@ def test_conversation_http_scope_and_input_boundaries(
     conversation: dict[str, Any], fault: str
 ) -> None:
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         first = await admit(client, conv)
         path = message_path(conv) + SCOPE
@@ -566,7 +567,7 @@ def test_scoped_runtime_logins_and_old_noop_cannot_bypass_chat(
     from tests.integration.test_storage import event
 
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         receipt = await admit(client, conv)
         async with DurableStore.connect(conversation["publisher"]) as legacy:
@@ -627,7 +628,7 @@ def test_chat_and_noop_share_two_global_execution_slots(conversation: dict[str, 
     from tests.integration.test_storage import event
 
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         first = await admit(client, conv, "message:a")
         second = await admit(client, conv, "message:b")
@@ -673,7 +674,7 @@ def test_fixed_worker_failures_are_terminal_without_automatic_handler_retry(
             return await super()._execute(claim)
 
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         receipt = await admit(client, conv)
         await handoff(conversation, receipt)
@@ -708,7 +709,7 @@ def test_held_proposal_requires_current_explicit_promotion_and_restore_cannot_re
     from markos_runtime.control.store import ControlConflict
 
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         value = ChatRequest.from_wire(json.dumps(request_value(conv, "message:held")).encode())
         staged = await store.stage_message(ctx, UUID(OWNER), value)
@@ -728,7 +729,7 @@ def test_held_proposal_requires_current_explicit_promotion_and_restore_cannot_re
 
 def test_identity_operation_budget_is_shared_with_api(conversation: dict[str, Any]) -> None:
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         receipt = await admit(client, conv)
         await handoff(conversation, receipt)
@@ -752,7 +753,7 @@ def test_changed_message_checksum_cannot_detach_execution_from_its_event(
     conversation: dict[str, Any], when: str
 ) -> None:
     async def action(
-        client: Client, issuer: FixtureIssuer, store: ControlStore, conv: UUID, ctx: SessionContext
+        client: Client, issuer: FixtureIssuer, store: HarnessStore, conv: UUID, ctx: SessionContext
     ) -> None:
         receipt = await admit(client, conv)
         await handoff(conversation, receipt)

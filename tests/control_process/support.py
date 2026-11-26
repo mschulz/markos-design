@@ -19,9 +19,9 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from markos_runtime.api.identity import opaque
-from markos_runtime.control.store import ControlStore
 from markos_runtime.control_lifecycle.config import ControlServiceConfig
 from markos_runtime.store.migrations import migrate
+from tests.control_store_support import HarnessStore
 from tests.integration.test_control_persistence import prepare, session
 from tests.integration.test_rabbitmq import Harness
 
@@ -274,7 +274,7 @@ async def bootstrap() -> None:
                 "can_publish,can_consume,can_execute) VALUES(%s,%s,%s,%s,%s,%s,%s)",
                 (login, service, OWNER, "personal", pub, consume, execute),
             )
-    async with ControlStore.connect(make_conninfo(admin(), user="m1g_gateway")) as store:
+    async with HarnessStore.connect(make_conninfo(admin(), user="m1g_gateway")) as store:
         ctx = await session(store)
         state["conversation_id"] = str(await prepare(store, ctx))
         from markos_runtime.contracts.governance import ReviewedFixtureGrant

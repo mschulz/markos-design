@@ -12,7 +12,7 @@ from aiormq.connection import TCPTransportFactory, TLSTransportFactory, Transpor
 from pamqp.commands import Basic
 from yarl import URL
 
-from markos_runtime.config import ProposedLimits
+from markos_runtime.config import TransportLimits
 
 
 class TransportError(ValueError):
@@ -66,9 +66,9 @@ class BrokerSession:
         connection: AbstractRobustConnection,
         factory: AbortableFactory,
         url: URL,
-        limits: ProposedLimits | None = None,
+        limits: TransportLimits | None = None,
     ) -> None:
-        self.limits = limits or ProposedLimits()
+        self.limits = limits or TransportLimits()
         self.connection = connection
         self.factory = factory
         self.username = str(url.user)
@@ -77,9 +77,9 @@ class BrokerSession:
     @classmethod
     @asynccontextmanager
     async def connect(
-        cls, dsn: str, *, limits: ProposedLimits | None = None
+        cls, dsn: str, *, limits: TransportLimits | None = None
     ) -> AsyncIterator[Self]:
-        profile = limits or ProposedLimits()
+        profile = limits or TransportLimits()
         url = endpoint(dsn)
         factory = AbortableFactory()
 
