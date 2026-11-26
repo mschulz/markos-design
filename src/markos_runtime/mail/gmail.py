@@ -1,10 +1,10 @@
 """Gmail access as a narrow interface: read mail, keep a watch, and stop at disconnect.
 
-There is no network client yet: tests use a fake.
+The real client is `mail/google.py`. Tests use a fake.
 """
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Protocol
 from uuid import UUID
@@ -16,6 +16,18 @@ class HistoryGone(Exception):
 
 class MessageGone(Exception):
     """The message was deleted after a change named it."""
+
+
+class ConsentDenied(Exception):
+    """The provider refused the code. The message never holds the code or a token."""
+
+
+@dataclass(frozen=True)
+class Grant:
+    """What a completed consent returns: the refresh token and the mailbox address."""
+
+    refresh_token: str = field(repr=False)
+    address: str = field(repr=False)
 
 
 @dataclass(frozen=True)
