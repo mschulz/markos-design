@@ -1,6 +1,6 @@
 # M2 Gmail ingestion plan
 
-Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. M2-C1 is implemented in migration 0021, `mail/optin.py` and `mail/sealing.py`. M2-C2 is implemented in `src/markos_runtime/api/mail_connect.py` and the web Mail page. Owner decisions are under "Decisions".
+Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. M2-C1 is implemented in migration 0021, `mail/optin.py` and `mail/sealing.py`. M2-C2 is implemented in `src/markos_runtime/api/mail_connect.py` and the web Mail page. M2-D is implemented in migration 0022 and `mail/bills.py`. Owner decisions are under "Decisions".
 
 M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and keeps a processing status for each one. The "message ingested" event moves to M3. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
 
@@ -69,6 +69,13 @@ The owner approved these on 2026-11-26.
    - The token is sealed for the mail worker: X25519, HKDF-SHA256 and AES-256-GCM, bound to the owner and domain. The gateway holds only the public key, so it cannot open a stored token.
    - Disconnect: the worker stops the watch and revokes the token, then deletes it. After 1 day the token is deleted even if Google stays out of reach.
    - M2-C is split into M2-C1 and M2-C2.
+8. **M2-D decisions,** owner, 2026-11-27:
+   - An administrator picks one bill label on the Mail page. It must be on the allowlist, and the change is audited. With no bill label, no bills are imported. A new allowlist without the bill label clears it.
+   - A mail bill names no person. It records `mail` as its source and its Gmail message ID. Its audit row uses the all-zero actor and the operation `bill-import.mail`.
+   - Bills are imported from every stored message in the bill label, back to 1 January 2020.
+   - The worker writes originals to the same private bill folder as the gateway, so the bill page rechecks them the same way. The worker and the gateway must run on the same host.
+   - Only attachments with the type `application/pdf` are read. Each gets one outcome: imported, duplicate, unsupported supplier, over the limit, or rejected with a reason. Unsupported and over-limit bills are counted for review and stay in Gmail.
+   - The bill folder holds at most 100 originals. The database allows 500 bills. So 100 is the limit in practice.
 
 ## Not confirmed
 

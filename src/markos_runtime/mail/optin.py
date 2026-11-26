@@ -23,10 +23,23 @@ class OptInError(ValueError):
 
 
 @dataclass(frozen=True)
+class BillCounts:
+    """Mail bill outcomes. `review` counts unknown suppliers and bills over the folder limit."""
+
+    waiting: int = 0
+    imported: int = 0
+    duplicate: int = 0
+    review: int = 0
+    rejected: int = 0
+
+
+@dataclass(frozen=True)
 class MailboxView:
     state: State
     labels: tuple[str, ...] | None
     watch_expires_at: datetime | None
+    bill_label: str | None = None
+    bills: BillCounts = BillCounts()
 
 
 def address_hash(address: str) -> str:
@@ -41,6 +54,8 @@ def _view(value: dict[str, Any]) -> MailboxView:
         value["state"],
         None if labels is None else tuple(labels),
         None if expires is None else datetime.fromisoformat(expires),
+        value["bill_label"],
+        BillCounts(**value["bills"]),
     )
 
 
@@ -82,6 +97,12 @@ class MailOptIn:
         self, ctx: SessionContext, owner: UUID, domain: Domain, labels: Sequence[str]
     ) -> MailboxView:
         return await self._run("set_mail_labels", ctx, owner, domain, list(labels))
+
+    async def set_bill_label(
+        self, ctx: SessionContext, owner: UUID, domain: Domain, label: str | None
+    ) -> MailboxView:
+        """Pick the one allowed label that holds bills, or None to stop bill imports."""
+        return await self._run("set_mail_bill_label", ctx, owner, domain, label)
 
     async def disconnect(self, ctx: SessionContext, owner: UUID, domain: Domain) -> MailboxView:
         return await self._run("disconnect_mailbox", ctx, owner, domain)

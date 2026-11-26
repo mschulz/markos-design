@@ -11,7 +11,8 @@ from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
-from markos_runtime.mail.gmail import MessageMeta, SealedToken
+from markos_runtime.mail.bills import BillMessage
+from markos_runtime.mail.gmail import Attachment, MessageMeta, SealedToken
 from markos_runtime.mail.ingest import Mailbox, MailError, Reason
 from markos_runtime.mail.worker import WorkClaim
 from markos_runtime.store.database import DurableStore, StorageError
@@ -76,9 +77,9 @@ class MailStore(DurableStore):
         query = "SELECT markos_runtime.note_mail_alert(%s::numeric) AS result"
         return bool(await self._one(query, (str(history_id),)))
 
-    async def claim_work(self, lease_seconds: int) -> WorkClaim | None:
-        query = "SELECT markos_runtime.claim_mail_work(%s) AS result"
-        claim = await self._one(query, (lease_seconds,))
+    async def claim_work(self, lease_seconds: int, bills: bool = False) -> WorkClaim | None:
+        query = "SELECT markos_runtime.claim_mail_work(%s,%s) AS result"
+        claim = await self._one(query, (lease_seconds, bills))
         if claim is None:
             return None
         token = SealedToken(
@@ -95,6 +96,7 @@ class MailStore(DurableStore):
             tuple(claim["labels"]),
             claim["disconnect"],
             token,
+            claim["bills"],
         )
 
     async def finish_work(
@@ -109,3 +111,27 @@ class MailStore(DurableStore):
     async def finish_disconnect(self, claim: WorkClaim) -> bool:
         query = "SELECT markos_runtime.finish_mail_disconnect(%s) AS result"
         return bool(await self._one(query, (claim.fence,)))
+
+    async def bills_due(self, fence: int, limit: int) -> list[BillMessage] | None:
+        query = "SELECT markos_runtime.mail_bills_due(%s,%s) AS result"
+        due = await self._one(query, (fence, limit))
+        if due is None:
+            return None
+        return [
+            BillMessage(
+                m["message_id"],
+                datetime.fromisoformat(m["received_at"]),
+                tuple(
+                    Attachment(a["part_id"], a["attachment_id"], a["mime_type"], a["size"])
+                    for a in m["attachments"]
+                ),
+            )
+            for m in due
+        ]
+
+    async def finish_bill(
+        self, fence: int, message_id: str, results: Sequence[dict[str, Any]]
+    ) -> list[str] | None:
+        query = "SELECT markos_runtime.finish_mail_bill(%s,%s,%s) AS result"
+        done = await self._one(query, (fence, message_id, Jsonb(list(results))))
+        return None if done is None else [str(outcome) for outcome in done]

@@ -31,13 +31,17 @@ BILLS = "Label_bills"
 WORKER = TokenKey(os.urandom(32))
 
 
-def serve(data: dict[str, Any], tmp_path: Path, scenario: Any, **consent: Any) -> Any:
+def serve(
+    data: dict[str, Any], tmp_path: Path, scenario: Any, bills: bool = False, **consent: Any
+) -> Any:
     grant_mail(data, "m0b_pub")
     fixture = FixtureGmailConsent(**consent)
 
     async def run() -> Any:
         adapter = MailConnect(fixture, WORKER.public)
-        async with web_server(data, tmp_path, mail_connect=adapter) as server:
+        async with web_server(
+            data, tmp_path, mail_connect=adapter, bills=bills, prepare_agent=not bills
+        ) as server:
             return await scenario(server, fixture)
 
     return asyncio.run(run())
@@ -86,6 +90,8 @@ def test_administrator_connects_through_consent(
             "state": "connected",
             "labels": [BILLS],
             "watch_expires_at": None,
+            "bill_label": None,
+            "bills": {"waiting": 0, "imported": 0, "duplicate": 0, "review": 0, "rejected": 0},
         }
         # The code is single use: a replay finds no flow cookie.
         assert await callback(client, state=state, code=code) == "expired"
@@ -184,6 +190,43 @@ def test_labels_and_disconnect_over_https(conversation: dict[str, Any], tmp_path
         assert status == 200 and box["state"] == "disconnecting"
 
     serve(conversation, tmp_path, scenario)
+
+
+def test_mail_bill_passes_the_bill_page_recheck(
+    conversation: dict[str, Any], tmp_path: Path
+) -> None:
+    from markos_runtime.mail.store import MailStore
+    from markos_runtime.mail.worker import run_once
+    from tests.gmail_support import PDF, FakeGmail
+    from tests.pdf_support import origin_pdf
+
+    async def scenario(server: dict[str, Any], fixture: FixtureGmailConsent) -> None:
+        client = await browser(server)
+        state, code = fixture.approve(await consent(client))
+        assert await callback(client, state=state, code=code) == "connected"
+        label = "/api/v1/mail/bill-label" + SCOPE
+        viewer = await browser(server, "viewer")
+        assert (await viewer.call("POST", label, {"schema_version": 1, "label": BILLS}))[0] == 403
+        for bad, expected in (("has space", 400), ("Label_not_allowed", 409)):
+            status, _ = await client.call("POST", label, {"schema_version": 1, "label": bad})
+            assert status == expected, bad
+        status, box = await client.call("POST", label, {"schema_version": 1, "label": BILLS})
+        assert status == 200 and box["bill_label"] == BILLS
+        gmail = FakeGmail()
+        gmail.deliver([BILLS], attachments=[PDF], bodies=[origin_pdf()])
+        async with MailStore.connect(conversation["publisher"]) as store:
+            await run_once(gmail, store, server["bill_objects"])
+            assert (await run_once(gmail, store, server["bill_objects"])).bills == ("imported",)
+        status, box = await client.call("GET", "/api/v1/mail" + SCOPE)
+        assert status == 200 and box["bills"]["imported"] == 1
+        status, listed = await client.call("GET", "/api/v1/bills" + SCOPE)
+        assert status == 200 and [b["name"] for b in listed["items"]] == ["Gmail bill 2024-03-01"]
+        status, bill = await client.call(
+            "GET", "/api/v1/bills/" + listed["items"][0]["bill_id"] + SCOPE
+        )
+        assert status == 200 and bill["report"]["extractor"] == "origin-pdf-v1"
+
+    serve(conversation, tmp_path, scenario, bills=True)
 
 
 def test_mail_routes_and_page_are_absent_without_the_adapter(

@@ -19,6 +19,10 @@ class BillObjectError(ValueError):
     pass
 
 
+class BillStorageFull(BillObjectError):
+    """The private bill folder holds its maximum number of originals."""
+
+
 class BillObjects:
     def __init__(self, root: Path) -> None:
         if not root.is_absolute() or root.is_symlink():
@@ -59,7 +63,7 @@ class BillObjects:
                     raise BillObjectError("bill original integrity check failed")
                 return digest
             if sum(1 for p in folder.iterdir() if p.suffix in LIMITS) >= 100:
-                raise BillObjectError("preview bill storage limit reached")
+                raise BillStorageFull("preview bill storage limit reached")
             with tempfile.NamedTemporaryFile(dir=folder, prefix=".writing-", delete=False) as file:
                 temporary = Path(file.name)
                 try:

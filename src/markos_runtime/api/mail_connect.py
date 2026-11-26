@@ -11,7 +11,7 @@ import json
 import re
 import secrets
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 from uuid import UUID
@@ -66,12 +66,25 @@ class MailRequest(ControlValue):
     pass
 
 
+class MailBillLabel(ControlValue):
+    label: str | None
+
+    @field_validator("label")
+    @classmethod
+    def allowed(cls, value: str | None) -> str | None:
+        if value is not None and not LABEL.fullmatch(value):
+            raise ValueError("invalid label")
+        return value
+
+
 def present(view: MailboxView) -> dict[str, Any]:
     expires = view.watch_expires_at
     return {
         "state": view.state,
         "labels": None if view.labels is None else list(view.labels),
         "watch_expires_at": None if expires is None else expires.isoformat(),
+        "bill_label": view.bill_label,
+        "bills": asdict(view.bills),
     }
 
 
@@ -105,12 +118,16 @@ class MailConnect:
             MAIL_PATH + "/connect",
             MAIL_PATH + "/labels",
             MAIL_PATH + "/disconnect",
+            MAIL_PATH + "/bill-label",
         }:
             raise ApiFault("not-found", 404)
         await api.write(request, ctx, binding, raw)
         if path.endswith("/disconnect"):
             MailRequest.from_wire(body)
             return JSONResponse(present(await mail.disconnect(ctx, owner, domain)))
+        if path.endswith("/bill-label"):
+            label = MailBillLabel.from_wire(body).label
+            return JSONResponse(present(await mail.set_bill_label(ctx, owner, domain, label)))
         labels = MailLabels.from_wire(body).labels
         if path.endswith("/labels"):
             return JSONResponse(present(await mail.set_labels(ctx, owner, domain, labels)))
