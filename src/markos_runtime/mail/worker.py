@@ -2,6 +2,8 @@
 
 Pub/Sub pushes Gmail alerts to the MarkOS API, which records them with `note_alert`. A
 recorded alert makes the poll due now. The 15-minute backstop poll covers lost alerts.
+After the owner disconnects, one pass stops the watch, revokes the token and deletes it. A
+failed attempt is retried after the lease. After 1 day the database deletes the token anyway.
 """
 
 import json
@@ -9,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
-from markos_runtime.mail.gmail import GmailReader
+from markos_runtime.mail.gmail import GmailAccess, SealedToken
 from markos_runtime.mail.ingest import MailRecords, SyncResult, sync
 
 MAX_ALERT_BYTES = 1024
@@ -23,6 +25,8 @@ class WorkClaim:
     sync: bool
     alert_seq: int
     labels: tuple[str, ...]
+    disconnect: bool = False
+    token: SealedToken | None = None
 
 
 class MailWork(MailRecords, Protocol):
@@ -34,11 +38,14 @@ class MailWork(MailRecords, Protocol):
         self, claim: WorkClaim, synced: bool, watch_expires: datetime | None
     ) -> bool: ...
 
+    async def finish_disconnect(self, claim: WorkClaim) -> bool: ...
+
 
 @dataclass(frozen=True)
 class PassResult:
     renewed: bool = False
     synced: SyncResult | None = None
+    disconnected: bool = False
 
 
 def alert_history(data: bytes) -> int | None:
@@ -57,10 +64,15 @@ def alert_history(data: bytes) -> int | None:
     return value
 
 
-async def run_once(gmail: GmailReader, work: MailWork) -> PassResult:
+async def run_once(access: GmailAccess, work: MailWork) -> PassResult:
     claim = await work.claim_work(LEASE_SECONDS)
     if claim is None:
         return PassResult()
+    gmail = access.client(claim.token)
+    if claim.disconnect:
+        await gmail.stop()
+        await gmail.revoke()
+        return PassResult(disconnected=await work.finish_disconnect(claim))
     expires: datetime | None = None
     try:
         if claim.renew:

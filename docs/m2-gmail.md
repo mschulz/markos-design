@@ -1,6 +1,6 @@
 # M2 Gmail ingestion plan
 
-Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. Owner decisions are under "Decisions".
+Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. M2-C1 is implemented in migration 0021, `mail/optin.py` and `mail/sealing.py`. Owner decisions are under "Decisions".
 
 M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and keeps a processing status for each one. The "message ingested" event moves to M3. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
 
@@ -25,17 +25,19 @@ Roadmap acceptance: duplicate and out-of-order mailbox notifications create one 
 5. **Change alerts.** A Gmail watch sends alerts to a Pub/Sub topic. A Pub/Sub **push** subscription sends each alert to `POST /api/v1/mail/alerts` over HTTPS, so MarkOS makes no Google requests while the mailbox is idle. An alert only says "something changed". The endpoint accepts a request only with a Google-signed OIDC token whose issuer, audience and service account match the configured values. It records the alert, which makes the poll due now, and returns at once. It never fetches mail and never reads the alert's email address. A request without a valid token gets 401. A malformed alert gets 204 and is counted as dropped, so Pub/Sub does not retry it. If the database is down, the endpoint returns 503 and Pub/Sub retries. The mail worker checks the database for due work every few seconds, then reads changes by history ID and fetches messages and attachments through the Gmail API. A database schedule renews the watch daily. Gmail requires renewal at least every 7 days.
 6. **Backstop poll.** A database schedule also reads changes every 15 minutes, so a lost alert delays mail but never loses it.
 7. **Events.** Moved to M3 on 2026-11-26, owner decision. Every event needs an intended consumer, and nothing consumes mail until M3 classification. M2 stores each message with status `ingested`. M3-D adds the event, its consumer and bindings, and announces stored messages that are still `ingested`. PostgreSQL stays the record, so no mail is lost meanwhile.
-8. **Opt-in and tokens.** The operator connects the mailbox from the web app through Google OAuth with PKCE. The refresh token is encrypted at rest. Disconnecting stops the watch, deletes the token and keeps the stored records. Every connect, disconnect and resync is audited.
+8. **Opt-in and tokens.** An administrator of the owner and domain connects the mailbox from the web app through Google OAuth with PKCE. The gateway seals the refresh token with the mail worker's public key, so only the worker can open it. Disconnecting stops new work at once. The worker then stops the watch, revokes the token at Google and deletes it. If Google is out of reach, the worker retries, and the token is deleted after 1 day anyway. The stored records stay. Every connect, label change and disconnect is audited with its labels. Resyncs are recorded as in M2-A.
 9. **Scope.** `gmail.readonly` is the narrowest scope that can read attachments. Gmail has no per-label scope, so the label allowlist is enforced in MarkOS code and tested.
 
 ## Delivery
 
 Six PRs, each reviewed and merged separately. M2-A to M2-D use only a fake Gmail and synthetic mail.
 
-1. **M2-A mailbox records and fake Gmail:** migration for the mailbox and message tables, a Gmail client interface with an in-memory fake, incremental reads and cursor-gap resync. A `can_ingest_mail` grant gates the mail functions. Until M2-C, the synthetic worker opens the mailbox itself with an address hash and label list.
+1. **M2-A mailbox records and fake Gmail:** migration for the mailbox and message tables, a Gmail client interface with an in-memory fake, incremental reads and cursor-gap resync. A `can_ingest_mail` grant gates the mail functions. Until M2-C1, the synthetic worker opened the mailbox itself with an address hash and label list. Migration 0021 removed that path.
 2. **M2-B schedules:** daily watch renewal and the 15-minute backstop poll, as due times on the mailbox with leases. Recording an alert makes the poll due now. The worker claims due work every few seconds. Owner decision on 2026-11-26: the schedules are due times on the mailbox row, claimed under a lease using database time. The generic scheduler only emits events, which would bring the M3-D event work forward.
 3. **M2-B2 push endpoint:** the alert route, the OIDC token check against Google's published keys, a config gate that is off by default, and a database login with only the `can_ingest_mail` grant. Tests sign tokens with a local test key and never call Google.
-4. **M2-C owner opt-in:** the OAuth connect and disconnect flow for operators, encrypted token storage, label allowlist settings and audit. Tests use a fixture OAuth provider.
+4. **M2-C owner opt-in**, in two PRs:
+   - **M2-C1 storage and rules:** sealed token storage, connect, label and disconnect functions for administrators, audit, and the worker's disconnect pass. Tests use a placeholder token and the fake Gmail.
+   - **M2-C2 OAuth flow:** the browser connect and disconnect pages and the OAuth exchange with PKCE. Tests use a fixture OAuth provider.
 5. **M2-D bills from a label:** PDF attachments in one owner-chosen label go through the existing K1 PDF import. Size, type and page limits apply. Duplicates are skipped by SHA-256. Bills from an unknown supplier are counted and left for review.
 6. **M2-E real-account gate:** a checklist the owner approves before MarkOS connects to the real mailbox. It covers the Google Cloud project, OAuth client, Pub/Sub topic and its publisher grant, the push subscription with its service account and audience, the public endpoint URL and certificate, the acknowledgement deadline, a dead-letter topic, secret storage, the host it runs on, and the retention decision. No code runs against real Gmail before this gate.
 
@@ -61,6 +63,11 @@ The owner approved these on 2026-11-26.
 4. **Bills from a label:** M2-D is in M2. One owner-chosen label feeds the K1 PDF import. M3 classification replaces it later.
 5. **Backfill depth:** the first import and every resync read back to 1 January 2020.
 6. **Retention:** message records and bill originals stay until the owner deletes them. Disconnecting deletes the token only. `docs/decisions.md` still lists real-data retention as open: deletion, privacy and backup erasure need their own review before M2-E.
+7. **M2-C decisions,** owner, 2026-11-27:
+   - Only the `administrator` role connects or disconnects the mailbox and sets its labels. Any member can read its status.
+   - The token is sealed for the mail worker: X25519, HKDF-SHA256 and AES-256-GCM, bound to the owner and domain. The gateway holds only the public key, so it cannot open a stored token.
+   - Disconnect: the worker stops the watch and revokes the token, then deletes it. After 1 day the token is deleted even if Google stays out of reach.
+   - M2-C is split into M2-C1 and M2-C2.
 
 ## Not confirmed
 

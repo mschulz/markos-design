@@ -17,7 +17,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa  # type: ignore[import
 from markos_runtime.api.mail_alerts import ALERT_PATH, MailAlerts, PushIdentity, push_history
 from markos_runtime.mail.store import MailStore
 from tests.control_api.test_conversation import conversation
-from tests.integration.test_mail_store import ADDRESS, BILLS, grant_mail, rows
+from tests.integration.test_mail_store import grant_mail, rows
+from tests.mail_optin_support import connect_mailbox
 from tests.web_support import web_server
 
 __all__ = ["conversation"]
@@ -105,15 +106,13 @@ def serve(
     data: dict[str, Any], tmp_path: Path, scenario: Any, *, opened: bool = True
 ) -> MailAlerts:
     grant_mail(data, "m0b_pub")
+    if opened:
+        connect_mailbox(data)
+        # Push the first poll out, so only an alert can make it due.
+        with_admin(data, "UPDATE markos_runtime.mailboxes SET poll_due_at=now()+interval '1 hour'")
 
     async def run() -> MailAlerts:
         async with MailStore.connect(data["publisher"]) as store:
-            if opened:
-                await store.open_mailbox(ADDRESS, [BILLS])
-                # Push the first poll out, so only an alert can make it due.
-                with_admin(
-                    data, "UPDATE markos_runtime.mailboxes SET poll_due_at=now()+interval '1 hour'"
-                )
             adapter = MailAlerts(PushIdentity(AUDIENCE, ACCOUNT), TestKeys(), store)
             async with web_server(data, tmp_path, mail_alerts=adapter) as server:
                 await asyncio.to_thread(scenario, server)

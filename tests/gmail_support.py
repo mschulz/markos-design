@@ -13,6 +13,7 @@ from markos_runtime.mail.gmail import (
     ListPage,
     MessageGone,
     MessageMeta,
+    SealedToken,
     Watch,
 )
 from markos_runtime.mail.ingest import Mailbox, Reason
@@ -30,6 +31,10 @@ class FakeGmail:
     changes: list[tuple[int, Change]] = field(default_factory=list)
     fetched: Counter[str] = field(default_factory=Counter)
     watched: list[tuple[str, ...]] = field(default_factory=list)
+    tokens: list[SealedToken | None] = field(default_factory=list)
+    stopped: int = 0
+    revoked: int = 0
+    unreachable: bool = False
 
     def deliver(
         self,
@@ -99,6 +104,20 @@ class FakeGmail:
         self.watched.append(tuple(label_ids))
         return Watch(self.history_id, datetime.now(UTC) + timedelta(days=7))
 
+    def client(self, token: SealedToken | None) -> "FakeGmail":
+        self.tokens.append(token)
+        return self
+
+    async def stop(self) -> None:
+        if self.unreachable:
+            raise OSError("Gmail unreachable")
+        self.stopped += 1
+
+    async def revoke(self) -> None:
+        if self.unreachable:
+            raise OSError("Gmail unreachable")
+        self.revoked += 1
+
     def alert(self) -> bytes:
         """The Pub/Sub payload Gmail sends. The address is invented."""
         return b'{"emailAddress": "owner@example.invalid", "historyId": %d}' % self.history_id
@@ -159,4 +178,8 @@ class MemoryWork(MemoryRecords):
         self, claim: WorkClaim, synced: bool, watch_expires: datetime | None
     ) -> bool:
         self.finished.append((synced, watch_expires))
+        return True
+
+    async def finish_disconnect(self, claim: WorkClaim) -> bool:
+        self.finished.append((False, None))
         return True
