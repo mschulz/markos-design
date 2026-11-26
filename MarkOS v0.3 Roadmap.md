@@ -22,7 +22,7 @@ Accepted direction: cloud-first DigitalOcean / Compose, Supabase durable operati
 
 ## Repository and prior work
 
-Use `markos-design` for code, tests, infrastructure and docs together. Leave `markos` untouched. M0.0 import history is archived; preserving it was not approval to build on it. PR #6's contract/config artifacts and PR #7's naming cleanup are prior review material, not automatic prerequisites. Main preserves the legacy application and now includes merged independent M0-A–M0-C contracts, storage and transport. This is not a deployed runtime or M0 completion.
+Use `markos-design` for code, tests, infrastructure and docs together. Leave `markos` untouched. M0.0 import history is archived; preserving it was not approval to build on it. PR #6's contract/config artifacts and PR #7's naming cleanup are prior review material, not automatic prerequisites. Main preserves the legacy application as an archive and includes the independent M0 foundations plus the local M1 control preview through PR #28. The sample-data foundations are implemented; production/operational closeout and the useful Knowledge Base workflow remain distinct gates. K1-A is the next separately reviewable slice, not a deployed service.
 
 `services/runtime/` is a separate project with its own lock and tests. The first gate forbids imports/dependencies on the old package, DuckDB or note-tree configuration. No bulk deletion or code relocation occurs in this documentation PR.
 
@@ -48,6 +48,10 @@ M0 and the local M1 sample-data control preview are implemented; full production
 | M8 Expansion | Additional agents/integrations | Add subscriber without producer rewrite or permission bypass |
 
 [[MarkOS v0.3 M0 Implementation Plan]] breaks M0 into reviewable slices and acceptance cases. Old M0–M16 completion records do not transfer to this sequence. Baseline backup/monitoring design belongs in M0 before real data; M7 proves and hardens it.
+
+## Historical milestone implementation records
+
+The following records describe the scope at each earlier slice. They do not replace the current K1 priority and current-state summary above; phrases such as “later gate” refer to that slice’s original review boundary.
 
 ## M0-A merged status
 

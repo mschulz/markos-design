@@ -2,7 +2,7 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.14
+version: 1.15
 owner: Mark Schulz
 created: 2026-11-12
 updated: 2026-11-26
