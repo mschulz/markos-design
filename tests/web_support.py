@@ -30,6 +30,7 @@ async def web_server(
     prepare_agent: bool = True,
     governance: bool = False,
     bills: bool = False,
+    mail_alerts: Any = None,
 ) -> AsyncIterator[dict[str, Any]]:
     cert, key = certificate(directory)
     listener = socket.socket()
@@ -76,6 +77,7 @@ async def web_server(
             session_key=b"s" * 32,
             confirm_synthetic=True,
             bill_objects=objects,
+            mail_alerts=mail_alerts,
         )
         server = uvicorn.Server(
             uvicorn.Config(

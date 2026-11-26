@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-26 — M2-B2 Gmail push alert endpoint
+
+- Added `POST /api/v1/mail/alerts` for Pub/Sub push. It is off unless the gateway is built with a `MailAlerts` adapter.
+- The route accepts a request only with an RS256 token signed by a Google key, with Google's issuer, the configured audience and the configured service account (`email` and `email_verified`). Otherwise it returns 401 and records nothing.
+- A valid alert is recorded with `note_mail_alert`, which makes the poll due now. The route returns 204 at once. It never fetches mail and never reads the alert's email address.
+- A malformed alert, or an alert for a disconnected mailbox, gets 204 and is counted as dropped, so Pub/Sub does not retry it. A database failure, or Google's keys being out of reach, gets 503 so Pub/Sub retries.
+- `GoogleKeys` fetches Google's published keys through PyJWT, with caching. Tests use a local RSA key and never call Google.
+- The gateway service does not build the adapter yet. That waits for the mail database login and the real Gmail client. No migration.
+
 ## 2026-11-26 — M2-B watch renewal and backstop poll
 
 - Migration 0020 adds due times to the mailbox: the next poll, the next watch renewal, the watch expiry, an alert counter and a lease with a fence. Database time is the only clock.
