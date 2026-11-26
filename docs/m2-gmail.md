@@ -1,8 +1,8 @@
 # M2 Gmail ingestion plan
 
-Status: draft. The owner has not approved it. Questions for the owner are under "Decisions".
+Status: approved on 2026-11-26. No slice is started. Owner decisions are under "Decisions".
 
-M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and publishes a generic "message ingested" event. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D), if the owner approves it.
+M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and publishes a generic "message ingested" event. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
 
 Roadmap acceptance: duplicate and out-of-order mailbox notifications create one durable source record and event, and MarkOS recovers from cursor gaps.
 
@@ -35,7 +35,7 @@ Five PRs, each reviewed and merged separately. M2-A to M2-D use only a fake Gmai
 1. **M2-A mailbox records and fake Gmail:** migration for the mailbox and message tables, a Gmail client interface with an in-memory fake, incremental reads, cursor-gap resync and the outbox event.
 2. **M2-B alerts and schedules:** the Pub/Sub pull worker, daily watch renewal and the 15-minute backstop poll, as database schedules with leases. Tests use the Pub/Sub emulator or a fake.
 3. **M2-C owner opt-in:** the OAuth connect and disconnect flow for operators, encrypted token storage, label allowlist settings and audit. Tests use a fixture OAuth provider.
-4. **M2-D bills from a label (if approved):** PDF attachments in one owner-chosen label go through the existing K1 PDF import. Size, type and page limits apply. Duplicates are skipped by SHA-256. Bills from an unknown supplier are counted and left for review.
+4. **M2-D bills from a label:** PDF attachments in one owner-chosen label go through the existing K1 PDF import. Size, type and page limits apply. Duplicates are skipped by SHA-256. Bills from an unknown supplier are counted and left for review.
 5. **M2-E real-account gate:** a checklist the owner approves before MarkOS connects to the real mailbox. It covers the Google Cloud project, OAuth client, Pub/Sub topic and its publisher grant, secret storage, the host it runs on, and the retention decision. No code runs against real Gmail before this gate.
 
 ## Tests
@@ -51,12 +51,14 @@ Five PRs, each reviewed and merged separately. M2-A to M2-D use only a fake Gmai
 
 ## Decisions
 
-1. **Where real ingestion first runs.** The rules say production Gmail ingestion runs in the cloud, and no cloud host exists yet. I propose M2-A to M2-D stay synthetic. Real use waits for M2-E and a host decision. The alternative is a one-off, owner-supervised import of old bills on the MacBook, recorded as an exception and not as production.
-2. **Alert path.** I propose a Pub/Sub pull subscription plus a 15-minute backstop poll. The alternative is push delivery, which needs a public HTTPS endpoint.
-3. **Scope.** I propose `gmail.readonly`, with the label allowlist enforced in code. `gmail.metadata` cannot read attachments.
-4. **Bills from a label in M2.** I propose M2-D: one label you choose, for example "Bills", feeds the K1 PDF import. M3 classification replaces it later. The alternative is to wait for M3.
-5. **Backfill depth.** How far back should the first import read? I propose 1 January 2020.
-6. **Retention.** What MarkOS keeps when you disconnect or delete: I propose keeping records and bill originals until you delete them. This decision is still open in `docs/decisions.md` and blocks M2-E.
+The owner approved these on 2026-11-26.
+
+1. **Where real ingestion first runs:** M2-A to M2-D stay synthetic. Real use waits for M2-E and a decision on the cloud host.
+2. **Alert path:** a Pub/Sub pull subscription plus a 15-minute backstop poll. No public endpoint.
+3. **Scope:** `gmail.readonly`. MarkOS code enforces the label allowlist.
+4. **Bills from a label:** M2-D is in M2. One owner-chosen label feeds the K1 PDF import. M3 classification replaces it later.
+5. **Backfill depth:** the first import and every resync read back to 1 January 2020.
+6. **Retention:** message records and bill originals stay until the owner deletes them. Disconnecting deletes the token only. `docs/decisions.md` still lists real-data retention as open: deletion, privacy and backup erasure need their own review before M2-E.
 
 ## Not confirmed
 
