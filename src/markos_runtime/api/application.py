@@ -21,7 +21,6 @@ from markos_runtime.api.identity import (
     TOKEN_PATTERN,
     FixtureIssuer,
     IdentityDenied,
-    IdentityUnavailable,
     IdentityVerifier,
     SecretCodec,
     challenge,
@@ -52,10 +51,20 @@ from markos_runtime.control.store import (
     ControlStore,
     SessionContext,
 )
-from markos_runtime.store.database import StorageError
 
 COOKIE = "__Host-markos-session"
 FLOW_COOKIE = "__Host-markos-flow"
+
+
+# First match wins, so subclasses come before their parents. Anything else is 503.
+ERROR_CODES: tuple[tuple[type[Exception], str, int], ...] = (
+    (ControlConflict, "conflict", 409),
+    (ControlLimited, "limited", 429),
+    (ControlNotFound, "not-found", 404),
+    (ControlDenied, "forbidden", 403),
+    (IdentityDenied, "unauthenticated", 401),
+    (ContractError, "invalid", 400),
+)
 
 
 class ApiFault(ValueError):
@@ -103,8 +112,6 @@ class SyntheticApi:
         self.config, self.store, self.issuer = config, store, issuer
         self.codec = SecretCodec(key)
         self.identity = IdentityVerifier(store, issuer)
-        self.requests = 0
-        self.failures = 0
 
     def context(self, raw: str) -> SessionContext:
         try:
@@ -666,12 +673,7 @@ def create_app(
             local_admitted = admitted
             lease = None
             try:
-                if (
-                    admitted
-                    and not is_stream
-                    and scope.get("type") == "http"
-                    and scope.get("path") not in {"/live", "/ready"}
-                ):
+                if admitted and not is_stream and scope.get("path") not in {"/live", "/ready"}:
                     try:
                         async with asyncio.timeout(5):
                             lease = await store._call("claim_http_request")
@@ -695,10 +697,6 @@ def create_app(
         async def handle(
             self, scope: dict[str, Any], receive: Any, send: Any, admitted: bool
         ) -> None:
-            if scope["type"] != "http":
-                await app(scope, receive, send)
-                return
-            api.requests += 1
             request_id = uuid4()
             messages: list[dict[str, Any]] = []
             streaming = False
@@ -823,25 +821,13 @@ def create_app(
                                 {"type": "http.response.body", "body": b"", "more_body": False}
                             )
                     return
-                api.failures += 1
                 if isinstance(error, ApiFault):
                     code, status = error.code, error.status
-                elif isinstance(error, ControlConflict):
-                    code, status = "conflict", 409
-                elif isinstance(error, ControlLimited):
-                    code, status = "limited", 429
-                elif isinstance(error, ControlNotFound):
-                    code, status = "not-found", 404
-                elif isinstance(error, ControlDenied):
-                    code, status = "forbidden", 403
-                elif isinstance(error, (IdentityDenied,)):
-                    code, status = "unauthenticated", 401
-                elif isinstance(error, ContractError):
-                    code, status = "invalid", 400
-                elif isinstance(error, (IdentityUnavailable, StorageError, TimeoutError)):
-                    code, status = "unavailable", 503
                 else:
-                    code, status = "unavailable", 503
+                    code, status = next(
+                        ((c, s) for kind, c, s in ERROR_CODES if isinstance(error, kind)),
+                        ("unavailable", 503),
+                    )
                 error_body = {"schema_version": 1, "request_id": str(request_id), "code": code}
                 messages = []
                 await JSONResponse(error_body, status_code=status)(scope, receive, collected)

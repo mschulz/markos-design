@@ -94,7 +94,6 @@ class SecretCodec:
 class VerifiedIdentity:
     subject: str
     provider_session_id: UUID
-    nonce: str
     expires_at: int
 
 
@@ -316,7 +315,7 @@ class IdentityVerifier:
                 audience=AUDIENCE,
                 options={"require": sorted(required), "strict_aud": True},
             )
-            verified = VerifiedIdentity(raw["sub"], sid, nonce, raw["exp"])
+            verified = VerifiedIdentity(raw["sub"], sid, raw["exp"])
             if not await self.provider_call("session", verified):
                 raise ValueError
             return verified
