@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-26 — K1-B plan
+
+- Added the K1-B plan for Amber Electric PDF bills to `docs/k1-bill-knowledge.md`.
+
 ## 2026-11-26 — Replace stale milestone docstrings
 
 - Rewrote 10 docstrings that named old milestones (M1-A to M1-E) or "future" work as present-tense descriptions. Five schema descriptions changed to match.
