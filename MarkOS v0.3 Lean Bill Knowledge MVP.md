@@ -30,7 +30,7 @@ The supported text labels are intentionally narrow and documented in `knowledge/
 
 ## Architecture and authority
 
-This follows [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]], [[Vision]] and [[MarkOS v0.3 Specification]]. It adds no dependency on the archived application, PARA or Obsidian. GitHub remains canonical for project artifacts; bill originals, private data and sign-in material stay outside Git.
+This follows [[docs/decisions|decisions]], [[Vision]] and [[MarkOS v0.3 Specification]]. It adds no dependency on the archived application, PARA or Obsidian. GitHub remains canonical for project artifacts; bill originals, private data and sign-in material stay outside Git.
 
 - The existing authenticated shared HTTPS gateway serves the bill page and API. Import requires the operator role; viewers may inspect and ask. Each SQL entry point independently checks the current session and owner/domain. Existing browser CSRF, request leases, rate and byte/time bounds remain in force.
 - Additive migration 0014 stores the source fingerprint, bill identity/name and extracted facts/provenance in PostgreSQL. Preserve migrations 0001–0013. Raw originals are separate objects, not canonical Markdown or database message bodies.
@@ -83,5 +83,5 @@ These tests create/drop their own databases; never target the running local prev
 ## Related
 
 - [[MarkOS v0.3 Roadmap]]
-- [[MarkOS v0.3 M1-G CI and Lean Preview]]
-- [[ADR-006 Control Plane Identity and Trust Boundary]]
+- [[docs/local-preview|local preview guide]]
+- [[docs/decisions|decisions]]

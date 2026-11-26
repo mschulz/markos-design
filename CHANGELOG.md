@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-26 — Prune the abandoned v0.2 code and the milestone documents
+
+- Delete the archived v0.2 application (`src/markos/`, root `tests/`, root `pyproject.toml` and `uv.lock`), its documents, the import manifest, the legacy config example and the document template. Git history keeps all of them.
+- Fold the six ADRs and sixteen M0/M1 milestone records into `docs/decisions.md`, keeping only rules that still govern the code, each with its reason. Move the preview run steps to `docs/local-preview.md`.
+- Replace the document inventory and metadata gate with a broken-link check, and delete `Documentation Authority Index.md`.
+- Rewrite `README.md`, `CLAUDE.md`, `AGENTS.md` and the `config/`, `infrastructure/` and `services/runtime/` READMEs as short current guides. No runtime code, migration or CI job changes.
+
 ## 2026-11-26 — Lean electricity-bill Knowledge Base first slice
 
 - Bring a useful K1 bill-to-answer workflow ahead of Gmail and broad classification, preserving the event-driven architecture and later milestone identifiers.

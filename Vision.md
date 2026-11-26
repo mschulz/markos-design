@@ -33,7 +33,7 @@ No PARA note hierarchy, Obsidian installation, local Markdown index or native de
 
 ## Supersession
 
-This revision replaces the original Markdown-canonical Personal Knowledge Engine vision following the owner's explicit architecture correction. Previous text remains in Git history. [[ADR-004 Event-driven Architecture Supersedes Legacy MarkOS]] defines precedence and boundaries; [[MarkOS v0.3 Specification]] defines the current design. Preserving legacy code does not make it the new implementation baseline.
+This revision replaces the original Markdown-canonical Personal Knowledge Engine vision following the owner's explicit architecture correction. Previous text remains in Git history. [[docs/decisions|decisions]] defines precedence and boundaries; [[MarkOS v0.3 Specification]] defines the current design. Preserving legacy code does not make it the new implementation baseline.
 
 ## Success criteria
 

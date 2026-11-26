@@ -1,100 +1,45 @@
 # MarkOS
 
-MarkOS is a cloud-hosted, event-driven personal agent operating system. The current design replaces the original PARA/Markdown/DuckDB system; the imported code is preserved history, not the foundation of the new runtime.
+MarkOS is a personal knowledge base and agent system. It keeps source documents,
+extracts facts from them, and answers questions with evidence from the source.
 
-RabbitMQ is the internal event bus. Supabase PostgreSQL owns durable events, tasks, schedules, structured knowledge and conversations. Immutable source originals live in cloud object storage (provider pending). Generated Markdown is a derived view/export in an ordinary folder, without PARA or Obsidian requirements. Always-on services run on DigitalOcean with Docker Compose, independently of the MacBook.
+## Current focus: electricity bills
 
-GitHub is canonical for all project code, tests, infrastructure and documentation; Space is for drafting. Runtime data and secrets never belong here.
+The first useful workflow is: supply an electricity bill, keep the original,
+extract the key figures, inspect them, and ask questions with cited answers.
 
-M0-A is merged as an independent contracts/configuration project;
-see [the implementation record](MarkOS%20v0.3%20M0-A%20Contracts%20and%20Configuration.md).
-Its preflight validates synthetic documents only. M0-B adds [explicit PostgreSQL storage](MarkOS%20v0.3%20M0-B%20Durable%20Storage.md) in main; M0-C adds [explicit RabbitMQ transport](MarkOS%20v0.3%20M0-C%20RabbitMQ%20Transport.md) in main. M0-D [synthetic execution and persistent scheduling](MarkOS%20v0.3%20M0-D%20Execution%20and%20Scheduling.md), M0-E [synthetic replay, deletion safeguards and retention](MarkOS%20v0.3%20M0-E%20Replay%20and%20Retention.md) and M0-F [synthetic lifecycle and closeout](MarkOS%20v0.3%20M0-F%20Lifecycle%20and%20Closeout.md) are merged through PRs #15–#17. The [M0 runbook](MarkOS%20v0.3%20M0%20Runbook.md) describes controlled test procedures and production gaps. No service is deployed and no real agent/tool execution is implemented.
+Working now (K1-A, synthetic data only): paste bill text or load a sample bill,
+see the extracted figures with the source line for each, and ask one of four
+questions. Figures that are missing or conflict are marked **Needs review**.
+Next (K1-B): text-based PDF bills with page citations.
 
-MCP access for agents is proposed through a governed tool gateway with explicit owner/domain grants, scoped approvals and durable audit. It is not enabled by this documentation; RabbitMQ remains the event bus.
+See [the K1 bill workflow](MarkOS%20v0.3%20Lean%20Bill%20Knowledge%20MVP.md) and
+[the roadmap](MarkOS%20v0.3%20Roadmap.md).
 
-## Next useful workflow: electricity-bill Knowledge Base
+## How it is built
 
-The owner has prioritized a lean bill-to-answer workflow ahead of Gmail and general classification. The first working slice adds **Electricity bills** to an explicitly opted-in local preview: paste bill text or load an invented sample, save it, inspect extracted figures, and ask a question with source-line citations. Missing/conflicting values remain explicit. Originals stay private outside Git; PostgreSQL owns facts and provenance. PDF/OCR, real accounts/models and cloud deployment remain off. See [the slice and run instructions](MarkOS%20v0.3%20Lean%20Bill%20Knowledge%20MVP.md) and [updated roadmap](MarkOS%20v0.3%20Roadmap.md). This PR does not update the running preview.
+- **PostgreSQL** holds all durable state, extracted facts and their provenance.
+- **Object storage** holds the original documents, unchanged.
+- **RabbitMQ** is the internal event bus.
+- **Markdown** is only an export, never the source of truth.
+- Hosting target: DigitalOcean with Docker Compose, and Supabase.
 
-## Synthetic MVP feedback preview
+Real accounts, Gmail, AI models and production hosting are not enabled yet.
 
-The [lean M1-G preview and runbook](MarkOS%20v0.3%20M1-G%20CI%20and%20Lean%20Preview.md) packages the existing web/CLI, deterministic chat and exact synthetic approval flow for local feedback. It uses an explicit disposable Docker setup and synthetic credentials. No real account, model, production deployment or full operational closeout is claimed. Review the PR before running it; nothing starts on import or preflight.
+## Repository layout
 
-## Read first
-
-- [Architecture reset decision](ADR-004%20Event-driven%20Architecture%20Supersedes%20Legacy%20MarkOS.md): accepted replacement of the legacy baseline, evidence and limits.
-- [Vision](Vision.md), [v0.3 specification](MarkOS%20v0.3%20Specification.md) and [roadmap](MarkOS%20v0.3%20Roadmap.md): current product and architecture.
-- [M0 implementation plan](MarkOS%20v0.3%20M0%20Implementation%20Plan.md): independent runtime, ordered changes and acceptance tests.
-- [M1 control-plane implementation plan](MarkOS%20v0.3%20M1%20Control%20Plane%20Implementation%20Plan.md): merged-main review, proposed API/identity and seven implementation slices with 22 acceptance cases. M1-A/B are merged; the M1-C review record below distinguishes implemented fixture behavior from later gates.
-- [Documentation authority index](Documentation%20Authority%20Index.md): current requirements versus archived designs and evidence.
-- [Agent MCP access ADR](ADR-005%20Governed%20MCP%20Access%20for%20Agents.md): proposed permissions, domain isolation, approvals, audit and acceptance gates.
-- [RabbitMQ ADR](ADR-003%20RabbitMQ%20Internal%20Event%20Bus.md): selected transport and proposed operating profile.
-- [Cloud deployment architecture](MarkOS%20Cloud%20Deployment%20Architecture.md) and [cloud decision](ADR-002%20Cloud-first%20Deployment.md): hosting, durable scheduling, backup and recovery.
-- [Canonical project record](ADR-0002%20GitHub%20as%20Canonical%20Project%20Record.md): GitHub and review workflow.
-
-## Implementation status
-
-Main contains the historical v0.2 application imported through PR #5. PR #6's pure contract/config work was merged into an earlier feature branch, not main. PR #7 is closed unmerged with its branch retained; its legacy naming cleanup is not the replacement-system baseline. Neither legacy regression counts nor pure-schema checks establish a working RabbitMQ/PostgreSQL runtime.
-
-The independent M0-A project under `services/runtime/` has its own package, dependency lock, tests and connection-free preflight command. M0-F adds a separately invoked, explicitly confirmed test-only service command. It does not import the old `markos` package or require a Markdown folder, PARA tree or DuckDB. M0-A–M0-C contracts, PostgreSQL storage and RabbitMQ transport are merged; M0-D–M0-F synthetic execution, replay/retention and lifecycle are merged; real agents, source-provider access/deletion and production lifecycle remain future work. M0-F supplies disposable CI process/dependency/pressure/restore evidence with explicit production gaps.
-
-## Repository boundaries
-
-| Path | Role |
+| Path | Contents |
 |---|---|
-| Root Title Case documents | Current decisions plus explicitly classified historical records |
-| `src/markos/`, root `pyproject.toml` and `uv.lock` | Archived application and its reproducible environment; no new product foundation |
-| `tests/` | Preserved legacy regression tests; independent runtime acceptance tests live under services/runtime/tests |
-| `services/runtime/` | Independent contracts/configuration, PostgreSQL storage and RabbitMQ transport and synthetic execution/scheduling and M0-E recovery/retention, own tests and lock |
-| `config/`, `infrastructure/` | Versioned schemas/examples and reviewed infrastructure; legacy examples clearly separated |
-| `.github/`, `Templates/` | Review workflow and document template |
+| `services/runtime/` | The application (`markos_runtime`), its tests and its dependency lock |
+| `infrastructure/` | Docker Compose files, database migrations, RabbitMQ definitions |
+| `config/runtime/` | Example configuration and generated JSON schemas |
+| `docs/decisions.md` | The design decisions and the reasons for them |
+| `scripts/` | The documentation link check |
 
-## Preserving old work
+## Development
 
-Old source, evaluation results and Git ancestry remain recoverable. The v0.2 guide/project-memory snapshots and import manifest retain their original bytes. Their instructions, local paths and PARA conventions are historical, not directions to access personal notes. See the authority index before using any old document.
+Run the checks from `services/runtime/`; its [README](services/runtime/README.md)
+has the details. Database and broker tests need disposable local services and never
+touch a real database.
 
-To reproduce the archived application's checks in an isolated synthetic environment, use Python 3.13 and uv: `uv sync --locked`, `uv lock --check`, `uv run ruff check .`, `uv run mypy`, `uv run pytest`. These checks protect the archive; they do not select the new architecture or complete M0.
-
-## Documentation checks
-
-The `Documentation checks` GitHub Actions job runs on pull requests and pushes to main. It checks the complete tracked Markdown inventory, required metadata and local links in current/template documents, then whitespace in the change. Historical documents remain inventoried; their old links are not current requirements. External URLs and heading anchors are not verified by this local-path checker. Run it without application dependencies:
-
-```sh
-python3 -B -m unittest discover -s scripts/tests -v
-python3 -B scripts/check_docs.py
-git diff --check
-```
-
-The workflow uses a pinned checkout action, read-only repository permissions, no persisted checkout credentials and no runtime services or deployment. This adds CI, not branch protection; making the check required is a separate repository setting. It does not validate MCP interoperability or complete runtime acceptance.
-
-## Working agreement
-
-Use focused `codex/` branches and reviewable PRs to main. Keep implementation, acceptance evidence and docs together. No merge, deployment, provisioning or personal-folder migration is performed by this increment. The separate `markos` repository remains untouched; no second active source of truth is introduced.
-
-## M1-A contracts merged
-
-[M1-A Contracts and Identity](MarkOS%20v0.3%20M1-A%20Contracts%20and%20Identity.md) adds versioned synthetic control-plane models, schemas/examples, frozen test configuration and connection-free `preflight-control`. [ADR-006](ADR-006%20Control%20Plane%20Identity%20and%20Trust%20Boundary.md) records proposed identity/session/delegation decisions and production gates. An optional independently locked API/JWT/template profile is compatibility tested. No login service, control-plane database, chat execution or tool access is implemented; a valid principal/intent descriptor is not authority. PRs #18/#19 are merged; the original planning/contract evidence and all prerequisite history remain preserved.
-
-## M1-B persistence prepared for review
-
-[M1-B Control Plane Persistence](MarkOS%20v0.3%20M1-B%20Control%20Plane%20Persistence.md) adds explicit scoped PostgreSQL storage for sessions/memberships, versioned registry/configuration, conversations/messages/activity and idempotency, with a dedicated gateway role and additive migration 0006. Messages are staged as held proposals; the current RabbitMQ/no-op path is unchanged. M1-C supplies the fixture authentication/API in the separate review described below; publishable chat, approvals/tools and production deployment remain later work.
-
-
-## Merged M1-B and M1-C review status
-
-PR #20 is merged. [[MarkOS v0.3 M1-C Authenticated Shared API]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.
-
-
-## Merged M1-C and M1-D review status
-
-PR #21 is merged. [[MarkOS v0.3 M1-D Durable Test Agent Conversation]] records the `8311f01` main review, six green post-merge checks and a separately reviewable durable synthetic conversation. The explicit conversation API profile adds atomic message/event/outbox admission, fixed checksum acknowledgement, durable reply/completion/activity, scoped polling/cursors, cancellation and current-authority/epoch/fence checks. It shares PostgreSQL/RabbitMQ and the two global execution slots with the unchanged no-op path; migration 0008 is additive. M1-C/preflight configurations remain execution-disabled. Real identity adapters, interactive clients/SSE, governance/tools, scheduled cleanup and packaged process/restore/production gates remain separate work. No merge or deployment.
-
-
-## Merged M1-D and M1-E review status
-
-PR #22 is merged. [[MarkOS v0.3 M1-E Web and CLI]] records the `4cb4d7b` main review, six green post-merge checks covering 706 tests, and the separately reviewable client slice. It fixes activity cursor-purpose binding and adds an explicit fixture-only web profile with five pages, a shared-HTTPS CLI, exact typed write previews, private explicit CLI session storage and durable scoped SSE with shared 1/4/20 lease limits, current-authority checks and restore-aware cursors. Additive migration 0009 preserves 0001–0008; existing dependency pins and archived work remain intact. Browser acceptance is required in CI. Approvals/tools remain disabled for M1-F; packaged process/restore/operational closeout remains M1-G. Real accounts and deployment remain disabled. Earlier slice sections below/above are chronological evidence; this section describes the latest review state. No merge or deployment.
-
-
-## Merged M1-E and M1-F review status
-
-PR #23 is merged. [[MarkOS v0.3 M1-F Governance and Synthetic Tools]] records the `231a018` main review, exact preserved M1-E tree and six green post-merge checks with 770 cases. The separately reviewable M1-F slice adds an explicit synthetic governance profile, fixed reviewed fixture grants, immutable exact approvals, slot-free durable waiting/fresh execution leases, atomic one-time dispatch/audit/reservations, bounded pinned MCP 2.3.0 / 2026-07-28 HTTPS reads and unknown-outcome reconciliation. Additive migration 0010 preserves 0001–0009; shared limits, scoped typed web/CLI controls and explicit privileged retention/tombstones are covered. Ordinary no-tool chat and archived code remain intact. Real accounts/OAuth/effects and deployment stay disabled. M1-G owns packaged processes, full restore/maintenance/operational closeout; earlier slice sections are chronological evidence. No merge or deployment.
+Documentation check: `python3 -B scripts/check_docs.py` (fails on broken local links).
