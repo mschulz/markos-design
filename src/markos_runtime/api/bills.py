@@ -4,14 +4,12 @@ import asyncio
 import hashlib
 import json
 import re
-from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
 from markos_runtime.api.application import ApiFault
-from markos_runtime.knowledge.amber import extract_amber, is_amber
 from markos_runtime.knowledge.bills import (
     SAMPLE,
     BillFacts,
@@ -26,19 +24,11 @@ from markos_runtime.knowledge.corrections import CorrectionRequest, effective, n
 from markos_runtime.knowledge.history import answer as history_answer
 from markos_runtime.knowledge.history import history, row
 from markos_runtime.knowledge.objects import BillObjectError, BillObjects
-from markos_runtime.knowledge.origin import extract_origin, is_origin
 from markos_runtime.knowledge.pdf import PdfError, read_pages
+from markos_runtime.knowledge.profiles import PDF_PROFILES
 
 PDF_PATH = "/api/v1/bills/pdf"
 HISTORY_PATH = "/api/v1/bills/history"
-
-# Supplier PDF profiles by extractor name: (recognises the pages, extracts the facts).
-PDF_PROFILES: dict[
-    str, tuple[Callable[[list[str]], bool], Callable[[list[str], str], BillFacts]]
-] = {
-    "amber-pdf-v1": (is_amber, extract_amber),
-    "origin-pdf-v1": (is_origin, extract_origin),
-}
 
 
 def present(record: dict[str, Any]) -> dict[str, Any]:

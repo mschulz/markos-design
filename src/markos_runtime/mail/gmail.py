@@ -76,6 +76,10 @@ class GmailReader(Protocol):
 
     async def message(self, message_id: str) -> MessageMeta: ...
 
+    async def attachment(self, message_id: str, attachment_id: str) -> bytes:
+        """The decoded attachment body. Raises MessageGone if the message was deleted."""
+        ...
+
     async def watch(self, label_ids: Sequence[str]) -> Watch: ...
 
 

@@ -162,6 +162,10 @@
     if (box.state === "connected") {
       view.append(node("h2", "Allowed labels"), node("p", box.labels.join(", ")));
       if (box.watch_expires_at) view.append(node("p", "Change alerts are active until " + new Date(box.watch_expires_at).toLocaleString() + ". They renew daily."));
+      view.append(node("h2", "Bills from mail"), node("p", box.bill_label ? "PDF bills in " + box.bill_label + " are imported." : "No bill label is set. No bills are imported."));
+      const b = box.bills;
+      view.append(node("p", b.imported + " imported, " + b.duplicate + " already stored, " + b.waiting + " waiting, " + b.review + " to review, " + b.rejected + " not readable."));
+      if (b.review) view.append(node("p", "Bills to review are from an unknown supplier or over the bill limit. They stay in Gmail."));
     }
     if (!can("administrator")) { view.append(node("p", "Only a workspace administrator can change the mail connection.")); return; }
     if (box.state === "disconnecting") return;
@@ -172,8 +176,18 @@
     if (box.state === "connected") {
       form.append(button("Save labels", async () => {
         const body = {schema_version: 1, labels: chosen()};
-        review("Change allowed labels", [["Labels", body.labels.join(", ")], ["Effect", "The watch is renewed with the new labels."]], async () => {
+        review("Change allowed labels", [["Labels", body.labels.join(", ")], ["Effect", "The watch is renewed with the new labels. A bill label that is no longer allowed is cleared."]], async () => {
           await api(scoped("/api/v1/mail/labels"), body); await mailPage(); message("Labels saved.");
+        });
+      }));
+      const chooser = node("select", undefined, {id: "bill-label"});
+      chooser.append(node("option", "No bill label", {value: ""}));
+      for (const label of box.labels) chooser.append(node("option", label, {value: label}));
+      chooser.value = box.bill_label || "";
+      form.append(node("label", "Bill label", {for: "bill-label"}), chooser, button("Save bill label", async () => {
+        const body = {schema_version: 1, label: chooser.value || null};
+        review("Change bill label", [["Bill label", body.label || "None"], ["Effect", body.label ? "PDF bills in this label are imported, back to 2020." : "No more bills are imported."]], async () => {
+          await api(scoped("/api/v1/mail/bill-label"), body); await mailPage(); message("Bill label saved.");
         });
       }), button("Disconnect Gmail", async () => {
         review("Disconnect Gmail", [["Effect", "MarkOS stops reading mail now, then revokes and deletes its access."], ["Stored records", "Kept"]], async () => {

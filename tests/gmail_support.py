@@ -4,7 +4,9 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
+from markos_runtime.mail.bills import BillMessage
 from markos_runtime.mail.gmail import (
     Attachment,
     Change,
@@ -35,6 +37,8 @@ class FakeGmail:
     stopped: int = 0
     revoked: int = 0
     unreachable: bool = False
+    bodies: dict[tuple[str, str], bytes] = field(default_factory=dict)
+    downloaded: Counter[str] = field(default_factory=Counter)
 
     def deliver(
         self,
@@ -42,6 +46,7 @@ class FakeGmail:
         *,
         received: date = date(2024, 3, 1),
         attachments: Sequence[Attachment] = (),
+        bodies: Sequence[bytes] = (),
     ) -> str:
         self.history_id += 1
         message_id = f"{self.history_id:016x}"
@@ -51,6 +56,8 @@ class FakeGmail:
         )
         self.messages[message_id] = meta
         self.changes.append((self.history_id, Change(message_id, tuple(labels))))
+        for part, body in zip(attachments, bodies, strict=False):
+            self.bodies[(message_id, part.attachment_id)] = body
         return message_id
 
     def relabel(self, message_id: str, labels: Sequence[str]) -> None:
@@ -99,6 +106,12 @@ class FakeGmail:
         if message_id not in self.messages:
             raise MessageGone
         return self.messages[message_id]
+
+    async def attachment(self, message_id: str, attachment_id: str) -> bytes:
+        self.downloaded[message_id] += 1
+        if message_id not in self.messages:
+            raise MessageGone
+        return self.bodies[(message_id, attachment_id)]
 
     async def watch(self, label_ids: Sequence[str]) -> Watch:
         self.watched.append(tuple(label_ids))
@@ -170,7 +183,7 @@ class MemoryWork(MemoryRecords):
         self.alerts.append(history_id)
         return True
 
-    async def claim_work(self, lease_seconds: int) -> WorkClaim | None:
+    async def claim_work(self, lease_seconds: int, bills: bool = False) -> WorkClaim | None:
         claim, self.due = self.due, None
         return claim
 
@@ -183,3 +196,11 @@ class MemoryWork(MemoryRecords):
     async def finish_disconnect(self, claim: WorkClaim) -> bool:
         self.finished.append((False, None))
         return True
+
+    async def bills_due(self, fence: int, limit: int) -> list[BillMessage] | None:
+        return []
+
+    async def finish_bill(
+        self, fence: int, message_id: str, results: Sequence[dict[str, Any]]
+    ) -> list[str] | None:
+        return None
