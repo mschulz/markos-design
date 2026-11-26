@@ -2,11 +2,11 @@
 title: MarkOS v0.3 M1-G CI and Lean Preview
 type: implementation-record
 status: implemented-synthetic-preview
-version: 1.1
+version: 1.2
 owner: Mark Schulz
 created: 2026-11-13
-updated: 2026-11-13
-reviewed: 2026-11-13
+updated: 2026-11-25
+reviewed: 2026-11-25
 tags:
   - architecture
 ---
@@ -82,6 +82,14 @@ The restore drill keeps independent issuer/MCP state current, rotates the SQL ep
 
 Review this bounded preview PR, then collect product feedback before expanding infrastructure or starting another milestone. Do not block local synthetic feedback on production-only gates, and do not waive applicable safety gates before connecting real accounts. Decide the first useful end-to-end task and whether to prioritize UI changes or the separately reviewed native M2 vertical slice. No merge, deployment or real integration is implied.
 
+
+## Approval cancellation feedback
+
+The preview now labels a revoked approval **Request cancelled**, explains recorded causes in plain language and tells the user to send a new request. Reasons are captured when cancellation occurs: sender sign-out or sign-in expiry, permission/settings changes, restored preview, sender cancellation or withdrawn approval. An optional typed reason is exposed through the existing scope-checked readers; intent hashes and approval/execution decisions stay unchanged. Additive migration 0012 preserves 0001–0011. Historical sign-out reasons are backfilled only where the retained sign-out timestamp predates cancellation, with definitive human/access audit facts taking precedence; other unknown historical causes are identified as unrecorded. Cancelling or signing out later cannot rewrite a reason already recorded.
+
+For the demo, use **Chrome for the requester and Safari for the approver**, keeping both signed in. Ordinary windows in the same browser can share a sign-in. Signing out the sender cancels pending requests and requires a new request; this remains an intentional authority check.
+
+The PR #28 review identified a concurrent service-check failure that could overwrite another request’s already-recorded permission-change explanation. Additive migration 0013 preserves 0001–0012 and replaces the timestamp window with eligible request IDs captured under the existing execution fence and grant/intent locks. Existing cancellation records are excluded. The regression test observes a real competing lock wait, records a separate permission cancellation and verifies that its reason survives the failed-service handler. This correction changes explanations only; it does not restore access, reactivate requests or change dispatch decisions.
 
 ## Post-merge local setup review
 

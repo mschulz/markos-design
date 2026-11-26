@@ -158,7 +158,22 @@
     view.append(button("Refresh approvals", () => approvalsPage()));
     for (const item of value.items) {
       const card = node("article"), intent = item.intent;
-      card.append(node("h2", "Approval · " + item.status), node("p", item.intent_id));
+      card.append(node("h2", item.status === "revoked" ? "Request cancelled" : "Approval · " + item.status));
+      if (item.status === "revoked") {
+        const reasons = {
+          "test-service-check-failed": "Cancelled because the test service did not respond as expected.",
+          "requester-signed-out": "Cancelled because the person who sent this request signed out.",
+          "sign-in-expired": "Cancelled because the sender’s sign-in expired.",
+          "access-changed": "Cancelled because permissions for this request changed.",
+          "settings-changed": "Cancelled because the agent or request settings changed.",
+          "preview-restored": "Cancelled because the preview was restored from a backup.",
+          "request-cancelled": "Cancelled because the sender cancelled the request.",
+          "approval-withdrawn": "Cancelled because the approval was withdrawn.",
+        };
+        card.append(node("p", reasons[item.cancellation_reason] || "This request was cancelled, but the reason wasn’t recorded."),
+          node("p", "Send a new request to try again."));
+      }
+      card.append(node("p", item.intent_id));
       if (intent) {
         card.append(node("p", intent.preview), node("pre", JSON.stringify(intent.arguments, null, 2)),
           node("p", "Destination: " + item.endpoint), node("p", "Intent digest: " + item.intent_sha256));

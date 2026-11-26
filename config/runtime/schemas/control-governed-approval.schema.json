@@ -226,6 +226,29 @@
       ],
       "title": "Approver Id"
     },
+    "cancellation_reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "test-service-check-failed",
+            "requester-signed-out",
+            "sign-in-expired",
+            "access-changed",
+            "settings-changed",
+            "preview-restored",
+            "request-cancelled",
+            "approval-withdrawn",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cancellation Reason"
+    },
     "dispatch_id": {
       "anyOf": [
         {
