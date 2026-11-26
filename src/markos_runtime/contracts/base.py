@@ -19,6 +19,20 @@ class ContractError(ValueError):
     """A stable public error containing no input, paths or credentials."""
 
 
+def exact_int(value: object) -> object:
+    """Before-validator: reject bool and float, which strict JSON mode still coerces."""
+    if type(value) is not int:
+        raise ValueError("integer required")
+    return value
+
+
+def exact_bool(value: object) -> object:
+    """Before-validator: reject 0 and 1, which strict JSON mode still coerces."""
+    if type(value) is not bool:
+        raise ValueError("boolean required")
+    return value
+
+
 def loopback_https(
     value: str,
     *,

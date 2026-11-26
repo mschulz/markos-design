@@ -13,6 +13,7 @@ from markos_runtime.contracts.base import (
     Name,
     OperationKey,
     ValueModel,
+    exact_int,
     parse_document,
 )
 
@@ -63,12 +64,7 @@ class EventEnvelope(ValueModel):
     payload: NoopPayload | None = None
     payload_ref: SourceReference | None = None
 
-    @field_validator("schema_version", mode="before")
-    @classmethod
-    def exact_version(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("integer schema version required")
-        return value
+    _exact_version = field_validator("schema_version", mode="before")(exact_int)
 
     @field_validator("occurred_at", "expires_at")
     @classmethod

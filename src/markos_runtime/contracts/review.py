@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import Field, field_validator
 
-from markos_runtime.contracts.base import Domain, ValueModel
+from markos_runtime.contracts.base import Domain, ValueModel, exact_int
 
 
 class ReviewReference(ValueModel):
@@ -23,9 +23,4 @@ class ReviewReference(ValueModel):
             raise ValueError("invalid digest")
         return value
 
-    @field_validator("schema_version", mode="before")
-    @classmethod
-    def version(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("integer version required")
-        return value
+    _version = field_validator("schema_version", mode="before")(exact_int)

@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, field_validator, model_validator
 
-from markos_runtime.contracts.base import Domain, ValueModel
+from markos_runtime.contracts.base import Domain, ValueModel, exact_int
 
 
 class ScheduleDefinition(ValueModel):
@@ -29,12 +29,7 @@ class ScheduleDefinition(ValueModel):
     run_grace_seconds: int = Field(default=5, ge=0, le=59)
     max_age_seconds: int = Field(default=86400, ge=60, le=2_592_000)
 
-    @field_validator("schema_version", mode="before")
-    @classmethod
-    def integer_version(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("integer schema version required")
-        return value
+    _integer_version = field_validator("schema_version", mode="before")(exact_int)
 
     @field_validator("timezone")
     @classmethod

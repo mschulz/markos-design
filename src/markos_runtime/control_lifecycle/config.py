@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from markos_runtime.config import read_bounded
-from markos_runtime.contracts.base import ContractError, Domain, loopback_https
+from markos_runtime.contracts.base import ContractError, Domain, exact_int, loopback_https
 from markos_runtime.contracts.control import ControlValue
 
 ControlSecretRef = Annotated[str, Field(pattern=r"^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$")]
@@ -58,12 +58,9 @@ class ControlServiceConfig(ControlValue):
     real_tools_enabled: Literal[False] = False
     migrate_on_start: Literal[False] = False
 
-    @field_validator("health_port", "shutdown_seconds", "work_seconds", mode="before")
-    @classmethod
-    def exact_number(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("exact integer required")
-        return value
+    _exact_number = field_validator(
+        "health_port", "shutdown_seconds", "work_seconds", mode="before"
+    )(exact_int)
 
     @field_validator("audit_url")
     @classmethod
