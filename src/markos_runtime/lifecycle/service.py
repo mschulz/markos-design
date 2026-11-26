@@ -39,6 +39,19 @@ def secret(environ: Mapping[str, str], name: str) -> str:
     return value
 
 
+def isolated_dsn(dsn: str, databases: tuple[str, ...]) -> None:
+    """Refuse any database that is not a local synthetic one with a known name prefix."""
+    from psycopg.conninfo import conninfo_to_dict
+
+    info = conninfo_to_dict(dsn)
+    host = str(info.get("host", ""))
+    if not (
+        host in {"127.0.0.1", "localhost", "::1", "postgres"}
+        or host.startswith("/private/tmp/markos-m0b-")
+    ) or not str(info.get("dbname", "")).startswith(databases):
+        raise FatalServiceError("isolated synthetic database required")
+
+
 class SyntheticWorker(Worker):
     def __init__(self, store: DurableStore, delay: float) -> None:
         super().__init__(store)
@@ -79,16 +92,8 @@ class Service:
     async def _session(self) -> None:
         cfg = self.config
         self.phase = "database"
-        from psycopg.conninfo import conninfo_to_dict
-
         dsn = secret(self.environ, cfg.database_secret_ref)
-        info = conninfo_to_dict(dsn)
-        host = str(info.get("host", ""))
-        if not (
-            host in {"127.0.0.1", "localhost", "::1", "postgres"}
-            or host.startswith("/private/tmp/markos-m0b-")
-        ) or not str(info.get("dbname", "")).startswith(("markos_test_", "markos_m0f")):
-            raise FatalServiceError("isolated synthetic database required")
+        isolated_dsn(dsn, ("markos_test_", "markos_m0f"))
         if cfg.component in {"publisher", "consumer", "review"}:
             target = endpoint(secret(self.environ, cfg.broker_secret_ref))
             if target.host not in {"127.0.0.1", "localhost", "::1", "rabbitmq"} or not target.path[
