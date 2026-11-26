@@ -38,6 +38,8 @@ APPS = [
     "worker-two",
     "completion-publisher",
     "activity",
+    "google",
+    "mail",
 ]
 OWNER = "11111111-1111-4111-8111-111111111111"
 ORIGIN = "https://127.0.0.1:18443"
@@ -180,13 +182,26 @@ def prepare_files(*, bills: bool = False) -> None:
     FOLDER.mkdir(mode=0o700)
     (FOLDER / "config").mkdir(mode=0o755)
     credentials = {name: opaque() for name in ("both", "approver", "viewer")}
-    tokens = {name: opaque() for name in ("api", "worker", "issuer_admin", "tool", "tool_admin")}
+    tokens = {
+        name: opaque()
+        for name in (
+            "api",
+            "worker",
+            "issuer_admin",
+            "tool",
+            "tool_admin",
+            "google_client",
+            "google_admin",
+        )
+    }
     state = {
         "project": project(),
         "bill_knowledge": bills,
         "credentials": credentials,
         "tokens": tokens,
         "session_key": base64.urlsafe_b64encode(os.urandom(32)).decode(),
+        # The mail worker's private key. Only the mail process gets it.
+        "mail_key": base64.urlsafe_b64encode(os.urandom(32)).decode(),
     }
     write_private(FOLDER / "controller.json", state)
     certificates()
@@ -229,6 +244,7 @@ async def bootstrap() -> None:
             "m1g_pub",
             "m1g_worker",
             "m1g_activity",
+            "m1g_mail",
         ):
             conn.execute(
                 sql.SQL(
@@ -244,7 +260,7 @@ async def bootstrap() -> None:
                 )
             )
         conn.execute("GRANT markos_control_gateway TO m1g_gateway")
-        conn.execute("GRANT markos_runtime_client TO m1g_pub,m1g_worker,m1g_activity")
+        conn.execute("GRANT markos_runtime_client TO m1g_pub,m1g_worker,m1g_activity,m1g_mail")
         conn.execute("CREATE DATABASE markos_m1g OWNER markos_migrator")
     migration = make_conninfo(admin(), user="markos_migrator")
     async with await psycopg.AsyncConnection.connect(
@@ -274,6 +290,12 @@ async def bootstrap() -> None:
                 "can_publish,can_consume,can_execute) VALUES(%s,%s,%s,%s,%s,%s,%s)",
                 (login, service, OWNER, "personal", pub, consume, execute),
             )
+        # The mail process and the gateway's alert route share this mail-only login.
+        await conn.execute(
+            "INSERT INTO markos_runtime.service_identities("
+            "login_role,service_id,owner_id,domain,can_ingest_mail) VALUES(%s,%s,%s,%s,true)",
+            ("m1g_mail", "control-mail", OWNER, "personal"),
+        )
     async with HarnessStore.connect(make_conninfo(admin(), user="m1g_gateway")) as store:
         ctx = await session(store)
         state["conversation_id"] = str(await prepare(store, ctx))
@@ -330,11 +352,16 @@ async def bootstrap() -> None:
             data={"exchange": "markos.personal.events", "write": write, "read": r".*"},
         )
     state["principals"] = principals
+    from markos_runtime.mail.sealing import TokenKey
+
+    public = TokenKey(base64.urlsafe_b64decode(state["mail_key"])).public
     for i, role in enumerate(APPS):
         component = "worker" if role == "worker-two" else role
         service = (
             "control-gateway"
-            if component in {"gateway", "issuer", "publisher"}
+            if component in {"gateway", "issuer", "publisher", "google"}
+            else "control-mail"
+            if component == "mail"
             else "control-activity"
             if component == "activity"
             else "control-test-agent"
@@ -347,7 +374,11 @@ async def bootstrap() -> None:
             owner_id=UUID(OWNER),
             domain="personal",
             bill_objects_path="/var/lib/markos/bills"
-            if component == "gateway" and state.get("bill_knowledge")
+            if component in {"gateway", "mail"} and state.get("bill_knowledge")
+            else None,
+            mail_enabled=component in {"gateway", "mail"},
+            mail_worker_public_key=base64.urlsafe_b64encode(public).decode()
+            if component == "gateway"
             else None,
             health_port=8780 + i,
             listen_host="0.0.0.0",
@@ -362,10 +393,12 @@ async def bootstrap() -> None:
         )
         (FOLDER / "config" / (role + ".json")).write_bytes(config.to_wire())
         env = {"SSL_CERT_FILE": "/etc/test-ca/ca.pem"}
-        if component not in {"issuer", "mcp"}:
+        if component not in {"issuer", "mcp", "google"}:
             login = (
                 "m1g_gateway"
                 if component == "gateway"
+                else "m1g_mail"
+                if component == "mail"
                 else "m1g_pub"
                 if component == "publisher"
                 else "m1g_activity"
@@ -401,6 +434,13 @@ async def bootstrap() -> None:
             env["MARKOS_CONTROL_FIXTURE_ADMIN_TOKEN"] = state["tokens"]["tool_admin"]
         if component == "gateway":
             env["MARKOS_CONTROL_SESSION_KEY"] = state["session_key"]
+            env["MARKOS_CONTROL_MAIL_DATABASE_DSN"] = container_database("m1g_mail")
+        if component in {"gateway", "google", "mail"}:
+            env["MARKOS_CONTROL_GOOGLE_CLIENT_SECRET"] = state["tokens"]["google_client"]
+        if component == "google":
+            env["MARKOS_CONTROL_GOOGLE_ADMIN_TOKEN"] = state["tokens"]["google_admin"]
+        if component == "mail":
+            env["MARKOS_CONTROL_MAIL_TOKEN_KEY"] = state["mail_key"]
         file = FOLDER / (role + ".env")
         file.write_text("".join(key + "=" + value + "\n" for key, value in env.items()))
         file.chmod(0o600)

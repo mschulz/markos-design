@@ -69,7 +69,7 @@ services:
       retries: 5
       start_period: 20s
     cpus: 0.5
-    ports: ['127.0.0.1:18443:18443', '127.0.0.1:19444:19444', '127.0.0.1:19443:19443']
+    ports: ['127.0.0.1:18443:18443', '127.0.0.1:19444:19444', '127.0.0.1:19443:19443', '127.0.0.1:19445:19445']
     depends_on:
       postgres: {condition: service_healthy}
   issuer:
@@ -181,6 +181,39 @@ services:
     command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/activity.json']
     healthcheck:
       test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8788']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+  # Synthetic Google: OAuth, Gmail and push signing keys. No real Google account is reachable.
+  google:
+    <<: *control
+    env_file: ./.m1g-preview/google.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/google.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8789']
+      interval: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    network_mode: service:gateway
+    depends_on:
+      gateway: {condition: service_started}
+  mail:
+    <<: *control
+    volumes:
+      - ./.m1g-preview/config:/etc/markos:ro
+      - ./.test-certs/ca.pem:/etc/test-ca/ca.pem:ro
+      - ./.test-certs/server.pem:/etc/test-ca/server.pem:ro
+      - ./.test-certs/server.key:/etc/test-ca/server.key:ro
+      - bill-objects:/var/lib/markos/bills
+    env_file: ./.m1g-preview/mail.env
+    command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/mail.json']
+    healthcheck:
+      test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8790']
       interval: 3s
       timeout: 5s
       retries: 5

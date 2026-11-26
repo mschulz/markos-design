@@ -73,3 +73,55 @@ def test_bill_storage_is_an_explicit_gateway_only_opt_in() -> None:
     ]:
         with pytest.raises(ContractError):
             ControlServiceConfig.from_wire(json.dumps({**document, **changes}).encode())
+
+
+KEY = "A" * 43 + "="
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"mail_enabled": True},
+        {"mail_worker_public_key": KEY},
+        {"component": "worker", "service_id": "control-test-agent", "mail_enabled": True},
+        {"component": "mail", "service_id": "control-mail"},
+        {"component": "mail", "service_id": "control-gateway", "mail_enabled": True},
+        {"mail_enabled": True, "mail_worker_public_key": KEY, "google_endpoint": "https://x.test"},
+        {
+            "mail_enabled": True,
+            "mail_worker_public_key": KEY,
+            "google_client_id": "real.apps.googleusercontent.com",
+        },
+        {
+            "mail_enabled": True,
+            "mail_worker_public_key": KEY,
+            "push_account": "a@b.iam.gserviceaccount.com",
+        },
+        {
+            "mail_enabled": True,
+            "mail_worker_public_key": KEY,
+            "google_endpoint": "https://127.0.0.1:18443",
+        },
+        {"component": "worker", "service_id": "control-test-agent", "bill_objects_path": "/bills"},
+    ],
+)
+def test_mail_settings_fail_closed(changes: dict[str, Any]) -> None:
+    with pytest.raises(ContractError):
+        ControlServiceConfig.from_wire(json.dumps({**config(), **changes}).encode())
+
+
+def test_mail_is_off_by_default_and_on_only_for_gateway_and_mail_process() -> None:
+    assert ControlServiceConfig.from_wire(json.dumps(config()).encode()).mail_enabled is False
+    gateway = {**config(), "mail_enabled": True, "mail_worker_public_key": KEY}
+    assert ControlServiceConfig.from_wire(json.dumps(gateway).encode()).mail_enabled
+    mail = {
+        **config(),
+        "component": "mail",
+        "service_id": "control-mail",
+        "mail_enabled": True,
+        "bill_objects_path": "/var/lib/markos/bills",
+    }
+    profile = ControlServiceConfig.from_wire(json.dumps(mail).encode())
+    assert profile.real_accounts_enabled is False and profile.google_endpoint.startswith(
+        "https://127.0.0.1:"
+    )

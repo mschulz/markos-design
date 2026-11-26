@@ -14,7 +14,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 
 import httpx2  # type: ignore[import-not-found,unused-ignore]
 
@@ -67,12 +67,36 @@ class OAuthClient:
     client_secret: str = field(repr=False)
 
 
-def google_http() -> Any:
+@dataclass(frozen=True)
+class GoogleEndpoints:
+    """Where the clients send requests. Only the synthetic fixture process changes these."""
+
+    authorize: str = AUTHORIZE_URL
+    token: str = TOKEN_URL
+    revoke: str = REVOKE_URL
+    gmail: str = GMAIL_URL
+
+    @classmethod
+    def at(cls, origin: str) -> "GoogleEndpoints":
+        """The same paths under one origin, as the fixture Google serves them."""
+        return cls(
+            *(
+                origin + urlsplit(url).path
+                for url in (AUTHORIZE_URL, TOKEN_URL, REVOKE_URL, GMAIL_URL)
+            )
+        )
+
+
+GOOGLE = GoogleEndpoints()
+
+
+def google_http(verify: Any = True) -> Any:
     """The HTTPS client for Google: short timeouts, no redirects, few connections."""
     return httpx2.AsyncClient(
         timeout=httpx2.Timeout(15.0, connect=5.0),
         limits=httpx2.Limits(max_connections=4),
         follow_redirects=False,
+        verify=verify,
     )
 
 
@@ -135,9 +159,10 @@ def _path(value: str) -> str:
 class GoogleConsent:
     """Implements GmailConsent from `api/mail_connect.py` against Google's OAuth endpoints."""
 
-    def __init__(self, oauth: OAuthClient, http: Any) -> None:
+    def __init__(self, oauth: OAuthClient, http: Any, endpoints: GoogleEndpoints = GOOGLE) -> None:
         self._oauth = oauth
         self._http = http
+        self.endpoints = endpoints
 
     def authorization_url(self, state: str, code_challenge: str, redirect_uri: str) -> str:
         params = {
@@ -151,14 +176,14 @@ class GoogleConsent:
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
         }
-        return AUTHORIZE_URL + "?" + urlencode(params)
+        return self.endpoints.authorize + "?" + urlencode(params)
 
     async def exchange(self, code: str, verifier: str, redirect_uri: str) -> Grant:
         status, body = await _call(
             self._http,
             "token exchange",
             "POST",
-            TOKEN_URL,
+            self.endpoints.token,
             data={
                 "grant_type": "authorization_code",
                 "code": code,
@@ -185,7 +210,7 @@ class GoogleConsent:
             self._http,
             "profile",
             "GET",
-            GMAIL_URL + "/profile",
+            self.endpoints.gmail + "/profile",
             params={"fields": "emailAddress"},
             headers={"Authorization": f"Bearer {access}"},
         )
@@ -197,7 +222,7 @@ class GoogleConsent:
     async def revoke(self, refresh_token: str) -> None:
         """Succeeds when Google revokes the token or already holds it as invalid."""
         status, _ = await _call(
-            self._http, "revoke", "POST", REVOKE_URL, data={"token": refresh_token}
+            self._http, "revoke", "POST", self.endpoints.revoke, data={"token": refresh_token}
         )
         if status != 200 and status != 400:
             raise GoogleError(f"revoke: HTTP {status}")
@@ -206,10 +231,17 @@ class GoogleConsent:
 class GoogleGmailAccess:
     """Implements GmailAccess: opens the sealed token with the worker's key for each claim."""
 
-    def __init__(self, oauth: OAuthClient, key: TokenKey, topic: str, http: Any) -> None:
+    def __init__(
+        self,
+        oauth: OAuthClient,
+        key: TokenKey,
+        topic: str,
+        http: Any,
+        endpoints: GoogleEndpoints = GOOGLE,
+    ) -> None:
         if not topic.startswith("projects/") or "/topics/" not in topic:
             raise ValueError("topic must be projects/<project>/topics/<topic>")
-        self._consent = GoogleConsent(oauth, http)
+        self._consent = GoogleConsent(oauth, http, endpoints)
         self._oauth = oauth
         self._key = key
         self._topic = topic
@@ -250,7 +282,7 @@ class GoogleGmail:
             self._http,
             "token refresh",
             "POST",
-            TOKEN_URL,
+            self._consent.endpoints.token,
             data={
                 "grant_type": "refresh_token",
                 "refresh_token": self._refresh,
@@ -282,7 +314,7 @@ class GoogleGmail:
                 self._http,
                 operation,
                 method,
-                GMAIL_URL + path,
+                self._consent.endpoints.gmail + path,
                 limit=limit,
                 params=params,
                 json=payload,
