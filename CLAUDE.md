@@ -42,7 +42,7 @@ independent event-driven runtime
 
 ## Database
 
-- **Migrations are append-only.** Never edit `0001`–`0014`; the next is `0015`.
+- **Migrations are append-only.** Never edit `0001`–`0015`; the next is `0016`.
   → decisions: Migrations are append-only and checksummed
 - **Runtime processes never run migrations**; only the migration-role API does.
   → decisions: Runtime processes never run migrations

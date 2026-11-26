@@ -353,8 +353,9 @@ def create_app(
     from markos_runtime.api.governance import GovernanceRoutes
 
     governance = GovernanceRoutes(api) if isinstance(config, SyntheticGovernanceApiConfig) else None
-    from markos_runtime.api.bills import BillRoutes
+    from markos_runtime.api.bills import PDF_PATH, BillRoutes
     from markos_runtime.knowledge.objects import BillObjects
+    from markos_runtime.knowledge.pdf import MAX_PDF_BYTES
 
     bills = None
     if isinstance(config, SyntheticBillApiConfig):
@@ -508,10 +509,10 @@ def create_app(
         data = await request.body()
         if method == "GET" and data:
             raise ApiFault("invalid", 400)
-        if (
-            method == "POST"
-            and request.headers.get("content-type", "").split(";")[0].strip().lower()
-            != "application/json"
+        if method == "POST" and request.headers.get("content-type", "").split(";")[
+            0
+        ].strip().lower() != (
+            "application/pdf" if bills is not None and path == PDF_PATH else "application/json"
         ):
             raise ApiFault("invalid", 400)
         if web is not None and (path.startswith("/app") or path == "/auth/fixture/authorize"):
@@ -838,8 +839,16 @@ def create_app(
                         raise ApiFault("forbidden", 403)
                     if headers.get(b"content-encoding", b"identity").lower() != b"identity":
                         raise ApiFault("invalid", 400)
+                    # Only the PDF bill upload may exceed 64 KiB, and only when bills are enabled.
+                    limit = (
+                        MAX_PDF_BYTES
+                        if bills is not None
+                        and scope.get("method") == "POST"
+                        and scope.get("path") == PDF_PATH
+                        else 65536
+                    )
                     length = headers.get(b"content-length")
-                    if length is not None and (not length.isdigit() or int(length) > 65536):
+                    if length is not None and (not length.isdigit() or int(length) > limit):
                         raise ApiFault("too-large", 413)
                     body = bytearray()
                     async with asyncio.timeout(10):
@@ -848,7 +857,7 @@ def create_app(
                             if message["type"] == "http.disconnect":
                                 raise ApiFault("invalid", 400)
                             chunk = message.get("body", b"")
-                            if len(body) + len(chunk) > 65536:
+                            if len(body) + len(chunk) > limit:
                                 raise ApiFault("too-large", 413)
                             body.extend(chunk)
                             if not message.get("more_body", False):

@@ -22,9 +22,10 @@
     const expectedGeneration = generation;
     const options = {credentials: "same-origin", cache: "no-store", redirect: "error", signal};
     if (body !== undefined) {
-      options.method = "POST"; options.headers = {"Content-Type": "application/json"};
+      const pdf = body instanceof Blob;
+      options.method = "POST"; options.headers = {"Content-Type": pdf ? "application/pdf" : "application/json"};
       if (csrf) options.headers["X-CSRF-Token"] = csrf;
-      options.body = JSON.stringify(body);
+      options.body = pdf ? body : JSON.stringify(body);
     }
     let response;
     try { response = await fetch(path, options); }
@@ -153,7 +154,7 @@
     if (can("operator")) {
       const form = node("form"), name = field(form, "Bill name", "bill-name", "text", 120);
       const text = field(form, "Bill text", "bill-text", "textarea", 16384);
-      form.append(node("p", "Paste a short bill’s selectable text. PDF files and scans are not supported yet."));
+      form.append(node("p", "Paste a short bill’s selectable text, or upload an Amber Electric PDF below."));
       form.append(button("Try sample bill", async () => {
         const sample = await api(scoped("/api/v1/bills/sample")); name.value = sample.name; text.value = sample.text;
       }));
@@ -165,12 +166,26 @@
           await billsPage(); await showBill(value.bill_id); message("Bill saved. Check the figures and their source lines.");
         } finally { save.disabled = false; }
       }); }; view.append(form);
+      const upload = node("form"), pdfName = field(upload, "PDF bill name", "pdf-name", "text", 120);
+      const file = field(upload, "PDF bill file", "bill-pdf", "file"); file.accept = "application/pdf";
+      upload.append(node("p", "Amber Electric PDF bills only, up to 2 MiB and 20 pages. Scanned bills are not supported."));
+      const send = node("button", "Upload PDF bill", {type: "submit"}); upload.append(send);
+      upload.onsubmit = event => { event.preventDefault(); run(async () => {
+        send.disabled = true;
+        try {
+          const value = await api(scoped("/api/v1/bills/pdf") + "&name=" + encodeURIComponent(pdfName.value), file.files[0]);
+          await billsPage(); await showBill(value.bill_id); message("PDF bill saved. Check the figures and their source pages.");
+        } finally { send.disabled = false; }
+      }); }; view.append(upload);
     }
     const list = await api(scoped("/api/v1/bills"));
     view.append(node("h2", "Saved bills"));
     for (const bill of list.items) view.append(button(bill.name, () => showBill(bill.bill_id)));
     if (!list.items.length) view.append(node("p", "No saved bills yet. Start with the sample or paste bill text."));
     view.append(node("section", undefined, {id: "bill-detail", "aria-label": "Bill details"}));
+  }
+  function where(evidence) {
+    return (evidence.page ? "Source page " + evidence.page + ", line " : "Source line ") + evidence.line;
   }
   async function showBill(id) {
     const region = document.getElementById("bill-detail");
@@ -183,7 +198,7 @@
     for (const fact of bill.report.facts) {
       const card = node("article");
       card.append(node("h4", fact.label), node("p", fact.state === "found" ? fact.value + " " + fact.unit : "Needs review: " + fact.state));
-      for (const evidence of fact.evidence) card.append(node("p", "Source line " + evidence.line + ": " + evidence.quote));
+      for (const evidence of fact.evidence) card.append(node("p", where(evidence) + ": " + evidence.quote));
       region.append(card);
     }
     const answers = node("section", undefined, {"aria-label": "Bill answer", "aria-live": "polite"});
@@ -192,7 +207,7 @@
       const result = await api(scoped("/api/v1/bills/" + id + "/questions"), {schema_version: 1, question});
       if (!answers.isConnected) return;
       answers.replaceChildren(node("p", result.answer));
-      for (const citation of result.citations) answers.append(node("p", "Source line " + citation.line + ": " + citation.quote));
+      for (const citation of result.citations) answers.append(node("p", where(citation) + ": " + citation.quote));
     };
     for (const question of ["How much do I owe?", "How much electricity did I use?", "What dates does this bill cover?", "What are the charges?"])
       region.append(button(question, () => ask(question)));
@@ -203,7 +218,10 @@
       const result = await api(scoped("/api/v1/bills/" + id + "/source"));
       if (!source.isConnected) return;
       source.replaceChildren(node("h3", "Original bill text"), node("p", "Source fingerprint: " + result.source_sha256));
-      result.lines.forEach((line, index) => source.append(node("p", (index + 1) + ": " + line)));
+      for (const page of result.pages || [{lines: result.lines}]) {
+        if (page.page) source.append(node("h4", "Page " + page.page));
+        page.lines.forEach((line, index) => source.append(node("p", (index + 1) + ": " + line)));
+      }
     }), source);
   }
   async function approvalsPage(cursor) {

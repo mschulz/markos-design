@@ -10,6 +10,9 @@ from pathlib import Path
 from uuid import UUID
 
 from markos_runtime.knowledge.bills import MAX_TEXT_BYTES
+from markos_runtime.knowledge.pdf import MAX_PDF_BYTES
+
+LIMITS = {".txt": MAX_TEXT_BYTES, ".pdf": MAX_PDF_BYTES}
 
 
 class BillObjectError(ValueError):
@@ -42,20 +45,20 @@ class BillObjects:
             folder.mkdir(mode=0o700, exist_ok=True)
         return folder
 
-    def put(self, owner: UUID, domain: str, body: bytes) -> str:
-        if not body or len(body) > MAX_TEXT_BYTES:
+    def put(self, owner: UUID, domain: str, body: bytes, suffix: str = ".txt") -> str:
+        if not body or len(body) > LIMITS[suffix]:
             raise BillObjectError("bounded bill original required")
         digest = hashlib.sha256(body).hexdigest()
         folder = self.folder(owner, domain)
         descriptor = os.open(folder / ".lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
         with os.fdopen(descriptor, "rb") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
-            path = folder / (digest + ".txt")
+            path = folder / (digest + suffix)
             if path.exists() or path.is_symlink():
-                if self.read(owner, domain, digest) != body:
+                if self.read(owner, domain, digest, suffix) != body:
                     raise BillObjectError("bill original integrity check failed")
                 return digest
-            if sum(1 for p in folder.glob("*.txt")) >= 100:
+            if sum(1 for p in folder.iterdir() if p.suffix in LIMITS) >= 100:
                 raise BillObjectError("preview bill storage limit reached")
             with tempfile.NamedTemporaryFile(dir=folder, prefix=".writing-", delete=False) as file:
                 temporary = Path(file.name)
@@ -68,17 +71,17 @@ class BillObjects:
                     temporary.unlink(missing_ok=True)
         return digest
 
-    def read(self, owner: UUID, domain: str, digest: str) -> bytes:
+    def read(self, owner: UUID, domain: str, digest: str, suffix: str = ".txt") -> bytes:
         if not re.fullmatch(r"[a-f0-9]{64}", digest):
             raise BillObjectError("invalid bill source reference")
         descriptor = os.open(
-            self.folder(owner, domain) / (digest + ".txt"), os.O_RDONLY | os.O_NOFOLLOW
+            self.folder(owner, domain) / (digest + suffix), os.O_RDONLY | os.O_NOFOLLOW
         )
         with os.fdopen(descriptor, "rb") as source:
             info = os.fstat(source.fileno())
-            if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= MAX_TEXT_BYTES:
+            if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= LIMITS[suffix]:
                 raise BillObjectError("invalid bill original")
-            body = source.read(MAX_TEXT_BYTES + 1)
+            body = source.read(LIMITS[suffix] + 1)
         if hashlib.sha256(body).hexdigest() != digest:
             raise BillObjectError("bill original integrity check failed")
         return body
