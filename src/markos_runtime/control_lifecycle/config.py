@@ -25,10 +25,12 @@ class ControlServiceConfig(ControlValue):
         "consumer",
         "activity",
         "worker",
+        "google",
+        "mail",
     ]
     owner_id: UUID
     domain: Domain
-    service_id: Literal["control-gateway", "control-test-agent", "control-activity"]
+    service_id: Literal["control-gateway", "control-test-agent", "control-activity", "control-mail"]
     api_origin: str = "https://127.0.0.1:18443"
     issuer_endpoint: str = "https://127.0.0.1:19444/fixture"
     tool_endpoint: str = "https://127.0.0.1:19443/mcp"
@@ -52,6 +54,26 @@ class ControlServiceConfig(ControlValue):
     fixture_admin_secret_ref: ControlSecretRef = "MARKOS_CONTROL_FIXTURE_ADMIN_TOKEN"
     session_key_secret_ref: ControlSecretRef = "MARKOS_CONTROL_SESSION_KEY"
     bill_objects_path: str | None = None
+    # Mail is off unless set on the gateway and the mail process. Google is the fixture Google.
+    mail_enabled: bool = False
+    google_endpoint: str = "https://127.0.0.1:19445"
+    google_client_id: str = Field(
+        default="markos-fixture.apps.googleusercontent.test",
+        pattern=r"^[a-z0-9.-]{1,128}\.apps\.googleusercontent\.test$",
+    )
+    google_client_secret_ref: ControlSecretRef = "MARKOS_CONTROL_GOOGLE_CLIENT_SECRET"
+    google_admin_secret_ref: ControlSecretRef = "MARKOS_CONTROL_GOOGLE_ADMIN_TOKEN"
+    mail_database_secret_ref: ControlSecretRef = "MARKOS_CONTROL_MAIL_DATABASE_DSN"
+    mail_token_key_secret_ref: ControlSecretRef = "MARKOS_CONTROL_MAIL_TOKEN_KEY"
+    mail_worker_public_key: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{43}=$")
+    push_account: str = Field(
+        default="gmail-push@markos-fixture.iam.gserviceaccount.test",
+        pattern=r"^[a-z0-9-]{1,64}@[a-z0-9-]{1,64}\.iam\.gserviceaccount\.test$",
+    )
+    pubsub_topic: str = Field(
+        default="projects/markos-fixture/topics/gmail",
+        pattern=r"^projects/[a-z][a-z0-9-]{1,62}/topics/[A-Za-z][A-Za-z0-9._-]{1,254}$",
+    )
     shutdown_seconds: Literal[15] = 15
     work_seconds: Literal[10] = 10
     real_accounts_enabled: Literal[False] = False
@@ -69,10 +91,15 @@ class ControlServiceConfig(ControlValue):
             raise ValueError("fixed isolated broker management required")
         return value
 
-    @field_validator("api_origin", "issuer_endpoint", "tool_endpoint")
+    @field_validator("api_origin", "issuer_endpoint", "tool_endpoint", "google_endpoint")
     @classmethod
     def endpoints(cls, value: str, info: ValidationInfo) -> str:
-        path = {"api_origin": "", "issuer_endpoint": "/fixture", "tool_endpoint": "/mcp"}
+        path = {
+            "api_origin": "",
+            "issuer_endpoint": "/fixture",
+            "tool_endpoint": "/mcp",
+            "google_endpoint": "",
+        }
         loopback_https(value, paths=frozenset({path[str(info.field_name)]}))
         return value
 
@@ -97,11 +124,17 @@ class ControlServiceConfig(ControlValue):
     @model_validator(mode="after")
     def role(self) -> Self:
         if self.bill_objects_path is not None and (
-            self.component != "gateway"
+            self.component not in {"gateway", "mail"}
             or not Path(self.bill_objects_path).is_absolute()
             or ".." in Path(self.bill_objects_path).parts
         ):
-            raise ValueError("bill originals require an explicit gateway-only directory")
+            raise ValueError("bill originals require an explicit gateway or mail directory")
+        if self.mail_enabled != (self.component == "mail") and self.component != "gateway":
+            raise ValueError("mail settings are for the gateway and the mail process only")
+        if (self.mail_worker_public_key is not None) != (
+            self.component == "gateway" and self.mail_enabled
+        ):
+            raise ValueError("a mail gateway requires the mail worker public key")
         expected = {
             "gateway": "control-gateway",
             "issuer": "control-gateway",
@@ -111,6 +144,8 @@ class ControlServiceConfig(ControlValue):
             "consumer": "control-test-agent",
             "activity": "control-activity",
             "worker": "control-test-agent",
+            "google": "control-gateway",
+            "mail": "control-mail",
         }
         if self.service_id != expected[self.component]:
             raise ValueError("fixed component/service binding required")
@@ -120,9 +155,10 @@ class ControlServiceConfig(ControlValue):
                     self.api_origin,
                     self.issuer_endpoint.removesuffix("/fixture"),
                     self.tool_endpoint.removesuffix("/mcp"),
+                    self.google_endpoint,
                 }
             )
-            != 3
+            != 4
         ):
             raise ValueError("distinct listeners required")
         return self

@@ -1,6 +1,6 @@
 # M2 Gmail ingestion plan
 
-Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. M2-C1 is implemented in migration 0021, `mail/optin.py` and `mail/sealing.py`. M2-C2 is implemented in `src/markos_runtime/api/mail_connect.py` and the web Mail page. M2-D is implemented in migration 0022 and `mail/bills.py`. M2-E is in progress: E1 records the gate checklist below. E2 adds the real Google clients in `mail/google.py`. Owner decisions are under "Decisions".
+Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. M2-C1 is implemented in migration 0021, `mail/optin.py` and `mail/sealing.py`. M2-C2 is implemented in `src/markos_runtime/api/mail_connect.py` and the web Mail page. M2-D is implemented in migration 0022 and `mail/bills.py`. M2-E is in progress: E1 records the gate checklist below. E2 adds the real Google clients in `mail/google.py`. E3 runs them in the synthetic fixture process against a fixture Google. Owner decisions are under "Decisions".
 
 M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and keeps a processing status for each one. The "message ingested" event moves to M3. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
 
@@ -43,7 +43,8 @@ Each step is reviewed and merged separately. M2-A to M2-D use only a fake Gmail 
 6. **M2-E real-account gate:** a checklist the owner approves before MarkOS connects to the real mailbox. It covers the Google Cloud project, OAuth client, Pub/Sub topic and its publisher grant, the push subscription with its service account and audience, the public endpoint URL and certificate, the acknowledgement deadline, a dead-letter topic, secret storage, the host it runs on, and the retention decision. No code runs against real Gmail before this gate. M2-E is three PRs:
    - **M2-E1 checklist:** docs only. It records the owner's decisions, the facts checked against Google's documentation, and the gate checklist.
    - **M2-E2 Google clients:** the real consent client and the real Gmail API client, using `httpx2`. Tests run them against an in-process fake Google built on the fake Gmail, and never call Google.
-   - **M2-E3 config and wiring:** load the OAuth client, the token keys and the push settings from config, and start the routes and the worker from them. Mail stays off by default.
+   - **M2-E3 fixture wiring:** the synthetic fixture process runs the real clients against a fixture Google, `control_lifecycle/google_fixture.py`. It serves Google's OAuth, Gmail and push-key paths under one loopback origin. The gateway gets the Mail routes and the alert route, and a new mail process runs the worker pass. Mail is off unless `mail_enabled` is set on the gateway and the mail process. The process test connects in the browser, sends a signed push, checks the sync and disconnects.
+     The fixture profile still fixes `real_accounts_enabled` to false. Loading the real OAuth client, the token key and the push settings for a real mailbox waits for the production profile in M7.
 
 ## Tests
 
@@ -109,8 +110,8 @@ The owner approves every item before MarkOS connects to the real mailbox. `<host
    - Acknowledgement deadline: the default 10 seconds. The endpoint only records the alert.
    - Message retention: the default 7 days. Expiry: never.
 7. **Dead-letter topic.** A dead-letter topic with 5 delivery attempts. The grants the Pub/Sub service agent needs for it are checked on Google's dead-letter page at setup.
-8. **Secrets.** The OAuth client secret and the mail worker's private key are stored as M2-E3 sets out. Neither is in the repository, the logs or the browser.
-9. **Code.** M2-E2 and M2-E3 are merged. Mail is still off until the owner turns it on.
+8. **Secrets.** The OAuth client secret and the mail worker's private key are stored as the M7 production profile sets out. M2-E3 reads them from secret references, as the fixture process does. Neither is in the repository, the logs or the browser.
+9. **Code.** M2-E2, M2-E3 and the M7 production profile are merged. Mail is still off until the owner turns it on.
 10. **First connect.** The owner connects from the Mail page, picks the label allowlist and checks the first sync and the status counts. Two details of `mail/google.py` are checked against real Gmail only at this point:
     - The partial-response selector for message parts. It reads five levels of MIME parts and asks for no body data or file names. A wrong selector makes Gmail answer HTTP 400.
     - The watch filter value `INCLUDE`. Google's guide writes it in capitals and the reference page in lower case.

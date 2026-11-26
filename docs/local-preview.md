@@ -9,7 +9,7 @@ and data only. It is not a deployment manifest.
 - A fresh checkout or folder. Setup refuses to overwrite an existing preview's
   private state.
 - Python 3.13, uv, OpenSSL and local Docker Compose. No cloud account.
-- Free loopback ports: 5672, 15672, 18443, 19443, 19444.
+- Free loopback ports: 5672, 15672, 18443, 19443, 19444, 19445.
 - PostgreSQL publishes on 5432 by default. If another local database uses it, set
   `MARKOS_PREVIEW_POSTGRES_PORT` to a free port before **every** setup, start and
   stop command. Never stop an existing database to make room.

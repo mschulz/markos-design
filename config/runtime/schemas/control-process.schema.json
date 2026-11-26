@@ -65,7 +65,9 @@
         "completion-publisher",
         "consumer",
         "activity",
-        "worker"
+        "worker",
+        "google",
+        "mail"
       ],
       "title": "Component",
       "type": "string"
@@ -103,6 +105,29 @@
     },
     "fixture_state_file": {
       "title": "Fixture State File",
+      "type": "string"
+    },
+    "google_admin_secret_ref": {
+      "default": "MARKOS_CONTROL_GOOGLE_ADMIN_TOKEN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Google Admin Secret Ref",
+      "type": "string"
+    },
+    "google_client_id": {
+      "default": "markos-fixture.apps.googleusercontent.test",
+      "pattern": "^[a-z0-9.-]{1,128}\\.apps\\.googleusercontent\\.test$",
+      "title": "Google Client Id",
+      "type": "string"
+    },
+    "google_client_secret_ref": {
+      "default": "MARKOS_CONTROL_GOOGLE_CLIENT_SECRET",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Google Client Secret Ref",
+      "type": "string"
+    },
+    "google_endpoint": {
+      "default": "https://127.0.0.1:19445",
+      "title": "Google Endpoint",
       "type": "string"
     },
     "health_port": {
@@ -143,6 +168,36 @@
       "title": "Listen Host",
       "type": "string"
     },
+    "mail_database_secret_ref": {
+      "default": "MARKOS_CONTROL_MAIL_DATABASE_DSN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Mail Database Secret Ref",
+      "type": "string"
+    },
+    "mail_enabled": {
+      "default": false,
+      "title": "Mail Enabled",
+      "type": "boolean"
+    },
+    "mail_token_key_secret_ref": {
+      "default": "MARKOS_CONTROL_MAIL_TOKEN_KEY",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Mail Token Key Secret Ref",
+      "type": "string"
+    },
+    "mail_worker_public_key": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9_-]{43}=$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Mail Worker Public Key"
+    },
     "migrate_on_start": {
       "const": false,
       "default": false,
@@ -161,6 +216,18 @@
     "profile": {
       "const": "control-process-fixture-v1",
       "title": "Profile",
+      "type": "string"
+    },
+    "pubsub_topic": {
+      "default": "projects/markos-fixture/topics/gmail",
+      "pattern": "^projects/[a-z][a-z0-9-]{1,62}/topics/[A-Za-z][A-Za-z0-9._-]{1,254}$",
+      "title": "Pubsub Topic",
+      "type": "string"
+    },
+    "push_account": {
+      "default": "gmail-push@markos-fixture.iam.gserviceaccount.test",
+      "pattern": "^[a-z0-9-]{1,64}@[a-z0-9-]{1,64}\\.iam\\.gserviceaccount\\.test$",
+      "title": "Push Account",
       "type": "string"
     },
     "real_accounts_enabled": {
@@ -184,7 +251,8 @@
       "enum": [
         "control-gateway",
         "control-test-agent",
-        "control-activity"
+        "control-activity",
+        "control-mail"
       ],
       "title": "Service Id",
       "type": "string"

@@ -133,6 +133,21 @@ class ControlService:
                 raise FatalServiceError("separate fixture scopes required")
             app = issuer_app(issuer, cfg.issuer_endpoint, *tokens)
             port = urlsplit(cfg.issuer_endpoint).port
+        elif cfg.component == "google":
+            from markos_runtime.api.mail_alerts import ALERT_PATH
+            from markos_runtime.api.mail_connect import CALLBACK_PATH
+            from markos_runtime.control_lifecycle.google_fixture import google_app
+
+            app = google_app(
+                cfg.google_endpoint,
+                cfg.google_client_id,
+                secret(env, cfg.google_client_secret_ref),
+                cfg.api_origin + CALLBACK_PATH,
+                cfg.api_origin + ALERT_PATH,
+                cfg.push_account,
+                secret(env, cfg.google_admin_secret_ref),
+            )
+            port = urlsplit(cfg.google_endpoint).port
         else:
             from markos_runtime.control_lifecycle.mcp_fixture import mcp_app
 
@@ -169,6 +184,10 @@ class ControlService:
             store: Any
             if cfg.component == "gateway":
                 store = await stack.enter_async_context(ControlStore.connect(dsn))
+            elif cfg.component == "mail":
+                from markos_runtime.mail.store import MailStore
+
+                store = await stack.enter_async_context(MailStore.connect(dsn, max_connections=2))
             else:
                 store = await stack.enter_async_context(
                     DurableStore.connect(dsn, max_connections=2)
@@ -180,7 +199,20 @@ class ControlService:
             publisher = None
             worker = None
             plain_worker = None
+            mail_access = None
+            mail_objects = None
             server_task = None
+            google = None
+            if cfg.mail_enabled:
+                import ssl
+
+                from markos_runtime.mail.google import GoogleEndpoints, OAuthClient, google_http
+
+                trust = ssl.create_default_context(cafile=cfg.ca_file)
+                http = google_http(trust)
+                stack.push_async_callback(http.aclose)
+                oauth = OAuthClient(cfg.google_client_id, secret(env, cfg.google_client_secret_ref))
+                google = (oauth, http, GoogleEndpoints.at(cfg.google_endpoint))
             if cfg.component in {"gateway", "worker"}:
                 issuer = RemoteFixtureIssuer(
                     cfg.issuer_endpoint,
@@ -211,6 +243,30 @@ class ControlService:
                     profile = SyntheticBillApiConfig(
                         **profile.model_dump(), bill_profile="bill-text-v1"
                     )
+                mail_connect = mail_alerts = None
+                if google is not None:
+                    from markos_runtime.api.mail_alerts import (
+                        ALERT_PATH,
+                        GoogleKeys,
+                        MailAlerts,
+                        PushIdentity,
+                    )
+                    from markos_runtime.api.mail_connect import MailConnect
+                    from markos_runtime.mail.google import GoogleConsent
+                    from markos_runtime.mail.store import MailStore
+
+                    mail_dsn = secret(env, cfg.mail_database_secret_ref)
+                    isolated_dsn(mail_dsn, ("markos_test_", "markos_m1g"))
+                    mail_store = await stack.enter_async_context(
+                        MailStore.connect(mail_dsn, max_connections=2)
+                    )
+                    public = base64.urlsafe_b64decode(str(cfg.mail_worker_public_key))
+                    mail_connect = MailConnect(GoogleConsent(*google), public)
+                    mail_alerts = MailAlerts(
+                        PushIdentity(cfg.api_origin + ALERT_PATH, cfg.push_account),
+                        GoogleKeys(cfg.google_endpoint + "/oauth2/v3/certs", trust),
+                        mail_store,
+                    )
                 app = create_app(
                     profile,
                     store,
@@ -218,6 +274,8 @@ class ControlService:
                     session_key=key,
                     confirm_synthetic=True,
                     bill_objects=objects,
+                    mail_alerts=mail_alerts,
+                    mail_connect=mail_connect,
                 )
                 server_task = asyncio.create_task(
                     self.http_server(app, int(urlsplit(cfg.api_origin).port or 0))
@@ -246,6 +304,18 @@ class ControlService:
                     confirm_synthetic=True,
                     timeout_seconds=cfg.work_seconds,
                 )
+            elif cfg.component == "mail" and google is not None:
+                from markos_runtime.knowledge.objects import BillObjects
+                from markos_runtime.mail.google import GoogleGmailAccess
+                from markos_runtime.mail.sealing import TokenKey
+
+                key = base64.urlsafe_b64decode(secret(env, cfg.mail_token_key_secret_ref))
+                oauth, http, endpoints = google
+                mail_access = GoogleGmailAccess(
+                    oauth, TokenKey(key), cfg.pubsub_topic, http, endpoints
+                )
+                if cfg.bill_objects_path is not None:
+                    mail_objects = BillObjects(Path(cfg.bill_objects_path))
             elif cfg.component in {"publisher", "completion-publisher", "consumer", "activity"}:
                 raw = secret(env, cfg.broker_secret_ref)
                 target = endpoint(raw)
@@ -289,6 +359,10 @@ class ControlService:
                                 if not broker.connection.connected.is_set():
                                     raise StorageError("broker unavailable")
                                 await publisher.publish_once()
+                            if mail_access is not None:
+                                from markos_runtime.mail.worker import run_once
+
+                                await run_once(mail_access, store, mail_objects)
                             if worker:
                                 handled = await worker.run_once()
                                 if not handled and plain_worker:
@@ -297,7 +371,7 @@ class ControlService:
                                 raise StorageError("broker unavailable")
                             role = (
                                 "worker"
-                                if cfg.component == "worker"
+                                if cfg.component in {"worker", "mail"}
                                 else "publisher"
                                 if cfg.component in {"publisher", "completion-publisher"}
                                 else "consumer"
@@ -328,7 +402,7 @@ class ControlService:
             for name in (signal.SIGTERM, signal.SIGINT):
                 loop.add_signal_handler(name, self.request_stop)
             try:
-                if self.config.component in {"issuer", "mcp"}:
+                if self.config.component in {"issuer", "mcp", "google"}:
                     await self.fixtures()
                 else:
                     while not self.stop.is_set():

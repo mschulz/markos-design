@@ -34,8 +34,10 @@ class SigningKeys(Protocol):
 class GoogleKeys:
     """Google's published signing keys. PyJWT caches them and refetches for an unknown kid."""
 
-    def __init__(self, url: str = GOOGLE_KEYS_URL) -> None:
-        self._client = jwt.PyJWKClient(url, cache_keys=True, lifespan=3600, timeout=5)
+    def __init__(self, url: str = GOOGLE_KEYS_URL, ssl_context: Any = None) -> None:
+        self._client = jwt.PyJWKClient(
+            url, cache_keys=True, lifespan=3600, timeout=5, ssl_context=ssl_context
+        )
 
     async def key(self, kid: str) -> Any:
         return (await asyncio.to_thread(self._client.get_signing_key, kid)).key
