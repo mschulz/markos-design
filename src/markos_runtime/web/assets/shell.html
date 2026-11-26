@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ title }} · MarkOS</title><link rel="stylesheet" href="/app/assets/app.css"><script src="/app/assets/app.js" defer></script></head>
 <body data-page="{{ page }}"><a class="skip" href="#main">Skip to content</a><header><a class="brand" href="/app/conversations">MarkOS</a><span class="badge">Demo workspace</span><div id="account"></div></header>
-<nav aria-label="Main navigation">{% if bill_knowledge %}<a href="/app/bills">Electricity bills</a>{% endif %}<a href="/app/conversations">Conversations</a><a href="/app/agents">Agents and health</a><a href="/app/activity">Activity</a><a href="/app/approvals">Approvals</a><a href="/app/configuration">Configuration</a></nav>
+<nav aria-label="Main navigation">{% if bill_knowledge %}<a href="/app/bills">Electricity bills</a>{% endif %}<a href="/app/conversations">Conversations</a>{% if mail %}<a href="/app/mail">Mail</a>{% endif %}<a href="/app/agents">Agents and health</a><a href="/app/activity">Activity</a><a href="/app/approvals">Approvals</a><a href="/app/configuration">Configuration</a></nav>
 <div class="scope" id="scope-bar" hidden><label for="scope">Workspace</label><select id="scope"></select><span id="roles"></span></div>
 <main id="main" tabindex="-1"><h1>{{ title }}</h1><p id="notice" role="status" aria-live="polite"></p><section id="view" aria-label="{{ title }}">
 {% if page == 'sign-in' %}<p>Sign in to the demo workspace.</p><button id="begin-login">Sign in</button>

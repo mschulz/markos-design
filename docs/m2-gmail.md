@@ -1,6 +1,6 @@
 # M2 Gmail ingestion plan
 
-Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. M2-C1 is implemented in migration 0021, `mail/optin.py` and `mail/sealing.py`. Owner decisions are under "Decisions".
+Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. M2-C1 is implemented in migration 0021, `mail/optin.py` and `mail/sealing.py`. M2-C2 is implemented in `src/markos_runtime/api/mail_connect.py` and the web Mail page. Owner decisions are under "Decisions".
 
 M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and keeps a processing status for each one. The "message ingested" event moves to M3. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
 
@@ -38,6 +38,7 @@ Six PRs, each reviewed and merged separately. M2-A to M2-D use only a fake Gmail
 4. **M2-C owner opt-in**, in two PRs:
    - **M2-C1 storage and rules:** sealed token storage, connect, label and disconnect functions for administrators, audit, and the worker's disconnect pass. Tests use a placeholder token and the fake Gmail.
    - **M2-C2 OAuth flow:** the browser connect and disconnect pages and the OAuth exchange with PKCE. Tests use a fixture OAuth provider.
+     The routes and the Mail page exist only when the gateway gets an explicit consent adapter and the worker's public key. The real Google consent client, and where its secrets and keys are stored, are part of the M2-E gate.
 5. **M2-D bills from a label:** PDF attachments in one owner-chosen label go through the existing K1 PDF import. Size, type and page limits apply. Duplicates are skipped by SHA-256. Bills from an unknown supplier are counted and left for review.
 6. **M2-E real-account gate:** a checklist the owner approves before MarkOS connects to the real mailbox. It covers the Google Cloud project, OAuth client, Pub/Sub topic and its publisher grant, the push subscription with its service account and audience, the public endpoint URL and certificate, the acknowledgement deadline, a dead-letter topic, secret storage, the host it runs on, and the retention decision. No code runs against real Gmail before this gate.
 
