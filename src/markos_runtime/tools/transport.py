@@ -28,6 +28,10 @@ class ToolProtocolError(ValueError):
         super().__init__("synthetic tool unavailable")
 
 
+class ToolUnavailable(ToolProtocolError):
+    """No HTTP response before the deadline: refused, reset or timed out. Never a TLS failure."""
+
+
 def strict_json(body: bytes) -> dict[str, Any]:
     try:
         answer = loads_strict(body, 1048576)
@@ -61,6 +65,9 @@ class FixtureTransport:
     def __init__(self, config: FixtureConnection, *, confirm_synthetic: bool = False) -> None:
         if confirm_synthetic is not True or not isinstance(config, FixtureConnection):
             raise ToolProtocolError()
+        # Load the SDK now, so a cold import never spends an inspect deadline.
+        import mcp.types  # type: ignore[import-not-found]  # noqa: F401
+
         self.config = config
 
     def _request(
@@ -89,8 +96,10 @@ class FixtureTransport:
             **request.model_dump(mode="json", by_alias=True, exclude_none=True),
         }
         body = json.dumps(document, ensure_ascii=True, allow_nan=False).encode()
-        if len(body) > 65536 or deadline <= time.monotonic():
+        if len(body) > 65536:
             raise ToolProtocolError()
+        if deadline <= time.monotonic():
+            raise ToolUnavailable()
         parsed = urlsplit(self.config.endpoint)
         context = ssl.create_default_context(cafile=str(self.config.ca_file))
         connection = http.client.HTTPSConnection(
@@ -111,12 +120,14 @@ class FixtureTransport:
             if params.get("name") != "fixture.read":
                 raise ToolProtocolError()
             headers["Mcp-Name"] = "fixture.read"
+        answered = False
         try:
             with bounded_connection(connection, deadline):
                 connection.request("POST", "/mcp", body=body, headers=headers)
                 if connection.sock:
                     connection.sock.settimeout(max(0.001, min(10, deadline - time.monotonic())))
                 response = connection.getresponse()
+                answered = True
                 if (
                     response.status != 200
                     or response.getheader("Content-Encoding", "identity") != "identity"
@@ -216,7 +227,13 @@ class FixtureTransport:
                 if result.get("resultType", "complete") != "complete":
                     raise ToolProtocolError()
                 return result
-        except (OSError, ValueError, http.client.HTTPException):
+        except (OSError, ValueError, http.client.HTTPException) as error:
+            # Only a missing response is an outage. TLS failures and any answer stay mismatches.
+            if not answered and not isinstance(error, ssl.SSLError):
+                if isinstance(error, (ConnectionError, TimeoutError)):
+                    raise ToolUnavailable() from None
+                if time.monotonic() >= deadline:
+                    raise ToolUnavailable() from None
             raise ToolProtocolError() from None
         finally:
             connection.close()
@@ -251,6 +268,8 @@ class FixtureTransport:
                 raise ToolProtocolError()
             if len(tool.description or "") > 512:
                 raise ToolProtocolError()
+        except ToolUnavailable:
+            raise
         except Exception:
             raise ToolProtocolError() from None
 

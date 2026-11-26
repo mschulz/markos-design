@@ -388,7 +388,10 @@ A grant binds owner, domain, agent, server and endpoint, tool, input-schema
 digest, data class, recipient, effect and budget. Missing or unclassifiable
 fields deny. Discovery never enables a tool, and annotations are untrusted. A
 changed tool, schema, endpoint or capability disables the grant and invalidates
-pending approvals. A result cannot request another call, and a returned URL
+pending approvals. A tool server that gives no response (refused, reset or
+timed out) keeps the grant: the approved call is deferred and retried, and it
+still needs a successful check before dispatch. A TLS failure or any wrong
+answer disables the grant. A result cannot request another call, and a returned URL
 authorizes nothing. Classify disclosure as well as effect: a read can leak
 private arguments.
 
