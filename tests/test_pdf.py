@@ -13,6 +13,8 @@ from markos_runtime.knowledge.objects import BillObjectError, BillObjects
 from markos_runtime.knowledge.pdf import MAX_PDF_BYTES, PdfError, read_pages
 from tests.pdf_support import amber_pdf, make_pdf
 
+# The contracts job installs no control extra, so pypdf may be absent.
+pytest.importorskip("pypdf")
 OWNER = UUID("00000000-0000-4000-8000-000000000001")
 
 
@@ -35,7 +37,7 @@ def test_generated_amber_pdf_reads_into_reconciled_facts() -> None:
 
 
 def test_bad_input_is_rejected_with_a_bounded_code() -> None:
-    from pypdf import PdfWriter
+    from pypdf import PdfWriter  # type: ignore[import-not-found]
 
     writer = PdfWriter()
     writer.add_blank_page(595, 842)

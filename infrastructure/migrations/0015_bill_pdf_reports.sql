@@ -1,5 +1,5 @@
 -- K1-B: accept Amber Electric PDF reports. Originals stay in the private object adapter.
-ALTER TABLE markos_control.bill_records DROP CONSTRAINT bill_records_report_check;
+ALTER TABLE markos_control.bill_records DROP CONSTRAINT bill_records_check;
 ALTER TABLE markos_control.bill_records ADD CONSTRAINT bill_records_report_check CHECK((
  report->>'source_sha256'=source_sha256 AND jsonb_typeof(report->'facts')='array'
  AND ((report->>'extractor'='bill-text-v1' AND jsonb_array_length(report->'facts')=6)

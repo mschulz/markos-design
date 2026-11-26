@@ -65,7 +65,7 @@ async def read_pages(body: bytes) -> list[str]:
 
 
 def parse(data: bytes) -> list[str]:
-    from pypdf import PdfReader
+    from pypdf import PdfReader  # type: ignore[import-not-found]
 
     if len(data) > MAX_PDF_BYTES:
         raise PdfError("too-large")
