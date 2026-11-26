@@ -15,7 +15,7 @@ tags:
 
 ## Authorized environment
 
-This procedure describes the synthetic GitHub-hosted CI harness in [[MarkOS v0.3 M0-F Lifecycle and Closeout]]. It is not an instruction to deploy on DigitalOcean/Supabase, attach accounts or run destructive tests on a personal/shared Docker host. Test project names are unique `markos-m0f-<run-id>-<attempt>` values; helpers verify hosted-runner/local-socket context and container ownership labels. Do not bypass those guards. No personal folder, archive package or production credentials enter the image.
+This procedure describes the synthetic GitHub-hosted CI harness in [[docs/decisions|decisions]]. It is not an instruction to deploy on DigitalOcean/Supabase, attach accounts or run destructive tests on a personal/shared Docker host. Test project names are unique `markos-m0f-<run-id>-<attempt>` values; helpers verify hosted-runner/local-socket context and container ownership labels. Do not bypass those guards. No personal folder, archive package or production credentials enter the image.
 
 ## Validation and startup
 
@@ -42,7 +42,7 @@ SIGTERM removes readiness, drains bounded active work and closes resources. The 
 
 ## Future production recovery and alerts
 
-Before any production data, choose object/backup storage, encryption/key custody, independent deletion/hold records, backup schedule/restore owner, approved RPO/RTO and a separately hosted notification route. Isolate or revoke all previous writers before restoring; a generation in one database cannot fence an old database or revoke external credentials. Reconcile unknown provider outcomes and approvals before enabling effects. Retention of MCP audit records is governed separately by [[ADR-005 Governed MCP Access for Agents]], not by the 30/90-day operational event windows.
+Before any production data, choose object/backup storage, encryption/key custody, independent deletion/hold records, backup schedule/restore owner, approved RPO/RTO and a separately hosted notification route. Isolate or revoke all previous writers before restoring; a generation in one database cannot fence an old database or revoke external credentials. Reconcile unknown provider outcomes and approvals before enabling effects. Retention of MCP audit records is governed separately by [[docs/decisions|decisions]], not by the 30/90-day operational event windows.
 
 `lifecycle.monitor.monitor_once` has a synthetic loopback-only primary/fallback notification algorithm; tests prove fallback when the primary returns failure and reject remote/redirect endpoints. It is not deployed, independently placed monitoring. Configure and prove real outage notification, provider privacy and escalation ownership through a separate review before production. Routine backups and baseline independent monitoring must precede production data; M7 later hardens these controls. GitHub remains canonical for reviewed procedures; secrets/runtime records remain outside GitHub.
 

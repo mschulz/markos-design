@@ -1,27 +1,18 @@
-.obsidian/workspace.json
-.obsidian/workspace-mobile.json
-
-.DS_Store
-
-.trash/
-
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
 build/
 dist/
 wheels/
 *.egg-info
-
-# macOS metadata
-.DS_Store
-
-# Virtual environments (symlinked outside iCloud sync; see .envrc)
 .venv
 venv
+
+# macOS
+.DS_Store
 
 # Personal Claude Code instructions
 CLAUDE.local.md
 
-# Disposable synthetic control preview credentials/state
+# Disposable synthetic preview credentials and state
 infrastructure/.m1g-preview/
