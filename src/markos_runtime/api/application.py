@@ -400,6 +400,107 @@ def create_app(
             return None
         return seal_cursor(api.codec, page_bound(binding, owner, domain, resource), after)
 
+    def scoped(request: Any, path: str) -> tuple[dict[str, str], UUID, Domain]:
+        params = api.query(
+            request,
+            {"owner_id", "domain", "cursor", "limit"}
+            if path == "/api/v1/activity"
+            else {"owner_id", "domain"},
+        )
+        owner, domain = api.scope(params)
+        return params, owner, domain
+
+    async def me(request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str) -> Any:
+        api.query(request, set())
+        result = await store._call("api_me", ctx.session_id, ctx.lookup_hash)
+        if binding["kind"] == "browser":
+            result["csrf_token"] = api.codec.lookup("csrf", raw)
+        result["bill_knowledge_available"] = bills is not None
+        if governance is not None:
+            from markos_runtime.contracts.governance import SCHEMA_SHA256
+
+            result["synthetic_tool_schema_sha256"] = SCHEMA_SHA256
+        return JSONResponse(result)
+
+    async def logout(request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str) -> Any:
+        ControlValue.from_wire(data)
+        await store._call("api_logout", ctx.session_id, ctx.lookup_hash)
+        response = JSONResponse({"revoked": True})
+        response.delete_cookie(COOKIE, secure=True, httponly=True, samesite="lax", path="/")
+        return response
+
+    async def refresh(
+        request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str
+    ) -> Any:
+        ControlValue.from_wire(data)
+        await api.refresh(ctx, binding)
+        return JSONResponse({"refreshed": True})
+
+    async def save_agent(
+        request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str
+    ) -> Any:
+        api.query(request, set())
+        agent = AgentRevision.from_wire(data)
+        return JSONResponse(
+            wire(await store.save_agent(ctx, agent, expected_revision=agent.revision - 1)),
+            status_code=201,
+        )
+
+    async def save_configuration(
+        request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str
+    ) -> Any:
+        api.query(request, set())
+        return JSONResponse(
+            wire(await store.save_configuration(ctx, ConfigRevision.from_wire(data)))
+        )
+
+    async def set_agent_state(
+        request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str
+    ) -> Any:
+        _, owner, domain = scoped(request, "")
+        return JSONResponse(
+            wire(await store.set_agent_state(ctx, owner, domain, AgentStateRequest.from_wire(data)))
+        )
+
+    async def read_agents(
+        request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str
+    ) -> Any:
+        _, owner, domain = scoped(request, "")
+        return JSONResponse(wire(await store.read_agents(ctx, owner, domain)))
+
+    async def read_configuration(
+        request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str
+    ) -> Any:
+        _, owner, domain = scoped(request, "")
+        return JSONResponse(wire(await store.read_configuration(ctx, owner, domain)))
+
+    async def status(request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str) -> Any:
+        _, owner, domain = scoped(request, "")
+        return JSONResponse(
+            await store._call("api_status", ctx.session_id, ctx.lookup_hash, owner, domain)
+        )
+
+    async def activity(
+        request: Any, data: bytes, ctx: Any, binding: dict[str, Any], raw: str
+    ) -> Any:
+        params, owner, domain = scoped(request, "/api/v1/activity")
+        return JSONResponse(await activity_page(api, request, ctx, binding, owner, domain, params))
+
+    # Signed-in routes. dispatch runs sign-in, CSRF and write checks before the lookup.
+    session_routes = {
+        ("GET", "/api/v1/me"): me,
+        ("POST", "/api/v1/session/logout"): logout,
+        ("POST", "/api/v1/session/refresh"): refresh,
+        ("POST", "/api/v1/agents"): save_agent,
+        ("POST", "/api/v1/configuration/revisions"): save_configuration,
+        ("POST", "/api/v1/agents/control-test-agent/state"): set_agent_state,
+        ("GET", "/api/v1/agents"): read_agents,
+        ("GET", "/api/v1/configuration"): read_configuration,
+        ("GET", "/api/v1/status"): status,
+        ("GET", "/api/v1/activity"): activity,
+    }
+    session_paths = {path for _, path in session_routes}
+
     async def dispatch(request: Request) -> Any:
         response: Any
         path = request.url.path
@@ -581,18 +682,7 @@ def create_app(
             return JSONResponse(
                 {"schema_version": 1, "available": False, "items": [], "reason": "not-enabled"}
             )
-        known = {
-            "/api/v1/me",
-            "/api/v1/agents",
-            "/api/v1/agents/control-test-agent/state",
-            "/api/v1/configuration",
-            "/api/v1/configuration/revisions",
-            "/api/v1/status",
-            "/api/v1/activity",
-            "/api/v1/session/logout",
-            "/api/v1/session/refresh",
-        }
-        if path not in known:
+        if path not in session_paths:
             raise ApiFault("not-found", 404)
         ctx, binding, raw = await api.authenticate(
             request, local_only=path == "/api/v1/session/logout"
@@ -604,69 +694,12 @@ def create_app(
                 api.csrf(request, raw, binding)
             else:
                 await api.write(request, ctx, binding, raw)
-        if path == "/api/v1/me" and method == "GET":
-            api.query(request, set())
-            result = await store._call("api_me", ctx.session_id, ctx.lookup_hash)
-            if binding["kind"] == "browser":
-                result["csrf_token"] = api.codec.lookup("csrf", raw)
-            result["bill_knowledge_available"] = bills is not None
-            if governance is not None:
-                from markos_runtime.contracts.governance import SCHEMA_SHA256
-
-                result["synthetic_tool_schema_sha256"] = SCHEMA_SHA256
-            return JSONResponse(result)
-        if path == "/api/v1/session/logout" and method == "POST":
-            ControlValue.from_wire(data)
-            await store._call("api_logout", ctx.session_id, ctx.lookup_hash)
-            response = JSONResponse({"revoked": True})
-            response.delete_cookie(COOKIE, secure=True, httponly=True, samesite="lax", path="/")
-            return response
-        if path == "/api/v1/session/refresh" and method == "POST":
-            ControlValue.from_wire(data)
-            await api.refresh(ctx, binding)
-            return JSONResponse({"refreshed": True})
-        if path == "/api/v1/agents" and method == "POST":
-            api.query(request, set())
-            agent = AgentRevision.from_wire(data)
-            return JSONResponse(
-                wire(await store.save_agent(ctx, agent, expected_revision=agent.revision - 1)),
-                status_code=201,
-            )
-        if path == "/api/v1/configuration/revisions" and method == "POST":
-            api.query(request, set())
-            return JSONResponse(
-                wire(await store.save_configuration(ctx, ConfigRevision.from_wire(data)))
-            )
-        params = api.query(
-            request,
-            {"owner_id", "domain", "cursor", "limit"}
-            if path == "/api/v1/activity"
-            else {"owner_id", "domain"},
-        )
-        owner, domain = api.scope(params)
-        if path == "/api/v1/agents/control-test-agent/state" and method == "POST":
-            return JSONResponse(
-                wire(
-                    await store.set_agent_state(
-                        ctx, owner, domain, AgentStateRequest.from_wire(data)
-                    )
-                )
-            )
-        if method != "GET":
+        handler = session_routes.get((method, path))
+        if handler is None:
+            # Unknown method: keep the scope checks ahead of 404, as before.
+            scoped(request, path)
             raise ApiFault("not-found", 404)
-        if path == "/api/v1/agents":
-            return JSONResponse(wire(await store.read_agents(ctx, owner, domain)))
-        if path == "/api/v1/configuration":
-            return JSONResponse(wire(await store.read_configuration(ctx, owner, domain)))
-        if path == "/api/v1/status":
-            return JSONResponse(
-                await store._call("api_status", ctx.session_id, ctx.lookup_hash, owner, domain)
-            )
-        if path == "/api/v1/activity":
-            return JSONResponse(
-                await activity_page(api, request, ctx, binding, owner, domain, params)
-            )
-        raise ApiFault("not-found", 404)
+        return await handler(request, data, ctx, binding, raw)
 
     app.add_api_route("/{path:path}", dispatch, methods=["GET", "POST"])
 

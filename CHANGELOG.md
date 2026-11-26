@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-26 — Route table for signed-in API routes
+
+- The 10 signed-in API routes are now named handlers in one `(method, path)` table.
+- Sign-in, CSRF, query and scope checks run in the same order as before, so error codes do not change.
+
 ## 2026-11-26 — Remove duplicated product code
 
 - Shared one chat claim decoder, loopback HTTPS URL check, strict JSON parser and exact int/bool validators.
