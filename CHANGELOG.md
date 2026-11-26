@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-26 — M2 plan: Pub/Sub push delivery
+
+- Owner decision: Gmail alerts arrive by Pub/Sub push to an authenticated HTTPS endpoint, not by pull. The 15-minute backstop poll stays.
+- The plan adds M2-B2, the push endpoint, and the push items in the M2-E checklist.
+
 ## 2026-11-26 — M2-A mailbox records and fake Gmail
 
 - Migration 0019 adds the `mailboxes`, `mail_messages` and `mail_resyncs` tables. Runtime clients have no direct access to them.
