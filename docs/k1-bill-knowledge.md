@@ -134,9 +134,75 @@ Origin was the previous supplier. Most old bills are in Gmail, so this profile l
 - Page 1 shows "Debited on" a date instead of a due date. The profile stores it as the due or debit date.
 - The four Origin samples (Feb–Nov 2025) reconcile. None has a balance brought forward or an estimated read. The newest has no solar meter charge, so that fact is "missing".
 
+## K1-C plan: corrections, history and checked arithmetic
+
+Status: approved, not yet implemented. Owner decisions are under "Decisions".
+
+K1-C makes stored bills trustworthy over time. The owner can correct a figure without losing what the extractor read, compare bills across suppliers, and rely on written arithmetic rules backed by approved examples.
+
+### Starting point
+
+- `bill_records` holds one immutable report per original (migration 0014). Every read parses the original again and checks the report. Nothing can change a stored figure.
+- Three extractors exist: `bill-text-v1` (6 facts), `amber-pdf-v1` (15) and `origin-pdf-v1` (13). They share some fact keys but not all. Amber has `charges_gst` and `credits_gst`. Origin has `gst_included` and `brought_forward`.
+- Answers come from a fixed question list, one bill at a time.
+- Money figures that fail an arithmetic check are `unreconciled`, and answers do not repeat them.
+
+### Design
+
+1. **Corrections stay separate from extraction.** A new append-only table `bill_corrections` holds the bill, fact key, new value, a short required reason, who made it and when. The stored report never changes, and the original-recheck still runs on every read.
+   - The effective value of a fact is the latest correction, or the extracted value if there is none.
+   - Answers and the web page show both: "Corrected by you on <date>: $X (bill shows $Y, page 2 line 27)".
+   - A correction can be withdrawn by a later correction back to the extracted value. Nothing is deleted.
+   - After a correction, the profile's arithmetic checks run again on the effective values. If they pass, the money facts show "reconciled with corrections". If they fail, they stay unreconciled.
+   - Only the operator role (the `chat` permission, as for uploads) can correct. Viewers see corrections.
+2. **One shared fact vocabulary for history.** A small mapping turns each extractor's facts into common figures: period start and end, days, usage kWh, export credit, bill total (GST included), amount owed and balance brought forward. Amber's GST lines are added into its totals, so all totals mean "including GST". Supplier-specific facts stay on the bill page only.
+3. **History view and questions.** A bills history page and `GET /api/v1/bills/history` list bills in period order, across suppliers, with:
+   - total, kWh, cost per day and kWh per day, because Amber bills monthly and Origin quarterly;
+   - gaps or overlaps between billing periods, shown as notices;
+   - unreconciled figures shown as "not established", never as numbers.
+   New fixed questions: "How much electricity did I use each period?" and "How has my bill changed?". Each answer cites the bills it uses.
+4. **Written arithmetic rules.** A "Bill arithmetic rules" section in this document states, for each profile:
+   - GST: whether amounts include it and which lines carry it;
+   - earlier balances: bill total versus amount owed, and how a balance brought forward is shown;
+   - export credits: stored as a positive credit and subtracted from charges;
+   - tariff structures: split-rate quarters, controlled load, demand charges and subscriptions.
+   Each rule names the test that enforces it.
+5. **Approved acceptance examples.** A set of invented bills, one per rule and edge case, each with its expected facts and answers. The owner approves the set before K1-C claims checked arithmetic. Cases include an unpaid earlier balance, a credit bill (negative total), an estimated read and a split-rate quarter.
+6. **Measured extraction coverage.** A local script runs every profile over the owner's private sample folder and prints counts only: bills read, facts found, missing, unreconciled. It never prints values, and its output is not committed. This gives a real accuracy figure before Gmail brings in many more bills.
+
+### Delivery
+
+Three PRs, each reviewed and merged separately:
+
+1. **K1-C1 corrections:** migration 0017 (corrections table and the 500-bill limit), correction API, effective values, re-checked arithmetic, and correction controls on the bill page.
+2. **K1-C2 history:** shared vocabulary, history route and page, and the two new questions.
+3. **K1-C3 rules and acceptance:** the rules section, the approved examples as tests, and the coverage script.
+
+### Tests
+
+- A correction never changes the stored report, and the original-recheck still passes.
+- A withdrawn correction restores the extracted value. The full correction history stays readable.
+- Correcting a wrong figure can make a bill reconcile, and a bad correction makes it unreconciled.
+- Viewers cannot correct. CSRF and scope checks apply, as on other bill writes.
+- History orders mixed Amber and Origin bills by period, finds gaps and overlaps, and never shows an unreconciled figure as a number.
+
+### Decisions
+
+The owner approved these on 2026-11-26.
+
+1. **Who can correct:** only the operator role, with a required reason of up to 200 characters.
+2. **What can be corrected:** any fact, including period and due date.
+3. **History:** one combined history across Amber and Origin, with the supplier shown on each row.
+4. **Acceptance examples:** the four edge cases above plus one ordinary bill per profile. The owner approves the expected answers before C3 merges.
+5. **Bill limit:** raised from 100 to 500 per scope in migration 0017 (K1-C1). Amber bills monthly, so 10 years is 120 bills. 500 holds about 40 years of monthly bills.
+
+### Out of scope
+
+Deleting bills, retention and privacy policy, a hosted object store, Gmail ingestion (M2), and model-written answers. These stay unresolved, as listed below.
+
 ## Next slices and unresolved decisions
 
-- **K1-C review and history:** user-corrected facts kept distinct from extraction, sample bill comparisons, and rules for tax, previous balances, export credits and tariff structures. Approve acceptance examples before claiming bill arithmetic validation.
+- **K1-C review and history:** planned above in [K1-C plan](#k1-c-plan-corrections-history-and-checked-arithmetic).
 - **Then M2 Gmail:** opt-in native ingestion using the existing permission/recovery contract; broad M3 classification and the remaining M4/M5 capabilities follow demonstrated value.
 - Keep real bill/account enablement, hosted object-store provider, privacy/retention/deletion policy, backup/restore of source objects and extraction accuracy on representative documents explicitly unresolved. No real provider, personal bill, model or spend is needed for K1-A review.
 
