@@ -10,8 +10,9 @@ import pytest
 
 from markos_runtime.knowledge.amber import extract_amber, is_amber
 from markos_runtime.knowledge.objects import BillObjectError, BillObjects
+from markos_runtime.knowledge.origin import extract_origin, is_origin
 from markos_runtime.knowledge.pdf import MAX_PDF_BYTES, PdfError, read_pages
-from tests.pdf_support import amber_pdf, make_pdf
+from tests.pdf_support import amber_pdf, make_pdf, origin_pdf
 
 # The contracts job installs no control extra, so pypdf may be absent.
 pytest.importorskip("pypdf")
@@ -34,6 +35,15 @@ def test_generated_amber_pdf_reads_into_reconciled_facts() -> None:
     assert total.value == "47.99" and total.evidence[0].page == 2
     # Reading the same original again gives the same report, so stored facts can be rechecked.
     assert extract_amber(asyncio.run(read_pages(body)), report.source_sha256) == report
+
+
+def test_generated_origin_pdf_reads_into_reconciled_facts() -> None:
+    body = origin_pdf()
+    pages = asyncio.run(read_pages(body))
+    assert len(pages) == 3 and is_origin(pages) and not is_amber(pages)
+    report = extract_origin(pages, hashlib.sha256(body).hexdigest())
+    assert {fact.state for fact in report.facts} == {"found"}
+    assert extract_origin(asyncio.run(read_pages(body)), report.source_sha256) == report
 
 
 def test_bad_input_is_rejected_with_a_bounded_code() -> None:

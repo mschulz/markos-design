@@ -124,6 +124,16 @@ The bill also holds personal data: name, address, account number, NMI, meter num
 - The four sample bills have no unpaid earlier balance, credit bill or estimated read. The extractor flags these for review, and tests use invented examples.
 - The four sample bills are about 300 KiB and 7 pages each, well inside the 2 MiB and 20-page limits.
 
+### Origin Energy profile
+
+Origin was the previous supplier. Most old bills are in Gmail, so this profile lets them be read once Gmail ingestion (M2) exists.
+
+- pypdf puts each table cell on its own line: label, units, price, then amount.
+- A quarter with a price change has one charges table and one exports table per rate period. The state rebate is split the same way.
+- The billing period line can wrap onto a second line.
+- Page 1 shows "Debited on" a date instead of a due date. The profile stores it as the due or debit date.
+- The four Origin samples (Feb–Nov 2025) reconcile. None has a balance brought forward or an estimated read. The newest has no solar meter charge, so that fact is "missing".
+
 ## Next slices and unresolved decisions
 
 - **K1-C review and history:** user-corrected facts kept distinct from extraction, sample bill comparisons, and rules for tax, previous balances, export credits and tariff structures. Approve acceptance examples before claiming bill arithmetic validation.

@@ -42,3 +42,10 @@ def amber_pdf() -> bytes:
     """An invented two-page Amber bill: header page and summary page."""
     plain = str.maketrans({OPEN: " ", CLOSE: " ", DASH: " ", "−": "-"})
     return make_pdf([page1().translate(plain), page2().translate(plain)])
+
+
+def origin_pdf() -> bytes:
+    """An invented three-page Origin Energy bill with one table cell per line."""
+    from tests.test_origin import bill
+
+    return make_pdf(bill())

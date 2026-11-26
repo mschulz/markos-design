@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-26 — K1-B Origin Energy PDF profile
+
+- Added `knowledge/origin.py`, the Origin Energy profile (`origin-pdf-v1`, 13 facts). It reads tables that pypdf splits into one cell per line.
+- A quarter with a price change has two charge and two export tables. The profile adds both, and checks each table against its total.
+- The amount due must equal the bill total plus the balance brought forward. Any mismatch, unknown row or estimated read marks money facts unreconciled.
+- `POST /api/v1/bills/pdf` picks the profile from the bill's text. Reads recheck with the profile named in the stored report.
+- Migration 0016 lets `bill_records` hold `origin-pdf-v1` reports. Migrations 0001–0015 are unchanged.
+
 ## 2026-11-26 — K1-B Amber Electric PDF upload
 
 - Added `POST /api/v1/bills/pdf`: raw `application/pdf` bodies up to 2 MiB and 20 pages. Other routes keep the 64 KiB limit.

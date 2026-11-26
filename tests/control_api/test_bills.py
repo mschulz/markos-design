@@ -184,3 +184,23 @@ def test_pdf_bill_upload_limits_page_citations_and_tamper_check(
             assert status == 503
 
     asyncio.run(scenario())
+
+
+def test_origin_pdf_upload_is_stored_and_rechecked(control: dict[str, Any], tmp_path: Path) -> None:
+    from tests.pdf_support import origin_pdf
+
+    upload = "/api/v1/bills/pdf" + SCOPE + "&name=Origin%20Q1"
+
+    async def scenario() -> None:
+        async with web_server(control, tmp_path, bills=True, prepare_agent=False) as server:
+            client = WebBrowserClient(server["port"], server["cert"])
+            await client.login(server["issuer"], server["credentials"]["both"])
+            headers = {"content-type": "application/pdf"}
+            status, saved = await client.call("POST", upload, headers=headers, raw=origin_pdf())
+            assert status == 201, saved
+            assert saved["report"]["extractor"] == "origin-pdf-v1"
+            assert {f["state"] for f in saved["report"]["facts"]} == {"found"}
+            status, reread = await client.call("GET", "/api/v1/bills/" + saved["bill_id"] + SCOPE)
+            assert status == 200 and reread == saved
+
+    asyncio.run(scenario())
