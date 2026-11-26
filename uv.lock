@@ -383,6 +383,7 @@ dependencies = [
 [package.optional-dependencies]
 control = [
     { name = "fastapi" },
+    { name = "httpx2" },
     { name = "jinja2" },
     { name = "pyjwt", extra = ["crypto"] },
     { name = "pypdf" },
@@ -407,6 +408,7 @@ dev = [
 requires-dist = [
     { name = "aio-pika", specifier = "==10.2.3" },
     { name = "fastapi", marker = "extra == 'control'", specifier = "==0.162.5" },
+    { name = "httpx2", marker = "extra == 'control'", specifier = "==2.16.0" },
     { name = "jinja2", marker = "extra == 'control'", specifier = "==3.1.6" },
     { name = "mcp", marker = "extra == 'tools'", specifier = "==2.3.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.8" },

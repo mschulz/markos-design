@@ -11,7 +11,7 @@ import json
 import re
 import secrets
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict
 from typing import Any, Protocol, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 from uuid import UUID
@@ -23,6 +23,7 @@ from markos_runtime.api.identity import TOKEN_PATTERN, IdentityDenied, challenge
 from markos_runtime.contracts.base import Domain
 from markos_runtime.contracts.control import ControlValue
 from markos_runtime.control.store import ControlConflict, ControlDenied
+from markos_runtime.mail.gmail import ConsentDenied, Grant
 from markos_runtime.mail.optin import MailboxView, MailOptIn
 from markos_runtime.mail.sealing import SealError, seal
 
@@ -31,16 +32,6 @@ CALLBACK_PATH = "/api/v1/mail/callback"
 MAIL_FLOW_COOKIE = "__Host-markos-mail-flow"
 FLOW_SECONDS = 600
 LABEL = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
-
-
-class ConsentDenied(Exception):
-    """The provider refused the code. The message never holds the code or a token."""
-
-
-@dataclass(frozen=True)
-class Grant:
-    refresh_token: str = field(repr=False)
-    address: str = field(repr=False)
 
 
 class GmailConsent(Protocol):
