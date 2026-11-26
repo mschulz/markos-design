@@ -10,7 +10,7 @@ import binascii
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-import jwt
+import jwt  # type: ignore[import-not-found]
 
 from markos_runtime.api.application import ApiFault
 from markos_runtime.contracts.base import loads_strict

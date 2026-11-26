@@ -9,10 +9,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-import jwt
+import jwt  # type: ignore[import-not-found]
 import psycopg
 import pytest
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import rsa  # type: ignore[import-not-found]
 
 from markos_runtime.api.mail_alerts import ALERT_PATH, MailAlerts, PushIdentity, push_history
 from markos_runtime.mail.store import MailStore
@@ -51,7 +51,7 @@ def token(**changes: Any) -> str:
     key, kid = changes.pop("_key", KEY), changes.pop("_kid", "test-kid")
     claims.update(changes)
     claims = {k: v for k, v in claims.items() if v is not None}
-    return jwt.encode(claims, key, algorithm="RS256", headers={"kid": kid})
+    return str(jwt.encode(claims, key, algorithm="RS256", headers={"kid": kid}))
 
 
 def push(history: object, *, urlsafe: bool = False) -> bytes:
