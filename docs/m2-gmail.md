@@ -1,8 +1,8 @@
 # M2 Gmail ingestion plan
 
-Status: approved on 2026-11-26. No slice is started. Owner decisions are under "Decisions".
+Status: approved on 2026-11-26. M2-A is implemented in `src/markos_runtime/mail/` and migration 0019. Owner decisions are under "Decisions".
 
-M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and publishes a generic "message ingested" event. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
+M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and keeps a processing status for each one. The "message ingested" event moves to M3. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
 
 Roadmap acceptance: duplicate and out-of-order mailbox notifications create one durable source record and event, and MarkOS recovers from cursor gaps.
 
@@ -24,7 +24,7 @@ Roadmap acceptance: duplicate and out-of-order mailbox notifications create one 
 4. **Cursor gaps.** If Gmail no longer holds the history for the cursor, MarkOS runs a bounded resync. It lists the allowlisted labels only, back to a fixed start date, and records a "resync" notice.
 5. **Change alerts.** A Gmail watch sends alerts to a Pub/Sub topic. MarkOS reads them with a **pull** subscription, so it needs no public endpoint. An alert only says "something changed". The worker then reads changes by history ID. A database schedule renews the watch daily. Gmail requires renewal at least every 7 days.
 6. **Backstop poll.** A database schedule also reads changes every 15 minutes, so a lost alert delays mail but never loses it.
-7. **Events.** Each new message adds one outbox entry, `v1.mail.message-ingested`, in the same transaction. The event holds IDs and labels, not mail content. RabbitMQ delivers it through reviewed bindings.
+7. **Events.** Moved to M3 on 2026-11-26, owner decision. Every event needs an intended consumer, and nothing consumes mail until M3 classification. M2 stores each message with status `ingested`. M3-D adds the event, its consumer and bindings, and announces stored messages that are still `ingested`. PostgreSQL stays the record, so no mail is lost meanwhile.
 8. **Opt-in and tokens.** The operator connects the mailbox from the web app through Google OAuth with PKCE. The refresh token is encrypted at rest. Disconnecting stops the watch, deletes the token and keeps the stored records. Every connect, disconnect and resync is audited.
 9. **Scope.** `gmail.readonly` is the narrowest scope that can read attachments. Gmail has no per-label scope, so the label allowlist is enforced in MarkOS code and tested.
 
@@ -32,7 +32,7 @@ Roadmap acceptance: duplicate and out-of-order mailbox notifications create one 
 
 Five PRs, each reviewed and merged separately. M2-A to M2-D use only a fake Gmail and synthetic mail.
 
-1. **M2-A mailbox records and fake Gmail:** migration for the mailbox and message tables, a Gmail client interface with an in-memory fake, incremental reads, cursor-gap resync and the outbox event.
+1. **M2-A mailbox records and fake Gmail:** migration for the mailbox and message tables, a Gmail client interface with an in-memory fake, incremental reads and cursor-gap resync. A `can_ingest_mail` grant gates the mail functions. Until M2-C, the synthetic worker opens the mailbox itself with an address hash and label list.
 2. **M2-B alerts and schedules:** the Pub/Sub pull worker, daily watch renewal and the 15-minute backstop poll, as database schedules with leases. Tests use the Pub/Sub emulator or a fake.
 3. **M2-C owner opt-in:** the OAuth connect and disconnect flow for operators, encrypted token storage, label allowlist settings and audit. Tests use a fixture OAuth provider.
 4. **M2-D bills from a label:** PDF attachments in one owner-chosen label go through the existing K1 PDF import. Size, type and page limits apply. Duplicates are skipped by SHA-256. Bills from an unknown supplier are counted and left for review.
