@@ -16,7 +16,7 @@ tags:
 
 ## Baseline
 
-The event-driven product replaces the original MarkOS design. [[docs/decisions|decisions]] records the owner's decision; the older PARA/Markdown/DuckDB/desktop roadmap is superseded, not an unresolved competing baseline.
+The event-driven product replaces the original MarkOS design. [decisions](decisions.md) records the owner's decision; the older PARA/Markdown/DuckDB/desktop roadmap is superseded, not an unresolved competing baseline.
 
 Accepted direction: cloud-first DigitalOcean / Compose, Supabase durable operational state and structured knowledge, RabbitMQ internal bus, source originals in object storage, generated Markdown as a view/export, shared gateway and owner/domain isolation. Broker versions, queue/resource/retention profile and detailed operational targets remain proposals subject to verification.
 
@@ -24,13 +24,13 @@ Accepted direction: cloud-first DigitalOcean / Compose, Supabase durable operati
 
 Use `markos-design` for code, tests, infrastructure and docs together. Leave `markos` untouched. M0.0 import history is archived; preserving it was not approval to build on it. PR #6's contract/config artifacts and PR #7's naming cleanup are prior review material, not automatic prerequisites. Main preserves the legacy application as an archive and includes the independent M0 foundations plus the local M1 control preview through PR #28. The sample-data foundations are implemented; production/operational closeout and the useful Knowledge Base workflow remain distinct gates. K1-A is the next separately reviewable slice, not a deployed service.
 
-`services/runtime/` is a separate project with its own lock and tests. The first gate forbids imports/dependencies on the old package, DuckDB or note-tree configuration. No bulk deletion or code relocation occurs in this documentation PR.
+The runtime (`src/markos_runtime/`) is a separate project with its own lock and tests. The first gate forbids imports/dependencies on the old package, DuckDB or note-tree configuration. No bulk deletion or code relocation occurs in this documentation PR.
 
 ## Lean Knowledge Base priority — 2026-11-26
 
 M0 and the local M1 sample-data control preview are implemented; full production/operational closeout remains open. PRs #26–#28 are merged. The owner has prioritized a useful electricity-bill Knowledge Base MVP over further manual approval-screen testing and over building every ingestion/classification layer first.
 
-**Next: K1 Bill Knowledge MVP**, bringing a small part of M4/M5 forward. K1-A is the separately reviewable working text slice in [[MarkOS v0.3 Lean Bill Knowledge MVP]]: paste/sample bill text → immutable source object → persisted figures → cited answers in the web interface. K1-B adds bounded text-PDF input and page citations; K1-C adds correction/history and measured extraction coverage. Gmail ingestion follows this useful workflow; M2–M8 identifiers and broader outcomes remain intact. Current M1 approval regression checks stay automated. Neither cloud deployment nor personal-data enablement is implied.
+**Next: K1 Bill Knowledge MVP**, bringing a small part of M4/M5 forward. K1-A is the separately reviewable working text slice in [MarkOS v0.3 Lean Bill Knowledge MVP](k1-bill-knowledge.md): paste/sample bill text → immutable source object → persisted figures → cited answers in the web interface. K1-B adds bounded text-PDF input and page citations; K1-C adds correction/history and measured extraction coverage. Gmail ingestion follows this useful workflow; M2–M8 identifiers and broader outcomes remain intact. Current M1 approval regression checks stay automated. Neither cloud deployment nor personal-data enablement is implied.
 
 ## Delivery sequence
 
@@ -47,7 +47,7 @@ M0 and the local M1 sample-data control preview are implemented; full production
 | M7 Operations | CLI/replay/metrics, backup/restore and replacement drills | Measured approved recovery targets; independent alerts and operation with MacBook off |
 | M8 Expansion | Additional agents/integrations | Add subscriber without producer rewrite or permission bypass |
 
-[[docs/decisions|decisions]] breaks M0 into reviewable slices and acceptance cases. Old M0–M16 completion records do not transfer to this sequence. Baseline backup/monitoring design belongs in M0 before real data; M7 proves and hardens it.
+[decisions](decisions.md) breaks M0 into reviewable slices and acceptance cases. Old M0–M16 completion records do not transfer to this sequence. Baseline backup/monitoring design belongs in M0 before real data; M7 proves and hardens it.
 
 ## Historical milestone implementation records
 
@@ -57,7 +57,7 @@ The following records describe the scope at each earlier slice. They do not repl
 
 M0-A contracts/configuration are merged through PR #10,
 with 104 tests, its own lock/CLI, schemas/examples and a clean-wheel isolation
-check. See [[docs/decisions|decisions]]. This does not deliver
+check. See [decisions](decisions.md). This does not deliver
 M0-B–M0-F or any runtime service. PR #7 is closed unmerged; its branch is retained.
 
 ## M0-B merged status
@@ -65,7 +65,7 @@ M0-B–M0-F or any runtime service. PR #7 is closed unmerged; its branch is reta
 M0-B is merged through PR #11 and adds explicit PostgreSQL events/outbox/consumer intent, atomic inbox/task
 handoff, bounded conflict quarantine, scoped roles/RLS and fenced outbox claims.
 Its 34 real PostgreSQL cases bring the independent suite to 145 tests. See
-[[docs/decisions|decisions]]. This is not a live RabbitMQ worker or M0
+[decisions](decisions.md). This is not a live RabbitMQ worker or M0
 completion. PR #10’s CI context error is fixed and its corrected hosted run passes;
 PR #9 remains the separate, consistent ADR-002 correction.
 
@@ -74,16 +74,16 @@ PR #9 remains the separate, consistent ADR-002 correction.
 M0-C is merged through PR #12 and adds pinned RabbitMQ/aio-pika library transport, exact live topology audit,
 confirms/mandatory returns, durable backoff/review outboxes and generation-fenced
 consumer recovery with independent watchdogs. The required suite has 194 cases,
-including 11 real broker/database cases. See [[docs/decisions|decisions]].
+including 11 real broker/database cases. See [decisions](decisions.md).
 That transport slice delivers no agent worker, full broker-loss replay or production deployment.
 
 ## M0-D review status
 
-[[docs/decisions|decisions]] adds a fixed no-op worker, DB-clock leases/fencing and a global two-lease budget, durable attempts/retry/review and atomic interval/daily scheduling. Missed policies, timezone/DST, versions and controls are explicit/audited. The required 256-case suite includes 12 broker/database cases. Real agents/tools/approval expiry, retained-event replay and the deployed lifecycle remain later gates.
+[decisions](decisions.md) adds a fixed no-op worker, DB-clock leases/fencing and a global two-lease budget, durable attempts/retry/review and atomic interval/daily scheduling. Missed policies, timezone/DST, versions and controls are explicit/audited. The required 256-case suite includes 12 broker/database cases. Real agents/tools/approval expiry, retained-event replay and the deployed lifecycle remain later gates.
 
 ## Governed MCP access proposal
 
-[[docs/decisions|decisions]] adds a tool/data integration boundary, not a replacement event bus. RabbitMQ, PostgreSQL authority, source objects, derived Markdown and the independent runtime remain unchanged. This documentation adds no M0 dependency, implements no MCP client and enables no personal account, credential or server. Merged M0-A–M0-C contracts/storage/transport and their acceptance evidence remain intact; later M0 slices remain separate review units. No MCP implementation is added to those slices.
+[decisions](decisions.md) adds a tool/data integration boundary, not a replacement event bus. RabbitMQ, PostgreSQL authority, source objects, derived Markdown and the independent runtime remain unchanged. This documentation adds no M0 dependency, implements no MCP client and enables no personal account, credential or server. Merged M0-A–M0-C contracts/storage/transport and their acceptance evidence remain intact; later M0 slices remain separate review units. No MCP implementation is added to those slices.
 
 | Stage | MCP increment | Gate before advancing |
 |---|---|---|
@@ -101,14 +101,14 @@ Proposed audit profile: 365-day minimal audit/approval metadata after the latest
 
 ## M0-E review status
 
-[[docs/decisions|decisions]] adds bounded retained-event recovery, suppressed replay with one-use older-event permits, synthetic source gates/deletion and staged 30/90-day operational cleanup. The 294-case acceptance set includes an actual disposable broker-volume-loss drill while PostgreSQL survives. Real object-provider/backup erasure, action approvals and deployed lifecycle/pressure/monitoring remain gates. The MCP audit-retention proposal remains separate.
+[decisions](decisions.md) adds bounded retained-event recovery, suppressed replay with one-use older-event permits, synthetic source gates/deletion and staged 30/90-day operational cleanup. The 294-case acceptance set includes an actual disposable broker-volume-loss drill while PostgreSQL survives. Real object-provider/backup erasure, action approvals and deployed lifecycle/pressure/monitoring remain gates. The MCP audit-retention proposal remains separate.
 
 ## Immediate plan
 
 1. Retain the accepted architecture correction; PR #7 is closed unmerged and its reference branch/history is preserved.
 2. Preserve merged M0-A–M0-C and their independent contracts, isolation and database/broker evidence; no automatic promotion of old PR #6/#7.
 3. PRs #15–#17 are merged in order by owner instruction. Main has green 323-case synthetic runtime CI; the historical slice sections below retain their original review evidence. Production readiness remains false.
-4. Review [[docs/decisions|decisions]] and its M1-A contracts/identity decisions before authorizing implementation. Retain all M0 production gaps in [[docs/decisions|decisions]] and `config/runtime/m0-closeout.json`.
+4. Review [decisions](decisions.md) and its M1-A contracts/identity decisions before authorizing implementation. Retain all M0 production gaps in [decisions](decisions.md) and `config/runtime/m0-closeout.json`.
 5. Before provisioning, review provider plans, region, cost, network/security, retention, monitoring and recovery targets. Deployment requires separate authorization.
 
 ## Open implementation decisions
@@ -124,7 +124,7 @@ PARA storage, Markdown-as-canonical knowledge and legacy-code reuse are no longe
 
 ## M3 rules-first classification plan
 
-M3 consumes the Gmail ingestion/source contracts from M2 and the registry, identity and configuration controls from M1. It builds on the independent M0 runtime; it does not change PostgreSQL authority, RabbitMQ delivery semantics or approvals. This is planned work, with no classifier integration or accuracy result claimed. `m3_routing_revision` versions this amendment separately so the shared document version and M0 review-status sections can advance independently. [[MarkOS v0.3 Specification]] defines the routing contract.
+M3 consumes the Gmail ingestion/source contracts from M2 and the registry, identity and configuration controls from M1. It builds on the independent M0 runtime; it does not change PostgreSQL authority, RabbitMQ delivery semantics or approvals. This is planned work, with no classifier integration or accuracy result claimed. `m3_routing_revision` versions this amendment separately so the shared document version and M0 review-status sections can advance independently. [MarkOS v0.3 Specification](specification.md) defines the routing contract.
 
 | Slice | Required work | Review/acceptance evidence |
 |---|---|---|
@@ -139,41 +139,41 @@ Open M3 decisions: agent/category taxonomy and multi-assignment policy; verified
 
 ## M0-F review and closeout status
 
-[[docs/decisions|decisions]] adds explicit test-only role processes, private health/heartbeats, bounded shutdown/reconnect, a restricted independent image/Compose harness, restored-generation fencing and required lifecycle CI. A17–A19 have bounded synthetic evidence, not full production acceptance: daemon restart is not a VM reboot; fixture restore is not real cloud backup/erasure; test caps/alarms are not production sizing; loopback fallback tests are not independently hosted alerts. A13 real action approval and all provider/MCP enablement gates remain open. See [[docs/decisions|decisions]]. Nothing is merged or deployed by this slice.
+[decisions](decisions.md) adds explicit test-only role processes, private health/heartbeats, bounded shutdown/reconnect, a restricted independent image/Compose harness, restored-generation fencing and required lifecycle CI. A17–A19 have bounded synthetic evidence, not full production acceptance: daemon restart is not a VM reboot; fixture restore is not real cloud backup/erasure; test caps/alarms are not production sizing; loopback fallback tests are not independently hosted alerts. A13 real action approval and all provider/MCP enablement gates remain open. See [decisions](decisions.md). Nothing is merged or deployed by this slice.
 
 ## M1 control-plane implementation proposal
 
-[[docs/decisions|decisions]] reviews merged main at `ec52a27` and proposes M1-A contracts/trust, M1-B scoped persistence, M1-C authenticated API, M1-D durable deterministic chat, M1-E web/CLI, M1-F synthetic governance/tools and M1-G CI/closeout. M1-01–M1-22 define concrete identity, isolation, concurrency, replay/restore, UI and bounded tool tests. The plan preserves governed MCP and rules-first M3 decisions. Its fixture-only MCP path does not complete real-provider MCP-01–MCP-10 or cloud-operation evidence, and native Gmail/Pub/Sub remains independent. Stack/auth/session/retention choices are proposed, not provisioned or enabled. This update contains documentation only; no M1 implementation, merge or deployment.
+[decisions](decisions.md) reviews merged main at `ec52a27` and proposes M1-A contracts/trust, M1-B scoped persistence, M1-C authenticated API, M1-D durable deterministic chat, M1-E web/CLI, M1-F synthetic governance/tools and M1-G CI/closeout. M1-01–M1-22 define concrete identity, isolation, concurrency, replay/restore, UI and bounded tool tests. The plan preserves governed MCP and rules-first M3 decisions. Its fixture-only MCP path does not complete real-provider MCP-01–MCP-10 or cloud-operation evidence, and native Gmail/Pub/Sub remains independent. Stack/auth/session/retention choices are proposed, not provisioned or enabled. This update contains documentation only; no M1 implementation, merge or deployment.
 
 ## M1-A contracts and identity review
 
-[[docs/decisions|decisions]] implements the first slice with validation-only descriptors and preflight, frozen synthetic settings, separate chat contract namespace and optional API stack compatibility evidence. [[docs/decisions|decisions]] records the proposed human/session/gateway/database boundary. No database migration, signature-verifying login service, browser/CLI gateway, chat executor or MCP access is added. M1-B scoped persistence is the next reviewable slice after these contracts/decisions; real production profiles remain gated.
+[decisions](decisions.md) implements the first slice with validation-only descriptors and preflight, frozen synthetic settings, separate chat contract namespace and optional API stack compatibility evidence. [decisions](decisions.md) records the proposed human/session/gateway/database boundary. No database migration, signature-verifying login service, browser/CLI gateway, chat executor or MCP access is added. M1-B scoped persistence is the next reviewable slice after these contracts/decisions; real production profiles remain gated.
 
 ## M1-B persistence review
 
-M1-A planning/contracts are merged through PRs #18/#19. [[docs/decisions|decisions]] adds explicit scoped session/registry/configuration/conversation storage and an additive migration for review. Database functions validate current scope/version, with bounded held work and idempotent atomic staging. This completes neither publishable chat nor human authentication; M1-C supplies the verified API boundary and M1-D the reviewed transport/executor promotion. No merge or deployment is performed by this slice.
+M1-A planning/contracts are merged through PRs #18/#19. [decisions](decisions.md) adds explicit scoped session/registry/configuration/conversation storage and an additive migration for review. Database functions validate current scope/version, with bounded held work and idempotent atomic staging. This completes neither publishable chat nor human authentication; M1-C supplies the verified API boundary and M1-D the reviewed transport/executor promotion. No merge or deployment is performed by this slice.
 
 
 ## Merged M1-B and M1-C review status
 
-PR #20 is merged. [[docs/decisions|decisions]] records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.
+PR #20 is merged. [decisions](decisions.md) records the `6a87fb0` main review, green 533-case post-merge CI and a separately reviewable authenticated shared API. It adds an explicit fixture-only ASGI factory, browser/CLI PKCE session protocols, current signature/upstream/local authority checks, scoped registry/configuration/status/activity operations, private health and additive migration 0007. A separate loopback HTTPS profile keeps real accounts, chat and tools disabled. API metadata is not runtime knowledge authority; PostgreSQL/RabbitMQ and MCP/M3 decisions are preserved. Interactive web/CLI clients remain M1-E; chat promotion remains M1-D. Provider integration, key custody, scheduled secret cleanup, API packaging/process/restore and production gates remain open. No merge or deployment.
 
 
 ## Merged M1-C and M1-D review status
 
-PR #21 is merged. [[docs/decisions|decisions]] records the `8311f01` main review, six green post-merge checks and a separately reviewable durable synthetic conversation. The explicit conversation API profile adds atomic message/event/outbox admission, fixed checksum acknowledgement, durable reply/completion/activity, scoped polling/cursors, cancellation and current-authority/epoch/fence checks. It shares PostgreSQL/RabbitMQ and the two global execution slots with the unchanged no-op path; migration 0008 is additive. M1-C/preflight configurations remain execution-disabled. Real identity adapters, interactive clients/SSE, governance/tools, scheduled cleanup and packaged process/restore/production gates remain separate work. No merge or deployment.
+PR #21 is merged. [decisions](decisions.md) records the `8311f01` main review, six green post-merge checks and a separately reviewable durable synthetic conversation. The explicit conversation API profile adds atomic message/event/outbox admission, fixed checksum acknowledgement, durable reply/completion/activity, scoped polling/cursors, cancellation and current-authority/epoch/fence checks. It shares PostgreSQL/RabbitMQ and the two global execution slots with the unchanged no-op path; migration 0008 is additive. M1-C/preflight configurations remain execution-disabled. Real identity adapters, interactive clients/SSE, governance/tools, scheduled cleanup and packaged process/restore/production gates remain separate work. No merge or deployment.
 
 
 ## Merged M1-D and M1-E review status
 
-PR #22 is merged. [[docs/decisions|decisions]] records the `4cb4d7b` main review, six green post-merge checks covering 706 tests, and the separately reviewable client slice. It fixes activity cursor-purpose binding and adds an explicit fixture-only web profile with five pages, a shared-HTTPS CLI, exact typed write previews, private explicit CLI session storage and durable scoped SSE with shared 1/4/20 lease limits, current-authority checks and restore-aware cursors. Additive migration 0009 preserves 0001–0008; existing dependency pins and archived work remain intact. Browser acceptance is required in CI. Approvals/tools remain disabled for M1-F; packaged process/restore/operational closeout remains M1-G. Real accounts and deployment remain disabled. Earlier slice sections below/above are chronological evidence; this section describes the latest review state. No merge or deployment.
+PR #22 is merged. [decisions](decisions.md) records the `4cb4d7b` main review, six green post-merge checks covering 706 tests, and the separately reviewable client slice. It fixes activity cursor-purpose binding and adds an explicit fixture-only web profile with five pages, a shared-HTTPS CLI, exact typed write previews, private explicit CLI session storage and durable scoped SSE with shared 1/4/20 lease limits, current-authority checks and restore-aware cursors. Additive migration 0009 preserves 0001–0008; existing dependency pins and archived work remain intact. Browser acceptance is required in CI. Approvals/tools remain disabled for M1-F; packaged process/restore/operational closeout remains M1-G. Real accounts and deployment remain disabled. Earlier slice sections below/above are chronological evidence; this section describes the latest review state. No merge or deployment.
 
 
 ## Merged M1-E and M1-F review status
 
-PR #23 is merged. [[docs/decisions|decisions]] records the `231a018` main review, exact preserved M1-E tree and six green post-merge checks with 770 cases. The separately reviewable M1-F slice adds an explicit synthetic governance profile, fixed reviewed fixture grants, immutable exact approvals, slot-free durable waiting/fresh execution leases, atomic one-time dispatch/audit/reservations, bounded pinned MCP 2.3.0 / 2026-07-28 HTTPS reads and unknown-outcome reconciliation. Additive migration 0010 preserves 0001–0009; shared limits, scoped typed web/CLI controls and explicit privileged retention/tombstones are covered. Ordinary no-tool chat and archived code remain intact. Real accounts/OAuth/effects and deployment stay disabled. M1-G owns packaged processes, full restore/maintenance/operational closeout; earlier slice sections are chronological evidence. No merge or deployment.
+PR #23 is merged. [decisions](decisions.md) records the `231a018` main review, exact preserved M1-E tree and six green post-merge checks with 770 cases. The separately reviewable M1-F slice adds an explicit synthetic governance profile, fixed reviewed fixture grants, immutable exact approvals, slot-free durable waiting/fresh execution leases, atomic one-time dispatch/audit/reservations, bounded pinned MCP 2.3.0 / 2026-07-28 HTTPS reads and unknown-outcome reconciliation. Additive migration 0010 preserves 0001–0009; shared limits, scoped typed web/CLI controls and explicit privileged retention/tombstones are covered. Ordinary no-tool chat and archived code remain intact. Real accounts/OAuth/effects and deployment stay disabled. M1-G owns packaged processes, full restore/maintenance/operational closeout; earlier slice sections are chronological evidence. No merge or deployment.
 
 
 ## Lean M1-G preview after PR 24
 
-PR #24 is merged. [[docs/local-preview|local preview guide]] records review of main `c590cb2` and green post-merge CI, plus the separately reviewable synthetic preview slice. The owner's lean-startup direction prioritizes runnable web/CLI feedback and essential CI. Independent optional image/processes, persisted synthetic issuer/MCP fixtures, shared HTTP admission and absolute socket/send deadlines extend the existing PostgreSQL/RabbitMQ path through additive migration 0011; migrations 0001–0010 and archived work stay intact. The machine-readable M1/MCP ledger explicitly leaves full operational closeout false: broader fault/resource/proxy evidence, automated cleanup/log/alert operations and independently current real deletion/revocation recovery are deferred. Real accounts/providers/models/effects, cloud/MacBook-off acceptance, merging and deployment remain separate gates. Earlier slice sections are chronological evidence.
+PR #24 is merged. [local preview guide](local-preview.md) records review of main `c590cb2` and green post-merge CI, plus the separately reviewable synthetic preview slice. The owner's lean-startup direction prioritizes runnable web/CLI feedback and essential CI. Independent optional image/processes, persisted synthetic issuer/MCP fixtures, shared HTTP admission and absolute socket/send deadlines extend the existing PostgreSQL/RabbitMQ path through additive migration 0011; migrations 0001–0010 and archived work stay intact. The machine-readable M1/MCP ledger explicitly leaves full operational closeout false: broader fault/resource/proxy evidence, automated cleanup/log/alert operations and independently current real deletion/revocation recovery are deferred. Real accounts/providers/models/effects, cloud/MacBook-off acceptance, merging and deployment remain separate gates. Earlier slice sections are chronological evidence.

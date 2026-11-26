@@ -25,7 +25,7 @@ from markos_runtime.store.migrations import migrate
 from tests.integration.test_control_persistence import prepare, session
 from tests.integration.test_rabbitmq import Harness
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[2]
 FOLDER = ROOT / "infrastructure/.m1g-preview"
 CERTS = ROOT / "infrastructure/.test-certs"
 APPS = [

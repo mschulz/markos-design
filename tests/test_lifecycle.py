@@ -15,7 +15,7 @@ def service_document() -> dict[str, Any]:
         dict[str, Any],
         json.loads(
             (
-                Path(__file__).resolve().parents[3] / "config/runtime/lifecycle/worker.json"
+                Path(__file__).resolve().parents[1] / "config/runtime/lifecycle/worker.json"
             ).read_text()
         ),
     )
@@ -48,7 +48,7 @@ def test_service_config_cannot_enable_production_or_unbounded_work(change: dict[
 
 
 def test_all_synthetic_service_examples_match_manifest() -> None:
-    directory = Path(__file__).resolve().parents[3] / "config/runtime/lifecycle"
+    directory = Path(__file__).resolve().parents[1] / "config/runtime/lifecycle"
     for path in directory.glob("*.json"):
         if path.name != "subscriptions.json":
             load_service(path)

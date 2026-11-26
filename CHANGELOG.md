@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-26 — Move the runtime to the repo root and the docs into docs/
+
+- `services/runtime/` is now the repo root: `src/`, `tests/`, `pyproject.toml`, `uv.lock`, Dockerfiles.
+- Root docs moved to `docs/` with short kebab-case names. Wikilinks became relative links.
+- CI, Compose build contexts and test path lookups updated. No runtime code changed.
+
 ## 2026-11-26 — Prune the abandoned v0.2 code and the milestone documents
 
 - Delete the archived v0.2 application (`src/markos/`, root `tests/`, root `pyproject.toml` and `uv.lock`), its documents, the import manifest, the legacy config example and the document template. Git history keeps all of them.

@@ -17,9 +17,9 @@ tags:
 
 ## Decision
 
-Apply accepted [[docs/decisions|decisions]]: a DigitalOcean VM runs the always-on Docker Compose services; Supabase PostgreSQL holds durable state. The placement is accepted. The operational details and targets below are implementation requirements/proposals for review, not evidence of deployed infrastructure.
+Apply accepted [decisions](decisions.md): a DigitalOcean VM runs the always-on Docker Compose services; Supabase PostgreSQL holds durable state. The placement is accepted. The operational details and targets below are implementation requirements/proposals for review, not evidence of deployed infrastructure.
 
-[[docs/decisions|decisions]] selects RabbitMQ over AMQP, replacing provisional MQTT. [[docs/decisions|decisions]] replaces the old PARA/Markdown/DuckDB product baseline. Exact broker profile and operational targets remain proposals. Cloud placement is unchanged; the new runtime is independent of imported legacy code.
+[decisions](decisions.md) selects RabbitMQ over AMQP, replacing provisional MQTT. [decisions](decisions.md) replaces the old PARA/Markdown/DuckDB product baseline. Exact broker profile and operational targets remain proposals. Cloud placement is unchanged; the new runtime is independent of imported legacy code.
 
 ## Motivation
 
@@ -45,7 +45,7 @@ PostgreSQL holds structured facts, entities, relationships and provenance under 
 
 ## M0-D implementation evidence
 
-[[docs/decisions|decisions]] implements fixed synthetic no-op execution and versioned interval/daily scheduling for review, with database leases/fences/global slots, atomic occurrences/events/outbox and audited missed policies. The broader requirements below remain targets for real agents and deployed operations. CLI/service lifecycle, production job types, approvals, source access and full replay/recovery are not delivered by this slice.
+[decisions](decisions.md) implements fixed synthetic no-op execution and versioned interval/daily scheduling for review, with database leases/fences/global slots, atomic occurrences/events/outbox and audited missed policies. The broader requirements below remain targets for real agents and deployed operations. CLI/service lifecycle, production job types, approvals, source access and full replay/recovery are not delivered by this slice.
 
 ## Persistent scheduling and missed-job recovery
 
@@ -67,11 +67,11 @@ If PostgreSQL is unavailable, stop claiming jobs and performing unrecorded side 
 
 ## Container and host lifecycle
 
-[[docs/decisions|decisions]] defines an independent runtime project, synthetic foundation slices and tests. Do not build on the old markos package or inherit its toolchain automatically. Classic-queue consumers need a 10-second active handoff and 30-second total unacknowledged-age watchdog, dedicated consumer channels, and channel-close recovery after uncertain commits; health checks and heartbeats alone do not detect a stalled database handoff. Keep publishers separate and resolve retries by owner-scoped inbox identity.
+[decisions](decisions.md) defines an independent runtime project, synthetic foundation slices and tests. Do not build on the old markos package or inherit its toolchain automatically. Classic-queue consumers need a 10-second active handoff and 30-second total unacknowledged-age watchdog, dedicated consumer channels, and channel-close recovery after uncertain commits; health checks and heartbeats alone do not detect a stalled database handoff. Keep publishers separate and resolve retries by owner-scoped inbox identity.
 
 Set `restart: unless-stopped` for every long-running Compose service, including scheduler and ingestion. Enable Docker at host boot and verify recovery after a VM reboot. An intentionally stopped container remains stopped with this policy; maintenance recovery must explicitly start it. One-shot migrations and restore tasks need deliberate invocation and failure handling rather than an unlimited restart loop.
 
-Define readiness/liveness checks, startup grace periods, resource bounds and graceful termination. Workers finish safely or release/expire leases on shutdown. Persist RabbitMQ data in a named volume; use durable exchanges/queues and persistent messages, with confirms and manual acknowledgements as specified in [[docs/decisions|decisions]]. Keep reviewed topology definitions, policies and permissions recoverable separately from secrets. Propose RabbitMQ 4.4.0 with durable classic queues and aio-pika 10.2.3. The ADR-003 profile proposes a 4-vCPU/8-GiB/80-GiB SSD VM planning envelope, a 4-GiB broker cap with 2-GiB absolute memory alarm and a 10-GiB free-disk alarm (warning at 20 GiB). The broker CPU ceiling is 4, not reserved cores; shared-host contention and all service budgets require M0 measurement and cost review. Enforce ADR-003 queue, message, connection, channel, prefetch and publisher limits; reject-publish backpressure leaves work in PostgreSQL. M0-C pins the tested image digest and independent client lock; see [[docs/decisions|decisions]]. Production capacity and rollout remain unverified. Quorum replication requires a separately reviewed multi-node failure-domain design to provide availability. A single node on this VM is not highly available. Never store authoritative tasks only in container files.
+Define readiness/liveness checks, startup grace periods, resource bounds and graceful termination. Workers finish safely or release/expire leases on shutdown. Persist RabbitMQ data in a named volume; use durable exchanges/queues and persistent messages, with confirms and manual acknowledgements as specified in [decisions](decisions.md). Keep reviewed topology definitions, policies and permissions recoverable separately from secrets. Propose RabbitMQ 4.4.0 with durable classic queues and aio-pika 10.2.3. The ADR-003 profile proposes a 4-vCPU/8-GiB/80-GiB SSD VM planning envelope, a 4-GiB broker cap with 2-GiB absolute memory alarm and a 10-GiB free-disk alarm (warning at 20 GiB). The broker CPU ceiling is 4, not reserved cores; shared-host contention and all service budgets require M0 measurement and cost review. Enforce ADR-003 queue, message, connection, channel, prefetch and publisher limits; reject-publish backpressure leaves work in PostgreSQL. M0-C pins the tested image digest and independent client lock; see [decisions](decisions.md). Production capacity and rollout remain unverified. Quorum replication requires a separately reviewed multi-node failure-domain design to provide availability. A single node on this VM is not highly available. Never store authoritative tasks only in container files.
 
 Use healthy dependency conditions for local Compose startup where appropriate; services still need runtime reconnect/backoff for broker and remote Supabase failures. A health check alone does not restart an unhealthy process: exit on unrecoverable failure or alert for operator remediation. Rotate logs, monitor disk and prevent crash loops from exhausting the VM.
 
@@ -135,11 +135,11 @@ Single-VM downtime remains unavoidable without a later availability design. Oper
 
 ## Related
 
-- [[docs/decisions|decisions]]
+- [decisions](decisions.md)
 
-- [[docs/decisions|decisions]]
-- [[MarkOS v0.3 Specification]]
-- [[MarkOS v0.3 Roadmap]]
+- [decisions](decisions.md)
+- [MarkOS v0.3 Specification](specification.md)
+- [MarkOS v0.3 Roadmap](roadmap.md)
 - [Docker restart policies](https://docs.docker.com/engine/containers/start-containers-automatically/)
 - [Compose startup/readiness](https://docs.docker.com/compose/how-tos/startup-order/)
 - [Supabase database backups and storage boundaries](https://supabase.com/docs/guides/platform/backups)
@@ -148,9 +148,9 @@ Provider behavior was checked against these official references on 11 November 2
 
 ## M0-E synthetic recovery evidence
 
-[[docs/decisions|decisions]] proves retained intended-consumer recovery after removal/recreation of an owned disposable RabbitMQ volume while PostgreSQL stays intact. Its scoped synthetic source gates, tombstones and staged cleanup do not implement cloud object/backup erasure or restore tombstone reapplication. Production lifecycle, real-provider recovery, restore/pressure and operational drills remain future acceptance.
+[decisions](decisions.md) proves retained intended-consumer recovery after removal/recreation of an owned disposable RabbitMQ volume while PostgreSQL stays intact. Its scoped synthetic source gates, tombstones and staged cleanup do not implement cloud object/backup erasure or restore tombstone reapplication. Production lifecycle, real-provider recovery, restore/pressure and operational drills remain future acceptance.
 
 
 ## M0-F synthetic lifecycle evidence
 
-[[docs/decisions|decisions]] adds explicitly confirmed synthetic processes, private readiness/liveness/heartbeats, bounded shutdown, generation-fenced lease operations and a restricted container acceptance harness. The CI drill covers process/dependency faults, forced broker memory/disk alarms, Docker daemon restart and fresh-database/fixture-object restore. It does not validate a VM reboot, production capacity, cloud backup/erasure or independent alert placement. [[docs/decisions|decisions]] and the closeout ledger keep those production gates explicit; no cloud resource is provisioned or deployed.
+[decisions](decisions.md) adds explicitly confirmed synthetic processes, private readiness/liveness/heartbeats, bounded shutdown, generation-fenced lease operations and a restricted container acceptance harness. The CI drill covers process/dependency faults, forced broker memory/disk alarms, Docker daemon restart and fresh-database/fixture-object restore. It does not validate a VM reboot, production capacity, cloud backup/erasure or independent alert placement. [decisions](decisions.md) and the closeout ledger keep those production gates explicit; no cloud resource is provisioned or deployed.

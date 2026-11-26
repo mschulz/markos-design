@@ -16,3 +16,6 @@ CLAUDE.local.md
 
 # Disposable synthetic preview credentials and state
 infrastructure/.m1g-preview/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/

@@ -26,7 +26,7 @@ from markos_runtime.store.migrations import migrate
 from tests.integration.test_rabbitmq import Harness
 from tests.integration.test_storage import event
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[1]
 APPS = [
     "publisher",
     "consumer",

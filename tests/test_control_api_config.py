@@ -37,7 +37,7 @@ def test_fixture_profile_rejects_enablement_and_unapproved_origin(
 
 
 def test_fixture_profile_example() -> None:
-    example = Path(__file__).resolve().parents[3] / "config/runtime/control/api.example.json"
+    example = Path(__file__).resolve().parents[1] / "config/runtime/control/api.example.json"
     profile = SyntheticApiConfig.from_wire(example.read_bytes())
     assert profile.api_origin == "https://127.0.0.1:18443"
     assert not profile.real_accounts_enabled and not profile.chat_execution_enabled
@@ -48,7 +48,7 @@ def test_packaged_api_schema_fingerprints_match_reviewed_migrations() -> None:
 
     from markos_runtime.api.schema import EXPECTED_MIGRATIONS
 
-    directory = Path(__file__).resolve().parents[3] / "infrastructure/migrations"
+    directory = Path(__file__).resolve().parents[1] / "infrastructure/migrations"
     actual = {
         str(int(p.name[:4])): sha256(p.read_bytes()).hexdigest() for p in directory.glob("*.sql")
     }

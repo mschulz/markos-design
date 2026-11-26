@@ -3,12 +3,12 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/test_control_contracts.py",
-        "services/runtime/tests/test_control_api_config.py",
-        "services/runtime/tests/test_storage_configuration.py",
-        "services/runtime/tests/test_config.py",
-        "services/runtime/tests/test_client.py",
-        "services/runtime/tests/test_governance_contracts.py"
+        "tests/test_control_contracts.py",
+        "tests/test_control_api_config.py",
+        "tests/test_storage_configuration.py",
+        "tests/test_config.py",
+        "tests/test_client.py",
+        "tests/test_governance_contracts.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-01"
@@ -16,7 +16,7 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_api.py"
+        "tests/control_api/test_api.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-02"
@@ -24,8 +24,8 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_api.py",
-        "services/runtime/tests/control_api/test_activity_stream.py"
+        "tests/control_api/test_api.py",
+        "tests/control_api/test_activity_stream.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-03"
@@ -33,8 +33,8 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/integration/test_control_persistence.py",
-        "services/runtime/tests/control_api/test_governance.py"
+        "tests/integration/test_control_persistence.py",
+        "tests/control_api/test_governance.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-04"
@@ -42,7 +42,7 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_conversation.py"
+        "tests/control_api/test_conversation.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-05"
@@ -50,7 +50,7 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/integration/test_control_persistence.py"
+        "tests/integration/test_control_persistence.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-06"
@@ -58,7 +58,7 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_conversation.py"
+        "tests/control_api/test_conversation.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-07"
@@ -66,8 +66,8 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_web_cli.py",
-        "services/runtime/tests/browser/test_web.py"
+        "tests/control_api/test_web_cli.py",
+        "tests/browser/test_web.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-08"
@@ -75,7 +75,7 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/browser/test_web.py"
+        "tests/browser/test_web.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-09"
@@ -83,8 +83,8 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_chat_transport.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_chat_transport.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-10"
@@ -92,8 +92,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_chat_transport.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_chat_transport.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "All specified process kill points still need independent coverage.",
       "id": "M1-11"
@@ -101,7 +101,7 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_conversation.py"
+        "tests/control_api/test_conversation.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-12"
@@ -109,7 +109,7 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_activity_stream.py"
+        "tests/control_api/test_activity_stream.py"
       ],
       "gap": "Packaged SSE restart and measured slow-reader/proxy evidence remain open.",
       "id": "M1-13"
@@ -117,9 +117,9 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance_cli.py",
-        "services/runtime/tests/browser/test_web.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_governance_cli.py",
+        "tests/browser/test_web.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-14"
@@ -127,7 +127,7 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py"
+        "tests/control_api/test_governance.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-15"
@@ -135,8 +135,8 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-16"
@@ -144,8 +144,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_api.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_api.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "External monitoring/alert delivery and cloud outages remain untested.",
       "id": "M1-17"
@@ -153,8 +153,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance_limits.py",
-        "services/runtime/tests/control_api/test_process_bounds.py"
+        "tests/control_api/test_governance_limits.py",
+        "tests/control_api/test_process_bounds.py"
       ],
       "gap": "VM peak-memory/CPU and proxy/slow-client matrix remain open; Compose caps are not sizing evidence.",
       "id": "M1-18"
@@ -162,8 +162,8 @@
     {
       "disposition": "synthetic-covered",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance_https.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_governance_https.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "Evidence applies only to synthetic profile; no real provider or production acceptance.",
       "id": "M1-19"
@@ -171,8 +171,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "Synthetic snapshot/fresh restore only; independently current durable real revocation/deletion feed and production RPO/RTO remain open.",
       "id": "M1-20"
@@ -180,7 +180,7 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance_https.py"
+        "tests/control_api/test_governance_https.py"
       ],
       "gap": "Fixed numeric-loopback fixture only; real OAuth/resource/account and connector-specific interoperability gates remain open.",
       "id": "M1-21"
@@ -188,7 +188,7 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance_retention.py"
+        "tests/control_api/test_governance_retention.py"
       ],
       "gap": "SQL controlled-clock policy tested; daily scheduling, 14-day log operations and alert delivery remain open.",
       "id": "M1-22"
@@ -196,8 +196,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py"
       ],
       "gap": "Synthetic profile only; repeat applicable gates per real connector before enablement.",
       "id": "MCP-01"
@@ -205,8 +205,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py"
       ],
       "gap": "Private resource/transfer and real provider account isolation unimplemented.",
       "id": "MCP-02"
@@ -214,8 +214,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py"
       ],
       "gap": "Real classified private disclosure/effect adapters disabled.",
       "id": "MCP-03"
@@ -223,8 +223,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py"
       ],
       "gap": "Synthetic profile only; repeat applicable gates per real connector before enablement.",
       "id": "MCP-04"
@@ -232,8 +232,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py"
       ],
       "gap": "No OAuth provider; real audience, redirect/discovery and account acceptance unpassed.",
       "id": "MCP-05"
@@ -241,8 +241,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py"
       ],
       "gap": "Fixture protocol limits covered; production VM/proxy and provider-specific waits/retries remain open.",
       "id": "MCP-06"
@@ -250,9 +250,9 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "Synthetic profile only; repeat applicable gates per real connector before enablement.",
       "id": "MCP-07"
@@ -260,9 +260,9 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "Only fixed synthetic ledger and human-attested reconciliation; no verified real-provider idempotency.",
       "id": "MCP-08"
@@ -270,8 +270,8 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py"
       ],
       "gap": "Retention SQL is tested; scheduled cleanup/log retention/alerts and real deletion reapplication remain open.",
       "id": "MCP-09"
@@ -279,9 +279,9 @@
     {
       "disposition": "partial",
       "evidence": [
-        "services/runtime/tests/control_api/test_governance.py",
-        "services/runtime/tests/control_api/test_governance_https.py",
-        "services/runtime/tests/control_process/test_preview.py"
+        "tests/control_api/test_governance.py",
+        "tests/control_api/test_governance_https.py",
+        "tests/control_process/test_preview.py"
       ],
       "gap": "Isolated SDK/process interoperability only; cloud recovery and MacBook-off evidence unpassed.",
       "id": "MCP-10"

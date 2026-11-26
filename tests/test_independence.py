@@ -85,7 +85,7 @@ def test_schemas_and_examples_match() -> None:
     from markos_runtime.contracts import EventEnvelope
     from markos_runtime.schemas import artifacts, check
 
-    repository = Path(__file__).resolve().parents[3]
+    repository = Path(__file__).resolve().parents[1]
     examples = repository / "config" / "runtime"
     assert check(examples / "schemas")
     config, manifest = load_config(examples / "runtime.example.toml", {})
@@ -121,7 +121,7 @@ def test_schemas_are_valid_and_validate_examples() -> None:
     from markos_runtime.contracts import EventEnvelope
     from markos_runtime.schemas import artifacts
 
-    directory = Path(__file__).resolve().parents[3] / "config" / "runtime"
+    directory = Path(__file__).resolve().parents[1] / "config" / "runtime"
     config, _ = load_config(directory / "runtime.example.toml", {})
     event = EventEnvelope.from_wire((directory / "noop.example.json").read_bytes())
     data = {

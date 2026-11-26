@@ -9,7 +9,7 @@ from markos_runtime.contracts.base import ContractError
 from markos_runtime.contracts.governance import GovernedChatRequest, ReviewedFixtureGrant
 from markos_runtime.control.api_config import SyntheticGovernanceApiConfig, SyntheticWebApiConfig
 
-ROOT = Path(__file__).resolve().parents[3] / "config/runtime/control"
+ROOT = Path(__file__).resolve().parents[1] / "config/runtime/control"
 
 
 @pytest.mark.parametrize(

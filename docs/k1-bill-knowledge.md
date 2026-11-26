@@ -30,7 +30,7 @@ The supported text labels are intentionally narrow and documented in `knowledge/
 
 ## Architecture and authority
 
-This follows [[docs/decisions|decisions]], [[Vision]] and [[MarkOS v0.3 Specification]]. It adds no dependency on the archived application, PARA or Obsidian. GitHub remains canonical for project artifacts; bill originals, private data and sign-in material stay outside Git.
+This follows [decisions](decisions.md), [Vision](vision.md) and [MarkOS v0.3 Specification](specification.md). It adds no dependency on the archived application, PARA or Obsidian. GitHub remains canonical for project artifacts; bill originals, private data and sign-in material stay outside Git.
 
 - The existing authenticated shared HTTPS gateway serves the bill page and API. Import requires the operator role; viewers may inspect and ask. Each SQL entry point independently checks the current session and owner/domain. Existing browser CSRF, request leases, rate and byte/time bounds remain in force.
 - Additive migration 0014 stores the source fingerprint, bill identity/name and extracted facts/provenance in PostgreSQL. Preserve migrations 0001–0013. Raw originals are separate objects, not canonical Markdown or database message bodies.
@@ -47,7 +47,7 @@ An object may be committed before a database failure or access revocation. It re
 No existing preview, account, vault or deployment is changed by this PR. Use a **fresh** owned synthetic project/check-out and the existing M1-G instructions, adding `--bills` to the prepare step:
 
 ```sh
-# From services/runtime, in an isolated control/tools/browser environment.
+# From the repo root, in an isolated control/tools/browser environment.
 python -m tests.control_process.support prepare --confirm-synthetic --bills
 # Continue the normal M1-G dependency/bootstrap/build/start steps for that fresh project.
 ```
@@ -82,6 +82,6 @@ These tests create/drop their own databases; never target the running local prev
 
 ## Related
 
-- [[MarkOS v0.3 Roadmap]]
-- [[docs/local-preview|local preview guide]]
-- [[docs/decisions|decisions]]
+- [MarkOS v0.3 Roadmap](roadmap.md)
+- [local preview guide](local-preview.md)
+- [decisions](decisions.md)

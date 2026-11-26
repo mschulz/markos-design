@@ -583,7 +583,7 @@ def test_upgrade_preserves_existing_m0d_results_and_sets_conservative_floor(
     from tests.integration.conftest import ROLES
 
     name = "markos_upgrade_" + uuid4().hex
-    directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+    directory = Path(__file__).resolve().parents[2] / "infrastructure/migrations"
     for file in sorted(directory.glob("*.sql"))[:3]:
         (tmp_path / file.name).write_bytes(file.read_bytes())
     with psycopg.connect(admin_dsn, autocommit=True) as admin:

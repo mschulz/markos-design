@@ -27,10 +27,10 @@ Requirements carried over, not code: human approval, provenance, owner/domain
 isolation, privacy, outbox/inbox, idempotency, durable tasks and recovery. An
 old test for one of these proves nothing about the new runtime.
 
-## One independent project: `services/runtime`, package `markos_runtime`
+## One project at the repo root: package `markos_runtime`
 
-All runtime code lives in `services/runtime/` with its own `pyproject.toml`,
-`uv.lock`, tests and Dockerfiles. It must install and run without the repo root,
+All code lives in `src/markos_runtime/` with one `pyproject.toml`, `uv.lock`,
+`tests/` and Dockerfiles at the repo root. It must install and run without
 personal folders or legacy config. Python is pinned to `>=3.13,<3.14`; widening
 it needs test evidence. Pydantic is the only direct base dependency. The
 `control` and `tools` extras and the `browser` dev group stay out of the base

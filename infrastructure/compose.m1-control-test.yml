@@ -1,7 +1,7 @@
 # Disposable synthetic preview and CI only. No cloud/production credentials.
 x-control: &control
   build:
-    context: ../services/runtime
+    context: ..
     dockerfile: Dockerfile.control
   image: markos-m1g-test:${MARKOS_TEST_COMPOSE_PROJECT:?explicit owned project required}
   init: true

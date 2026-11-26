@@ -128,7 +128,7 @@ class Harness:
             )
         definitions = json.loads(
             (
-                Path(__file__).resolve().parents[4]
+                Path(__file__).resolve().parents[2]
                 / "infrastructure/rabbitmq/definitions.example.json"
             ).read_text()
         )

@@ -15,7 +15,7 @@ import psycopg
 def test_synthetic_service_process_health_signal_shutdown_and_no_startup_migration(
     database: dict[str, str], tmp_path: Path
 ) -> None:
-    directory = Path(__file__).resolve().parents[4] / "config/runtime/lifecycle"
+    directory = Path(__file__).resolve().parents[2] / "config/runtime/lifecycle"
     doc = json.loads((directory / "worker.json").read_text())
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))

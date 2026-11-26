@@ -5,7 +5,7 @@ The project rules are in [CLAUDE.md](CLAUDE.md), and the reasons for them are in
 
 The rules that matter most:
 
-- All code is in `services/runtime/`. The v0.2 design (PARA, DuckDB, Obsidian,
+- All code is in `src/markos_runtime/`. The v0.2 design (PARA, DuckDB, Obsidian,
   Markdown as source of truth) is abandoned.
 - Migrations in `infrastructure/migrations/` are append-only. The next is `0015`.
 - Database tests drop databases. Point `MARKOS_TEST_ADMIN_DSN` only at a

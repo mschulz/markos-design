@@ -12,7 +12,7 @@ from markos_runtime.contracts.events import EventEnvelope
 from markos_runtime.contracts.wire import parse_event, routing_key
 from markos_runtime.control.api_config import SyntheticApiConfig, SyntheticConversationApiConfig
 
-EXAMPLES = Path(__file__).resolve().parents[3] / "config/runtime/control"
+EXAMPLES = Path(__file__).resolve().parents[1] / "config/runtime/control"
 
 
 def chat() -> dict[str, Any]:

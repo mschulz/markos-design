@@ -13,8 +13,8 @@ see the extracted figures with the source line for each, and ask one of four
 questions. Figures that are missing or conflict are marked **Needs review**.
 Next (K1-B): text-based PDF bills with page citations.
 
-See [the K1 bill workflow](MarkOS%20v0.3%20Lean%20Bill%20Knowledge%20MVP.md) and
-[the roadmap](MarkOS%20v0.3%20Roadmap.md).
+See [the K1 bill workflow](docs/k1-bill-knowledge.md) and
+[the roadmap](docs/roadmap.md).
 
 ## How it is built
 
@@ -30,7 +30,7 @@ Real accounts, Gmail, AI models and production hosting are not enabled yet.
 
 | Path | Contents |
 |---|---|
-| `services/runtime/` | The application (`markos_runtime`), its tests and its dependency lock |
+| `src/markos_runtime/`, `tests/` | The application and its tests (`pyproject.toml`, `uv.lock` at the root) |
 | `infrastructure/` | Docker Compose files, database migrations, RabbitMQ definitions |
 | `config/runtime/` | Example configuration and generated JSON schemas |
 | `docs/decisions.md` | The design decisions and the reasons for them |
@@ -38,8 +38,8 @@ Real accounts, Gmail, AI models and production hosting are not enabled yet.
 
 ## Development
 
-Run the checks from `services/runtime/`; its [README](services/runtime/README.md)
-has the details. Database and broker tests need disposable local services and never
+Run the checks from the repo root. [docs/development.md](docs/development.md)
+has the commands. Database and broker tests need disposable local services and never
 touch a real database.
 
 Documentation check: `python3 -B scripts/check_docs.py` (fails on broken local links).

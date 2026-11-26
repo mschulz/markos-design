@@ -94,7 +94,7 @@ def database(admin_dsn: str) -> Iterator[dict[str, str]]:
             dsns["migration"], autocommit=True, row_factory=dict_row
         ) as connection:
             await migrate(
-                connection, Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+                connection, Path(__file__).resolve().parents[2] / "infrastructure/migrations"
             )
             for role in ROLES.values():
                 await connection.execute(

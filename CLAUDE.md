@@ -11,12 +11,12 @@ MarkOS is a personal knowledge base and agent system. **Current priority: the
 electricity-bill workflow (K1)**: supply a bill, keep the original, extract
 figures, inspect them, ask questions with cited answers. K1-A (pasted text) is
 merged; K1-B (text-based PDF with page citations) is next. Spec:
-`MarkOS v0.3 Lean Bill Knowledge MVP.md`. Gmail, broad classification and real
+`docs/k1-bill-knowledge.md`. Gmail, broad classification and real
 agents come later.
 
-**All code is in `services/runtime/`** (package `markos_runtime`, own
-`pyproject.toml` and `uv.lock`). Migrations are in `infrastructure/migrations/`.
-→ decisions: One independent project: `services/runtime`, package `markos_runtime`
+**All code is in `src/markos_runtime/`** (one `pyproject.toml` and `uv.lock`
+at the repo root). Migrations are in `infrastructure/migrations/`.
+→ decisions: One project at the repo root: package `markos_runtime`
 
 **The v0.2 design is abandoned.** Never reintroduce PARA, DuckDB, Obsidian or
 Markdown as the source of truth. → decisions: v0.2 is abandoned; v0.3 is an
@@ -50,8 +50,8 @@ independent event-driven runtime
 
 ## Testing
 
-Run checks from `services/runtime/` with a separate `UV_PROJECT_ENVIRONMENT`;
-commands are in `services/runtime/README.md`.
+Run checks from the repo root with a separate `UV_PROJECT_ENVIRONMENT`;
+commands are in `docs/development.md`.
 
 - **Database tests drop databases and create roles.** Point
   `MARKOS_TEST_ADMIN_DSN` only at a disposable local cluster. **Never at port
