@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import re
+from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
@@ -22,9 +23,18 @@ from markos_runtime.knowledge.bills import (
     plain_text,
 )
 from markos_runtime.knowledge.objects import BillObjectError, BillObjects
+from markos_runtime.knowledge.origin import extract_origin, is_origin
 from markos_runtime.knowledge.pdf import PdfError, read_pages
 
 PDF_PATH = "/api/v1/bills/pdf"
+
+# Supplier PDF profiles by extractor name: (recognises the pages, extracts the facts).
+PDF_PROFILES: dict[
+    str, tuple[Callable[[list[str]], bool], Callable[[list[str], str], BillFacts]]
+] = {
+    "amber-pdf-v1": (is_amber, extract_amber),
+    "origin-pdf-v1": (is_origin, extract_origin),
+}
 
 
 class BillRoutes:
@@ -96,7 +106,7 @@ class BillRoutes:
         )
         bill = BillRecord.from_wire(json.dumps(record).encode())
         # Every result verifies the original; corrupt/missing evidence cannot produce an answer.
-        pdf = bill.report.extractor == "amber-pdf-v1"
+        pdf = bill.report.extractor in PDF_PROFILES
         try:
             original = await asyncio.to_thread(
                 self.objects.read, owner, domain, bill.source_sha256, ".pdf" if pdf else ".txt"
@@ -109,7 +119,11 @@ class BillRoutes:
                 pages = await read_pages(original)
             except PdfError:
                 raise ApiFault("bill-evidence-unavailable", 503) from None
-        current = extract_amber(pages, bill.source_sha256) if pdf else extract(original.decode())
+        current = (
+            PDF_PROFILES[bill.report.extractor][1](pages, bill.source_sha256)
+            if pdf
+            else extract(original.decode())
+        )
         if bill.report != current:
             raise ApiFault("bill-evidence-unavailable", 503)
         if match[2] == "/questions" and method == "POST":
@@ -150,9 +164,10 @@ class BillRoutes:
             raise ApiFault(
                 "bill-pdf-" + error.code, 413 if error.code == "too-large" else 422
             ) from None
-        if not is_amber(pages):
+        profile = next((p for p in PDF_PROFILES.values() if p[0](pages)), None)
+        if profile is None:
             raise ApiFault("bill-pdf-unsupported-supplier", 422)
-        report: BillFacts = extract_amber(pages, hashlib.sha256(body).hexdigest())
+        report: BillFacts = profile[1](pages, hashlib.sha256(body).hexdigest())
         try:
             digest = await asyncio.to_thread(self.objects.put, owner, domain, body, ".pdf")
         except (BillObjectError, OSError):

@@ -19,7 +19,7 @@ BillKey = Literal[
     "supply_charge",
     "export_credit",
     "total_due",
-    # Supplier profiles (knowledge/amber.py) add these.
+    # Supplier profiles (knowledge/amber.py, knowledge/origin.py) add these.
     "demand_charge",
     "subscription",
     "charges_gst",
@@ -29,6 +29,9 @@ BillKey = Literal[
     "credits_total",
     "total_owed",
     "due_date",
+    "meter_charge",
+    "gst_included",
+    "brought_forward",
 ]
 FactState = Literal["found", "missing", "conflicting", "invalid", "unreconciled"]
 KEYS: dict[BillKey, str] = {
@@ -108,7 +111,7 @@ class Fact(ControlValue):
 
 
 class BillFacts(ControlValue):
-    extractor: Literal["bill-text-v1", "amber-pdf-v1"] = "bill-text-v1"
+    extractor: Literal["bill-text-v1", "amber-pdf-v1", "origin-pdf-v1"] = "bill-text-v1"
     source_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     facts: list[Fact]
     notices: list[str]
@@ -225,6 +228,7 @@ def answer(report: BillFacts, question: str) -> dict[str, object]:
             "supply_charge",
             "demand_charge",
             "subscription",
+            "meter_charge",
             "charges_gst",
             "charges_total",
             "export_credit",

@@ -7,7 +7,8 @@
           "default": "bill-text-v1",
           "enum": [
             "bill-text-v1",
-            "amber-pdf-v1"
+            "amber-pdf-v1",
+            "origin-pdf-v1"
           ],
           "title": "Extractor",
           "type": "string"
@@ -111,7 +112,10 @@
             "credits_gst",
             "credits_total",
             "total_owed",
-            "due_date"
+            "due_date",
+            "meter_charge",
+            "gst_included",
+            "brought_forward"
           ],
           "title": "Key",
           "type": "string"
