@@ -2,6 +2,7 @@
 
 import json
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
@@ -16,6 +17,35 @@ MAX_DOCUMENT_BYTES = 262_144
 
 class ContractError(ValueError):
     """A stable public error containing no input, paths or credentials."""
+
+
+def loopback_https(
+    value: str,
+    *,
+    paths: frozenset[str],
+    hosts: frozenset[str] = frozenset({"127.0.0.1"}),
+    exact: bool = True,
+) -> int:
+    """Return the port of an HTTPS URL on a loopback host with no credentials or query.
+
+    `exact` also requires the literal `127.0.0.1:<port>` form, so no other spelling
+    of the same address can pass.
+    """
+    u = urlsplit(value)
+    if (
+        u.scheme != "https"
+        or u.hostname not in hosts
+        or not u.port
+        or not 1024 <= u.port <= 65535
+        or (exact and u.netloc != f"127.0.0.1:{u.port}")
+        or u.username
+        or u.password
+        or u.path not in paths
+        or u.query
+        or u.fragment
+    ):
+        raise ValueError("loopback HTTPS endpoint required")
+    return u.port
 
 
 class ValueModel(BaseModel):

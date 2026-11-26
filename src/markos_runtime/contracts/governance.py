@@ -1,11 +1,11 @@
 """Closed synthetic tool profile. Descriptors never grant execution authority."""
 
 from typing import Literal, Self
-from urllib.parse import urlsplit
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
+from markos_runtime.contracts.base import loopback_https
 from markos_runtime.contracts.control import (
     CallIntent,
     ChatRequest,
@@ -28,20 +28,7 @@ SCHEMA_SHA256 = digest_document(INPUT_SCHEMA)
 
 
 def fixture_endpoint(value: str) -> str:
-    parsed = urlsplit(value)
-    if (
-        parsed.scheme != "https"
-        or parsed.hostname != "127.0.0.1"
-        or not parsed.port
-        or not 1024 <= parsed.port <= 65535
-        or parsed.netloc != f"127.0.0.1:{parsed.port}"
-        or parsed.path != "/mcp"
-        or parsed.query
-        or parsed.fragment
-        or parsed.username
-        or parsed.password
-    ):
-        raise ValueError("explicit numeric loopback HTTPS fixture endpoint required")
+    loopback_https(value, paths=frozenset({"/mcp"}))
     return value
 
 

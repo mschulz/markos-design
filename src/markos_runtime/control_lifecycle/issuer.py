@@ -24,6 +24,7 @@ from markos_runtime.api.identity import (
     IdentityUnavailable,
     strict_json,
 )
+from markos_runtime.contracts.base import loopback_https
 from markos_runtime.http_bounds import bounded_connection
 
 
@@ -147,22 +148,13 @@ class DurableFixtureIssuer(FixtureIssuer):
 
 class RemoteFixtureIssuer(FixtureIssuer):
     def __init__(self, endpoint: str, ca_file: Path, credential: str) -> None:
-        u = urlsplit(endpoint)
-        if (
-            u.scheme != "https"
-            or u.hostname != "127.0.0.1"
-            or not u.port
-            or not 1024 <= u.port <= 65535
-            or u.path != "/fixture"
-            or u.query
-            or u.fragment
-            or u.username
-            or u.password
-            or u.netloc != f"127.0.0.1:{u.port}"
-            or not TOKEN_PATTERN.fullmatch(credential)
-        ):
+        try:
+            port = loopback_https(endpoint, paths=frozenset({"/fixture"}))
+        except ValueError:
+            raise IdentityUnavailable("explicit synthetic issuer endpoint required") from None
+        if not TOKEN_PATTERN.fullmatch(credential):
             raise IdentityUnavailable("explicit synthetic issuer endpoint required")
-        self.endpoint, self.port, self.credential = endpoint, u.port, credential
+        self.endpoint, self.port, self.credential = endpoint, port, credential
         self.tls = ssl.create_default_context(cafile=str(ca_file))
 
     def request(self, operation: str, body: dict[str, Any]) -> Any:
