@@ -16,6 +16,8 @@ from markos_runtime.store.migrations import migrate
 
 OWNER = "11111111-1111-4111-8111-111111111111"
 OTHER = "99999999-9999-4999-8999-999999999999"
+# 5432: native PostgreSQL. 15432 and 25432: local previews.
+REFUSED_PORTS = {"5432", "15432", "25432"}
 ROLES = {
     "publisher": ("m0b_pub", "foundation-generator", OWNER, "personal", True, False),
     "consumer": ("m0b_cons", "foundation-worker", OWNER, "personal", False, True),
@@ -38,6 +40,14 @@ def admin_dsn() -> str:
     host = str(info.get("host", ""))
     if not (host in {"127.0.0.1", "localhost"} or host.startswith("/private/tmp/markos-m0b-")):
         pytest.fail("synthetic PostgreSQL tests require explicit local test host")
+    # These tests drop databases and create roles. Refuse the ports of real or preview
+    # databases on the developer machine, and any setting that could redirect the host.
+    port = str(info.get("port") or os.environ.get("PGPORT") or "5432")
+    redirected = {"hostaddr", "service"} & info.keys() or any(
+        os.environ.get(name) for name in ("PGHOSTADDR", "PGSERVICE")
+    )
+    if port in REFUSED_PORTS or redirected:
+        pytest.fail("synthetic PostgreSQL tests refuse real and preview database ports")
     with psycopg.connect(dsn, autocommit=True) as connection:
         for name in [
             "markos_migrator",

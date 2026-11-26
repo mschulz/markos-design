@@ -32,7 +32,7 @@ old test for one of these proves nothing about the new runtime.
 All code lives in `src/markos_runtime/` with one `pyproject.toml`, `uv.lock`,
 `tests/` and Dockerfiles at the repo root. It must install and run without
 personal folders or legacy config. Python is pinned to `>=3.13,<3.14`; widening
-it needs test evidence. Pydantic is the only direct base dependency. The
+it needs test evidence. The base install is pydantic, psycopg and aio-pika only. The
 `control` and `tools` extras and the `browser` dev group stay out of the base
 wheel and image. Add modules here; do not add a second backend project or lock.
 

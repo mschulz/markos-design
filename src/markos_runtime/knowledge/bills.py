@@ -124,7 +124,7 @@ def extract(text: str) -> BillFacts:
             value = match[1]
             try:
                 if key == "period":
-                    start, end = value.split(" to ")
+                    start, end = re.split(r"\s+to\s+", value)
                     if date.fromisoformat(start) > date.fromisoformat(end):
                         raise ValueError
                     value = start + " to " + end

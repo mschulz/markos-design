@@ -109,7 +109,7 @@ def container(service: str) -> str:
 def admin(database: str = "markos_m0f") -> str:
     return make_conninfo(
         host="127.0.0.1",
-        port=5432,
+        port=55432,
         dbname=database,
         user="postgres",
         password="synthetic-test-only",
