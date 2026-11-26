@@ -55,9 +55,9 @@ from markos_runtime.lifecycle.config import ServiceConfig
 
 def models() -> dict[str, type[ValueModel]]:
     return {
-        "bill-import": BillImport,
-        "bill-record": BillRecord,
-        "bill-question": BillQuestion,
+        "control-bill-import": BillImport,
+        "control-bill-record": BillRecord,
+        "control-bill-question": BillQuestion,
         "control-process": ControlServiceConfig,
         "control-api": SyntheticApiConfig,
         "control-governed-approval": GovernedApproval,
