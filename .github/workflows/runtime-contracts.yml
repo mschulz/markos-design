@@ -305,6 +305,11 @@ jobs:
               round(extract(epoch FROM s.provider_expires_at - i.terminal_at)) AS provider_left_s,
               round(extract(epoch FROM i.terminal_at - s.last_seen_at)) AS since_seen_s,
               round(extract(epoch FROM i.terminal_at - s.created_at)) AS session_age_s,
+              i.cancellation_reason,
+              (SELECT round(extract(epoch FROM max(v.recorded_at) - max(a.recorded_at))::numeric, 2)
+                FROM markos_control.tool_audit a, markos_control.tool_audit v
+                WHERE a.intent_id = i.intent_id AND a.outcome = 'approved'
+                AND v.intent_id = i.intent_id AND v.outcome = 'revoked') AS approve_to_revoke_s,
               g.enabled AS grant_enabled, g.revision = i.grant_revision AS grant_revision_ok,
               EXISTS(SELECT 1 FROM markos_control.principals WHERE principal_id = r.actor_id AND NOT disabled) AS principal_ok,
               EXISTS(SELECT 1 FROM markos_control.memberships WHERE principal_id = r.actor_id AND owner_id = r.owner_id AND domain = r.domain AND 'operator' = ANY(roles)) AS member_ok,
