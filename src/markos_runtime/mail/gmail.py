@@ -1,5 +1,6 @@
 """Read-only Gmail access as a narrow interface. M2-A has no network client: tests use a fake."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Protocol
@@ -54,6 +55,14 @@ class ListPage:
     next_page: str | None = None
 
 
+@dataclass(frozen=True)
+class Watch:
+    """A Gmail watch sends change alerts for the given labels until it expires (about 7 days)."""
+
+    history_id: int
+    expires_at: datetime
+
+
 class GmailReader(Protocol):
     async def current_history_id(self) -> int: ...
 
@@ -62,3 +71,5 @@ class GmailReader(Protocol):
     async def list_messages(self, label_id: str, after: date, page: str | None) -> ListPage: ...
 
     async def message(self, message_id: str) -> MessageMeta: ...
+
+    async def watch(self, label_ids: Sequence[str]) -> Watch: ...

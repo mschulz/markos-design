@@ -1,13 +1,14 @@
 """Mailbox state and message records in PostgreSQL, through the M2-A functions only."""
 
 from collections.abc import Sequence
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from psycopg.types.json import Jsonb
 
 from markos_runtime.mail.gmail import MessageMeta
 from markos_runtime.mail.ingest import Mailbox, MailError, Reason
+from markos_runtime.mail.worker import WorkClaim
 from markos_runtime.store.database import DurableStore, StorageError
 
 
@@ -73,3 +74,29 @@ class MailStore(DurableStore):
             (None if start is None else str(start), str(end), batch, reason),
         )
         return None if result is None else int(result)
+
+    async def note_alert(self, history_id: int) -> bool:
+        query = "SELECT markos_runtime.note_mail_alert(%s::numeric) AS result"
+        return bool(await self._one(query, (str(history_id),)))
+
+    async def claim_work(self, lease_seconds: int) -> WorkClaim | None:
+        query = "SELECT markos_runtime.claim_mail_work(%s) AS result"
+        claim = await self._one(query, (lease_seconds,))
+        if claim is None:
+            return None
+        return WorkClaim(
+            claim["fence"],
+            claim["renew"],
+            claim["sync"],
+            claim["alert_seq"],
+            tuple(claim["labels"]),
+        )
+
+    async def finish_work(
+        self, claim: WorkClaim, synced: bool, watch_expires: datetime | None
+    ) -> bool:
+        if watch_expires is not None and watch_expires.utcoffset() != timedelta(0):
+            raise MailError("timezone-aware UTC required")
+        query = "SELECT markos_runtime.finish_mail_work(%s,%s,%s,%s) AS result"
+        params = (claim.fence, claim.alert_seq, synced, watch_expires)
+        return bool(await self._one(query, params))
