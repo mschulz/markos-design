@@ -19,3 +19,6 @@ infrastructure/.m1g-preview/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+
+# Local graphify knowledge graph output
+graphify-out/
