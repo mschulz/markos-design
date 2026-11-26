@@ -136,7 +136,7 @@ Origin was the previous supplier. Most old bills are in Gmail, so this profile l
 
 ## K1-C plan: corrections, history and checked arithmetic
 
-Status: approved. K1-C1 (corrections) is implemented in `knowledge/corrections.py` and migration 0017. K1-C2 and K1-C3 are not started. Owner decisions are under "Decisions".
+Status: approved. K1-C1 (corrections) is implemented in `knowledge/corrections.py` and migration 0017. K1-C2 (history) is implemented in `knowledge/history.py` and migration 0018. K1-C3 is not started. Owner decisions are under "Decisions".
 
 K1-C makes stored bills trustworthy over time. The owner can correct a figure without losing what the extractor read, compare bills across suppliers, and rely on written arithmetic rules backed by approved examples.
 

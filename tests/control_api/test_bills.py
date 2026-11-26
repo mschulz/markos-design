@@ -1,6 +1,7 @@
 """Actual scoped SQL + HTTPS workflow, with no broker, model or deployed preview."""
 
 import asyncio
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -251,5 +252,55 @@ def test_corrections_keep_the_report_and_change_answers(
             status, back = await operator.call("POST", path + "/corrections" + SCOPE, withdraw)
             assert status == 201 and back["effective"] == back["report"]
             assert len(back["corrections"]) == 2
+
+    asyncio.run(scenario())
+
+
+def test_history_orders_bills_answers_and_flags_a_changed_original(
+    control: dict[str, Any], tmp_path: Path
+) -> None:
+    october = SAMPLE
+    november = (
+        SAMPLE.replace("2026-10-01 to 2026-10-31", "2026-11-01 to 2026-11-30")
+        .replace("$126.00", "$117.00")
+        .replace("$148.50", "$139.50")
+    )
+
+    async def scenario() -> None:
+        async with web_server(control, tmp_path, bills=True, prepare_agent=False) as server:
+            operator = WebBrowserClient(server["port"], server["cert"])
+            await operator.login(server["issuer"], server["credentials"]["both"])
+            for name, text in (("November", november), ("October", october)):
+                status, _ = await operator.call(
+                    "POST",
+                    "/api/v1/bills" + SCOPE,
+                    {"schema_version": 1, "name": name, "text": text},
+                )
+                assert status == 201
+            viewer = WebBrowserClient(server["port"], server["cert"])
+            await viewer.login(server["issuer"], server["credentials"]["viewer"])
+            status, view = await viewer.call("GET", "/api/v1/bills/history" + SCOPE)
+            assert status == 200 and view["notices"] == []
+            assert [(r["name"], r["days"], r["cost_per_day"]) for r in view["items"]] == [
+                ("October", 31, "4.79"),
+                ("November", 30, "4.65"),
+            ]
+            status, result = await viewer.call(
+                "POST",
+                "/api/v1/bills/history/questions" + SCOPE,
+                {"schema_version": 1, "question": "How has my bill changed?"},
+            )
+            assert status == 200 and "$0.14 a day less" in result["answer"]
+            assert [c["name"] for c in result["citations"]] == ["October", "November"]
+            digest = hashlib.sha256(november.encode()).hexdigest()
+            original = next((tmp_path / "bill-objects").rglob(digest + ".txt"))
+            original.write_bytes(b"tampered")
+            status, view = await viewer.call("GET", "/api/v1/bills/history" + SCOPE)
+            assert status == 200
+            assert [(r["name"], r["available"]) for r in view["items"]] == [
+                ("October", True),
+                ("November", False),
+            ]
+            assert view["items"][1]["figures"] == {}
 
     asyncio.run(scenario())
