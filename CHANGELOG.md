@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-26 — K1-C1 bill corrections
+
+- Added `POST /api/v1/bills/{id}/corrections`. Operators correct any fact with a reason of up to 200 characters, or withdraw a correction with a null value. Viewers cannot correct.
+- Corrections are append-only in `bill_corrections`. The extracted report never changes, and every read still rechecks it against the original.
+- Bill responses add `corrections` and `effective`: the latest correction of each fact on top of the report, with the bill's citations kept.
+- After a money correction, the Amber or Origin totals are checked again. If they do not add up, money figures stay unreconciled.
+- Answers use effective values and say when a figure was corrected.
+- Migration 0017 adds corrections and raises the bill limit from 100 to 500 per scope. Migrations 0001–0016 are unchanged.
+- The bills page shows the extracted value and correction history next to each corrected figure, with correct and withdraw controls.
+
 ## 2026-11-26 — K1-B Origin Energy PDF profile
 
 - Added `knowledge/origin.py`, the Origin Energy profile (`origin-pdf-v1`, 13 facts). It reads tables that pypdf splits into one cell per line.
