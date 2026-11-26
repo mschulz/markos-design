@@ -1,6 +1,6 @@
 # M2 Gmail ingestion plan
 
-Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. M2-C1 is implemented in migration 0021, `mail/optin.py` and `mail/sealing.py`. M2-C2 is implemented in `src/markos_runtime/api/mail_connect.py` and the web Mail page. M2-D is implemented in migration 0022 and `mail/bills.py`. Owner decisions are under "Decisions".
+Status: approved on 2026-11-26. M2-A and M2-B are implemented in `src/markos_runtime/mail/` and migrations 0019 and 0020. M2-B2 is implemented in `src/markos_runtime/api/mail_alerts.py`. M2-C1 is implemented in migration 0021, `mail/optin.py` and `mail/sealing.py`. M2-C2 is implemented in `src/markos_runtime/api/mail_connect.py` and the web Mail page. M2-D is implemented in migration 0022 and `mail/bills.py`. M2-E is in progress: E1 records the gate checklist below. Owner decisions are under "Decisions".
 
 M2 brings email into MarkOS. It reads changes from one opted-in Gmail mailbox, stores each new message once, and keeps a processing status for each one. The "message ingested" event moves to M3. It never sends, deletes or changes mail. Deciding what an email is about stays in M3. The one exception is a narrow, owner-chosen label rule for bills (M2-D).
 
@@ -30,7 +30,7 @@ Roadmap acceptance: duplicate and out-of-order mailbox notifications create one 
 
 ## Delivery
 
-Six PRs, each reviewed and merged separately. M2-A to M2-D use only a fake Gmail and synthetic mail.
+Each step is reviewed and merged separately. M2-A to M2-D use only a fake Gmail and synthetic mail.
 
 1. **M2-A mailbox records and fake Gmail:** migration for the mailbox and message tables, a Gmail client interface with an in-memory fake, incremental reads and cursor-gap resync. A `can_ingest_mail` grant gates the mail functions. Until M2-C1, the synthetic worker opened the mailbox itself with an address hash and label list. Migration 0021 removed that path.
 2. **M2-B schedules:** daily watch renewal and the 15-minute backstop poll, as due times on the mailbox with leases. Recording an alert makes the poll due now. The worker claims due work every few seconds. Owner decision on 2026-11-26: the schedules are due times on the mailbox row, claimed under a lease using database time. The generic scheduler only emits events, which would bring the M3-D event work forward.
@@ -40,7 +40,10 @@ Six PRs, each reviewed and merged separately. M2-A to M2-D use only a fake Gmail
    - **M2-C2 OAuth flow:** the browser connect and disconnect pages and the OAuth exchange with PKCE. Tests use a fixture OAuth provider.
      The routes and the Mail page exist only when the gateway gets an explicit consent adapter and the worker's public key. The real Google consent client, and where its secrets and keys are stored, are part of the M2-E gate.
 5. **M2-D bills from a label:** PDF attachments in one owner-chosen label go through the existing K1 PDF import. Size, type and page limits apply. Duplicates are skipped by SHA-256. Bills from an unknown supplier are counted and left for review.
-6. **M2-E real-account gate:** a checklist the owner approves before MarkOS connects to the real mailbox. It covers the Google Cloud project, OAuth client, Pub/Sub topic and its publisher grant, the push subscription with its service account and audience, the public endpoint URL and certificate, the acknowledgement deadline, a dead-letter topic, secret storage, the host it runs on, and the retention decision. No code runs against real Gmail before this gate.
+6. **M2-E real-account gate:** a checklist the owner approves before MarkOS connects to the real mailbox. It covers the Google Cloud project, OAuth client, Pub/Sub topic and its publisher grant, the push subscription with its service account and audience, the public endpoint URL and certificate, the acknowledgement deadline, a dead-letter topic, secret storage, the host it runs on, and the retention decision. No code runs against real Gmail before this gate. M2-E is three PRs:
+   - **M2-E1 checklist:** docs only. It records the owner's decisions, the facts checked against Google's documentation, and the gate checklist.
+   - **M2-E2 Google clients:** the real consent client and the real Gmail API client, using `httpx`. Tests run them against a local fake HTTP server and never call Google.
+   - **M2-E3 config and wiring:** load the OAuth client, the token keys and the push settings from config, and start the routes and the worker from them. Mail stays off by default.
 
 ## Tests
 
@@ -77,11 +80,38 @@ The owner approved these on 2026-11-26.
    - Only attachments with the type `application/pdf` are read. Each gets one outcome: imported, duplicate, unsupported supplier, over the limit, or rejected with a reason. Unsupported and over-limit bills are counted for review and stay in Gmail.
    - The bill folder holds at most 100 originals. The database allows 500 bills. So 100 is the limit in practice.
 
-## Not confirmed
+9. **M2-E decisions,** owner, 2026-11-27:
+   - The OAuth app uses Google's **Personal mode**. It needs no verification, its refresh tokens do not expire after 7 days, and Google shows no unverified-app screen. Only the Google account that creates the project can authorize the app, and the mode cannot be changed later.
+   - M2-E is three PRs, as listed under "Delivery". The Google clients use `httpx`, pinned in the `control` extra.
 
-- **OAuth app mode.** For a personal Gmail account the OAuth app stays unverified. I'm not sure how Google treats `gmail.readonly` there. My understanding is that an app in "testing" mode gets refresh tokens that expire after 7 days. That would need a reconnect each week. M2-E must confirm this against Google's current documentation before the owner relies on it.
+## Checked against Google's documentation
 
-- **Pub/Sub push details.** My understanding is that the push acknowledgement deadline defaults to 10 seconds, that Pub/Sub keeps undelivered alerts for up to 7 days, and that Gmail sends at most about one alert per second per mailbox. The OIDC claims and the role the push service account needs are also unconfirmed. M2-E must check these against Google's current documentation.
+Checked on 2026-11-27 through search summaries of Google's pages, not by reading each page in full. The owner confirms Personal mode on Google's own page before creating the project.
+
+- **OAuth app mode.** `gmail.readonly` is a restricted scope. An External app in "Testing" gets refresh tokens that expire 7 days after consent. Personal mode avoids this (see decision 9). Each Google account can hold at most 100 refresh tokens for one OAuth client. A new one past that limit silently invalidates the oldest.
+- **Gmail push.** Gmail publishes as `gmail-api-push@system.gserviceaccount.com`, which needs the Pub/Sub Publisher role on the topic. Gmail sends at most one alert per second per mailbox and drops the rest. MarkOS reads changes by history ID, so a dropped alert loses nothing.
+- **Push authentication.** The endpoint must check the token's signature, `aud`, `exp`, `email` and `email_verified`. `api/mail_alerts.py` already checks all of them. If the subscription sets no audience, Google uses the endpoint URL.
+- **Acknowledgement and retention.** The acknowledgement deadline defaults to 10 seconds and can be 10 to 600 seconds. For push it is also the request timeout. Pub/Sub keeps unacknowledged alerts for 7 days by default, from 10 minutes to 31 days. A dead-letter policy allows 5 to 100 delivery attempts.
+- **Subscription expiry.** A subscription expires after 31 days without activity by default. An idle mailbox may send no alerts for that long, so the gate sets the subscription to never expire.
+
+## M2-E gate checklist
+
+The owner approves every item before MarkOS connects to the real mailbox. `<host>` is the public HTTPS origin of the gateway.
+
+1. **Host.** The cloud host is chosen (an M7 decision). The gateway and the mail worker run on the same host. `<host>` has a valid certificate.
+2. **Retention.** The real-data retention review in `docs/decisions.md` is closed: deletion, privacy and backup erasure.
+3. **Project.** A new Google Cloud project is created while signed in as the mailbox's own Google account. The Google Auth Platform is in Personal mode. Only the Gmail API and Pub/Sub are enabled.
+4. **OAuth client.** A web application client with one redirect URI, `<host>/api/v1/mail/callback`. The only Gmail scope is `gmail.readonly`.
+5. **Topic.** One Pub/Sub topic. `gmail-api-push@system.gserviceaccount.com` has the Pub/Sub Publisher role on that topic only.
+6. **Push subscription.**
+   - Endpoint `<host>/api/v1/mail/alerts`, with OIDC authentication.
+   - A dedicated service account with no other roles. Its email and the audience match the gateway's push settings.
+   - Acknowledgement deadline: the default 10 seconds. The endpoint only records the alert.
+   - Message retention: the default 7 days. Expiry: never.
+7. **Dead-letter topic.** A dead-letter topic with 5 delivery attempts. The grants the Pub/Sub service agent needs for it are checked on Google's dead-letter page at setup.
+8. **Secrets.** The OAuth client secret and the mail worker's private key are stored as M2-E3 sets out. Neither is in the repository, the logs or the browser.
+9. **Code.** M2-E2 and M2-E3 are merged. Mail is still off until the owner turns it on.
+10. **First connect.** The owner connects from the Mail page, picks the label allowlist and checks the first sync and the status counts.
 
 ## Out of scope
 
