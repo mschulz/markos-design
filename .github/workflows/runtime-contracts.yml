@@ -296,6 +296,25 @@ jobs:
             UNION ALL SELECT 'chat_run_reason', coalesce(reason, '-'), count(*) FROM markos_control.chat_runs GROUP BY reason
             UNION ALL SELECT 'tool_audit', outcome || '/' || coalesce(reason, '-'), count(*) FROM markos_control.tool_audit GROUP BY outcome, reason
             ORDER BY 1, 2"
+          # Which tool_sweep condition revoked the intent, as booleans at the revoke time. No content.
+          docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml exec -T postgres psql -U postgres -d markos_m1g -x -c "
+            SELECT i.status, i.epoch = markos_runtime.current_epoch() AS intent_epoch_ok,
+              r.epoch = markos_runtime.current_epoch() AS run_epoch_ok, r.state AS run_state,
+              s.kind, s.revoked_at IS NULL AS session_not_revoked, s.epoch = r.epoch AS session_epoch_ok,
+              round(extract(epoch FROM s.expires_at - i.terminal_at)) AS session_left_s,
+              round(extract(epoch FROM s.provider_expires_at - i.terminal_at)) AS provider_left_s,
+              round(extract(epoch FROM i.terminal_at - s.last_seen_at)) AS since_seen_s,
+              round(extract(epoch FROM i.terminal_at - s.created_at)) AS session_age_s,
+              g.enabled AS grant_enabled, g.revision = i.grant_revision AS grant_revision_ok,
+              EXISTS(SELECT 1 FROM markos_control.principals WHERE principal_id = r.actor_id AND NOT disabled) AS principal_ok,
+              EXISTS(SELECT 1 FROM markos_control.memberships WHERE principal_id = r.actor_id AND owner_id = r.owner_id AND domain = r.domain AND 'operator' = ANY(roles)) AS member_ok,
+              EXISTS(SELECT 1 FROM markos_control.agents a JOIN markos_control.configurations c USING(owner_id, domain)
+                WHERE a.owner_id = r.owner_id AND a.domain = r.domain AND a.agent_id = 'control-test-agent' AND a.enabled
+                AND a.revision = r.agent_revision AND c.revision = r.config_revision AND c.document->'agent' = a.manifest) AS agent_ok
+            FROM markos_control.tool_intents i
+            JOIN markos_control.chat_runs r USING (owner_id, domain, event_id)
+            JOIN markos_control.sessions s ON s.session_id = r.session_id
+            LEFT JOIN markos_control.tool_grants g ON g.owner_id = i.owner_id AND g.domain = i.domain"
       - name: Remove only this disposable project and volumes
         if: always()
         run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml down -v --remove-orphans
