@@ -61,7 +61,7 @@ uv run --no-sync pytest -q tests/test_bills.py
 uv run --no-sync pytest -q tests/control_api/test_bills.py tests/browser/test_bills.py
 ```
 
-These tests create/drop their own databases; never target the running local preview or a shared/production database. Required hosted CI retains the existing contract, broker, browser, process, wheel and restore gates. No production/container deployment is authorized.
+These tests create/drop their own databases; never target the running local preview or a shared/production database. Required hosted CI retains the existing contract, broker, browser, process, wheel and restore gates. The packaged-preview job explicitly opts in with `--bills`, asks the sample amount question in the browser, and reopens the original after gateway restart and a fresh SQL restore against the retained source-object volume. This tests source accessibility, not an independent backup/restore of lost object storage. No production/container deployment is authorized.
 
 ## Acceptance for K1-A
 

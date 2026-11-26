@@ -14,6 +14,7 @@ from playwright.async_api import expect  # type: ignore[import-not-found]
 
 from markos_runtime.client.http import ClientError
 from markos_runtime.control_lifecycle.issuer import RemoteFixtureIssuer
+from markos_runtime.knowledge.bills import SAMPLE
 from tests.browser.test_web import browser_page, login
 from tests.control_api.test_api import SCOPE
 from tests.control_api.test_conversation import request_value
@@ -89,6 +90,13 @@ def test_packaged_preview_restart_outages_and_fresh_database_restore(tmp_path: P
     async def scenario() -> None:
         client = await cli_client(server, tmp_path)
         approver = await cli_client(server, tmp_path, "approver")
+        bill = None
+        if state.get("bill_knowledge"):
+            bill = await asyncio.to_thread(
+                client.request,
+                "/api/v1/bills" + SCOPE,
+                {"schema_version": 1, "name": "Packaged sample bill", "text": SAMPLE},
+            )
         async with browser_page(server, mobile=True) as page:
             await login(page, server)
             await expect(
@@ -103,6 +111,13 @@ def test_packaged_preview_restart_outages_and_fresh_database_restore(tmp_path: P
             ):
                 await page.get_by_role("link", name=name, exact=True).click()
                 await expect(page.get_by_role("heading", name=name, exact=True)).to_be_visible()
+            if bill:
+                await page.get_by_role("link", name="Electricity bills", exact=True).click()
+                await page.get_by_role("button", name="Packaged sample bill", exact=True).click()
+                await page.get_by_role("button", name="How much do I owe?", exact=True).click()
+                await expect(
+                    page.get_by_role("region", name="Bill answer", exact=True)
+                ).to_contain_text("Source line 9: Amount due: $148.50")
             assert await page.evaluate("localStorage.length + sessionStorage.length") == 0
             await page.screenshot(path=str(tmp_path / "synthetic-preview.png"), full_page=True)
         conv = UUID(state["conversation_id"])
@@ -126,6 +141,11 @@ def test_packaged_preview_restart_outages_and_fresh_database_restore(tmp_path: P
         await asyncio.to_thread(compose, "up", "-d", "--no-build", "--force-recreate", *APPS)
         await asyncio.to_thread(wait_healthy)
         assert await asyncio.to_thread(client.request, "/api/v1/agents" + SCOPE)
+        if bill:
+            original = await asyncio.to_thread(
+                client.request, "/api/v1/bills/" + bill["bill_id"] + "/source" + SCOPE
+            )
+            assert original["lines"] == SAMPLE.splitlines()
 
         async def tool_request(key: str) -> Any:
             return await asyncio.to_thread(
@@ -283,6 +303,18 @@ def test_packaged_preview_restart_outages_and_fresh_database_restore(tmp_path: P
         assert len(ledger["operations"]) == 2 and all(
             x["requests"] == 1 for x in ledger["operations"].values()
         )
+        if bill:
+            original = await asyncio.to_thread(
+                viewer.request, "/api/v1/bills/" + bill["bill_id"] + "/source" + SCOPE
+            )
+            assert original["lines"] == SAMPLE.splitlines()
+            result = await asyncio.to_thread(
+                viewer.request,
+                "/api/v1/bills/" + bill["bill_id"] + "/questions" + SCOPE,
+                {"schema_version": 1, "question": "How much do I owe?"},
+            )
+            assert result["answer"] == "Amount due: 148.50 AUD."
+            measurements["bill_source_survived_gateway_and_sql_restore"] = True
         measurements["fresh_database_restore"] = True
         measurements["production_ready"] = False
 
