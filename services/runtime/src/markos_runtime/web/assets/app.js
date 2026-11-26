@@ -98,7 +98,7 @@
           location.assign(value.callback_path);
         } else {
           form.hidden = true; const result = document.getElementById("authorization-result");
-          result.append(node("h2", "Finish CLI sign-in"), node("p", "Paste this one-use code into the waiting terminal. It expires shortly."),
+          result.append(node("h2", "Finish terminal sign-in"), node("p", "Paste this one-use code into the waiting terminal. It expires shortly."),
             node("pre", value.code, {id: "cli-code", tabindex: "0"}));
         }
       } finally { form.elements.credential.value = ""; }
@@ -184,10 +184,10 @@
       const card = node("article"); card.append(node("p", "Outcome: " + attempt.state), node("p", "Operation: " + attempt.operation_id));
       if (attempt.result) card.append(node("pre", JSON.stringify(attempt.result, null, 2)));
       if (attempt.state === "unknown" && can("approver")) {
-        card.append(node("p", "Review the synthetic ledger before recording a finding. This never retries the call."));
+        card.append(node("p", "Check the test results before recording an outcome. This does not run the request again."));
         for (const outcome of ["observed-succeeded", "not-observed", "unresolved"]) card.append(button("Review " + outcome, async () => {
           const body = {schema_version: 1, dispatch_id: attempt.dispatch_id, expected_revision: attempt.revision, outcome, evidence: "synthetic-ledger-reviewed"};
-          review("Record synthetic ledger finding", [["Operation", attempt.operation_id], ["Outcome", outcome], ["Authority", "Human attestation after ledger review; no automatic retry or reply"]], async () => {
+          review("Record test outcome", [["Operation", attempt.operation_id], ["Outcome", outcome], ["Authority", "Human attestation after ledger review; no automatic retry or reply"]], async () => {
             await api(scoped("/api/v1/tool-dispatches/" + attempt.dispatch_id + "/reconcile"), body); await approvalsPage();
           });
         }));
@@ -274,14 +274,14 @@
       } finally { send.disabled = false; send.textContent = pending ? "Retry pending send" : "Send message"; text.readOnly = !!pending; }
     }); }; region.append(form);
     if (me.synthetic_tool_schema_sha256) {
-      const label = field(form, "Synthetic fixture label", "fixture-label", "text", 256); label.required = false;
-      form.append(button("Review synthetic read request", async () => {
+      const label = field(form, "Test label", "fixture-label", "text", 256); label.required = false;
+      form.append(button("Review test request", async () => {
         if (pending) { message("Retry the pending send first."); return; }
-        if (!text.value.trim() || !label.value.trim() || new TextEncoder().encode(text.value).length > 16384) { message("Enter a message and synthetic label before review."); return; }
+        if (!text.value.trim() || !label.value.trim() || new TextEncoder().encode(text.value).length > 16384) { message("Enter a message and test label before review."); return; }
         const grant = await api(scoped("/api/v1/tools/grant"));
-        if (!grant?.enabled) { message("No reviewed fixture grant is enabled in this workspace."); return; }
+        if (!grant?.enabled) { message("Test access is not enabled for this workspace."); return; }
         const body = {schema_version: 1, domain: scope.domain, conversation_id: conversation, operation_key: "message:" + crypto.randomUUID(), agent_id: "control-test-agent", expected_agent_revision: agent.manifest.revision, text: text.value, fixture_arguments: {schema_version: 1, label: label.value}};
-        review("Request a synthetic fixture read", [["Message", body.text], ["Label", body.fixture_arguments.label], ["Destination", grant.endpoint], ["Approval", grant.require_approval ? "Separate exact human decision required" : "Reviewed standing grant; worker still reauthorizes"], ["Effect", "Synthetic read only"]], async () => { pending = body; form.requestSubmit(); });
+        review("Review test request", [["Message", body.text], ["Label", body.fixture_arguments.label], ["Destination", grant.endpoint], ["Approval", grant.require_approval ? "Approval required" : "Approved test access; permissions are checked before use"], ["Effect", "Read test data only"]], async () => { pending = body; form.requestSubmit(); });
       }));
     }
   }
@@ -342,15 +342,15 @@
   }
   async function grantPage() {
     const current = await api(scoped("/api/v1/tools/grant"));
-    view.append(node("h2", "Synthetic fixture grant"), node("p", current ? (current.enabled ? "Enabled" : "Disabled") + " · revision " + current.revision + " · " + current.endpoint : "No fixture grant has been reviewed."));
+    view.append(node("h2", "Test service access"), node("p", current ? (current.enabled ? "Enabled" : "Disabled") + " · revision " + current.revision + " · " + current.endpoint : "Test access has not been set up."));
     if (!can("administrator")) return;
-    const form = node("form"), endpoint = field(form, "Fixture HTTPS endpoint", "fixture-endpoint", "url", 256), reason = field(form, "Reason for fixture grant", "fixture-reason");
+    const form = node("form"), endpoint = field(form, "Test service address", "fixture-endpoint", "url", 256), reason = field(form, "Reason for access", "fixture-reason");
     endpoint.value = current?.endpoint || "";
     const enabled = node("input", undefined, {id: "fixture-enabled", type: "checkbox"}), approval = node("input", undefined, {id: "fixture-approval", type: "checkbox"});
     enabled.checked = !!current?.enabled; approval.checked = current?.require_approval ?? true;
-    form.append(enabled, node("label", "Enable this reviewed fixture grant", {for: "fixture-enabled"}), approval, node("label", "Require a separate exact human approval", {for: "fixture-approval"}), node("button", "Review fixture grant", {type: "submit"}));
+    form.append(enabled, node("label", "Allow this test service", {for: "fixture-enabled"}), approval, node("label", "Require approval for each request", {for: "fixture-approval"}), node("button", "Review test access", {type: "submit"}));
     form.onsubmit = event => { event.preventDefault(); const body = {schema_version: 1, owner_id: scope.owner_id, domain: scope.domain, grant_id: current?.grant_id || crypto.randomUUID(), revision: (current?.revision || 0) + 1, previous_revision: current?.revision || 0, agent_id: "control-test-agent", server_id: "synthetic-mcp-fixture", endpoint: endpoint.value, protocol: "2026-07-28", tool: "fixture.read", tool_schema_sha256: me.synthetic_tool_schema_sha256, data_class: "synthetic", recipient: "synthetic-mcp-fixture", effect: "read", require_approval: approval.checked, enabled: enabled.checked, reason: reason.value};
-      review("Review synthetic fixture permission", [["Destination", body.endpoint], ["Grant revision", body.revision], ["Enabled", body.enabled], ["Separate approval", body.require_approval], ["Tool", body.tool], ["Data and effect", "Synthetic read only; no paid or real tools"], ["Reason", body.reason]], async () => { await api(scoped("/api/v1/tools/grant"), body); await load(); message("Fixture grant revision recorded. Previous pending approvals are invalidated."); });
+      review("Review test access", [["Destination", body.endpoint], ["Grant revision", body.revision], ["Enabled", body.enabled], ["Separate approval", body.require_approval], ["Tool", body.tool], ["Data and effect", "Read test data only; no paid or real tools"], ["Reason", body.reason]], async () => { await api(scoped("/api/v1/tools/grant"), body); await load(); message("Test access updated. Earlier pending approvals no longer apply."); });
     }; view.append(form);
   }
   function addActivity(item) {
