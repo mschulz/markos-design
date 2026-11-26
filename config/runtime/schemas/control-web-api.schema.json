@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Explicit M1-E local fixture UI; no production or tool enablement.",
+  "description": "Local fixture web UI profile; enables no production use or tools.",
   "properties": {
     "api_origin": {
       "title": "Api Origin",

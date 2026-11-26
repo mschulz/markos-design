@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-26 — Replace stale milestone docstrings
+
+- Rewrote 10 docstrings that named old milestones (M1-A to M1-E) or "future" work as present-tense descriptions. Five schema descriptions changed to match.
+
 ## 2026-11-26 — Route table for signed-in API routes
 
 - The 10 signed-in API routes are now named handlers in one `(method, path)` table.

@@ -1,4 +1,4 @@
-"""M1-A data contracts only: parsing never authenticates or grants runtime authority."""
+"""Control-plane data contracts. Parsing never authenticates or grants authority."""
 
 import hashlib
 import json
@@ -75,7 +75,7 @@ class ScopedValue(ControlValue):
 
 
 class HumanPrincipal(ControlValue):
-    """Future verifier output descriptor, never evidence that a JWT was verified."""
+    """Verified human identity shape; holding one is not proof that a JWT was verified."""
 
     principal_id: UUID
     issuer_id: Literal["synthetic-issuer"]
@@ -310,7 +310,7 @@ class CallIntent(ScopedValue):
 
 
 class ApprovalDecisionRequest(ControlValue):
-    """Human/scope comes from future verified context, never this request body."""
+    """Human and scope come from the verified session, never this request body."""
 
     intent_id: UUID
     intent_sha256: Digest

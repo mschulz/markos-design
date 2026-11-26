@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Separately constructed M1-D profile, never an HTTP-writable execution switch.",
+  "description": "Conversation API profile; built from config, never switched on over HTTP.",
   "properties": {
     "api_origin": {
       "title": "Api Origin",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Future verifier output descriptor, never evidence that a JWT was verified.",
+  "description": "Verified human identity shape; holding one is not proof that a JWT was verified.",
   "properties": {
     "expires_at": {
       "format": "date-time",
