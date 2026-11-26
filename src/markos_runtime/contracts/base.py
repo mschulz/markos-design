@@ -79,13 +79,24 @@ def _constant(value: str) -> object:
     raise ValueError("non-JSON constant")
 
 
+def loads_strict(body: bytes, limit: int) -> object:
+    """Parse UTF-8 JSON, rejecting oversize input, duplicate keys and NaN/Infinity.
+
+    Raises ValueError, UnicodeError or RecursionError. Callers map these to their own
+    redacted error type.
+    """
+    if len(body) > limit:
+        raise ValueError("document exceeds byte limit")
+    return json.loads(body.decode("utf-8"), object_pairs_hook=_object, parse_constant=_constant)
+
+
 def parse_document[M: ValueModel](model: type[M], body: bytes, limit: int) -> M:
     if len(body) > limit:
         raise ContractError("document exceeds byte limit")
     try:
         # Pydantic JSON mode accepts wire UUID/time strings, not Python coercions.
         # Pre-scan rejects duplicate keys and nonstandard NaN/Infinity at every depth.
-        json.loads(body.decode("utf-8"), object_pairs_hook=_object, parse_constant=_constant)
+        loads_strict(body, limit)
         return model.model_validate_json(body)
     except (ValueError, UnicodeError, RecursionError, ValidationError):
         raise ContractError("invalid contract document") from None
