@@ -1,4 +1,4 @@
-"""Separate synthetic API profile; M1-A preflight configuration stays inert."""
+"""Synthetic API profiles, separate from the inert control preflight configuration."""
 
 from typing import Literal
 
@@ -35,7 +35,7 @@ class _ApiProfile(ControlValue):
 
 
 class SyntheticApiConfig(_ApiProfile):
-    """M1-C remains execution-disabled."""
+    """Base synthetic API profile; chat execution is always disabled."""
 
     chat_execution_enabled: Literal[False] = False
 
@@ -48,7 +48,7 @@ class SyntheticApiConfig(_ApiProfile):
 
 
 class SyntheticConversationApiConfig(_ApiProfile):
-    """Separately constructed M1-D profile, never an HTTP-writable execution switch."""
+    """Conversation API profile; built from config, never switched on over HTTP."""
 
     conversation_profile: Literal["deterministic-conversation-v1"]
     chat_execution_enabled: Literal[True] = True
@@ -62,7 +62,7 @@ class SyntheticConversationApiConfig(_ApiProfile):
 
 
 class SyntheticWebApiConfig(SyntheticConversationApiConfig):
-    """Explicit M1-E local fixture UI; no production or tool enablement."""
+    """Local fixture web UI profile; enables no production use or tools."""
 
     web_profile: Literal["synthetic-web-cli-v1"]
 

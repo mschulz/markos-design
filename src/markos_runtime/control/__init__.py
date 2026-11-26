@@ -1,1 +1,1 @@
-"""Inert configuration and explicitly connected persistence; no human authentication/API."""
+"""Control-plane configuration, API profiles and explicitly connected persistence."""
