@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-26 — M2-A mailbox records and fake Gmail
+
+- Migration 0019 adds the `mailboxes`, `mail_messages` and `mail_resyncs` tables. Runtime clients have no direct access to them.
+- A new `can_ingest_mail` service grant gates four functions: `open_mailbox`, `mailbox_state`, `store_mail` and `advance_mail`.
+- Each message is stored once, keyed by its Gmail message ID. A record holds the thread ID, history ID, received time, labels, attachment references and status `ingested`. Mail bodies and attachment names are not stored.
+- The database refuses a message without an allowlisted label.
+- The history cursor only moves forward. A worker that read an old cursor gets "stale" and writes nothing.
+- `markos_runtime.mail` adds a read-only Gmail interface and one sync pass. A pass reads changes since the cursor and fetches only messages with an allowlisted label.
+- A missing or lost cursor starts a resync of the allowlisted labels back to 1 January 2020. Each resync is recorded.
+- There is no network Gmail client yet. Tests use an in-memory fake with invented mail.
+- The "message ingested" event moves to M3, by owner decision. Migrations 0001–0018 are unchanged.
+
 ## 2026-11-26 — K1-C3 bill arithmetic rules and acceptance examples
 
 - Added "Bill arithmetic rules" to `docs/k1-bill-knowledge.md`: GST, totals, earlier balances, export credits and credit bills, estimated reads, and tariff structures. Each rule names the tests that enforce it.

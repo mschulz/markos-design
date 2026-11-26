@@ -636,7 +636,7 @@ def test_migration_upgrade_preserves_populated_m0_and_checksums(
             )
             assert conn.execute(
                 "SELECT count(*) FROM markos_runtime.schema_migrations"
-            ).fetchone() == (18,)
+            ).fetchone() == (19,)
 
     asyncio.run(scenario())
 
