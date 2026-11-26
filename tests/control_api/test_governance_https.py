@@ -12,7 +12,7 @@ import pytest
 
 from markos_runtime.contracts.governance import ReviewedFixtureGrant
 from markos_runtime.store.database import DurableStore
-from markos_runtime.tools.transport import FixtureConnection, FixtureTransport
+from markos_runtime.tools.transport import FixtureConnection, FixtureTransport, ToolUnavailable
 from markos_runtime.tools.worker import GovernedConversationWorker
 from tests.control_api.test_api import SCOPE
 from tests.control_api.test_conversation import conversation, handoff, request_value, rows
@@ -29,9 +29,25 @@ from tests.tools_support import tool_server
 __all__ = ["conversation"]
 
 
+class OutageTransport(FixtureTransport):
+    """Simulates a tool server that gives no response, for example during a restart."""
+
+    async def inspect(self, deadline: float) -> None:
+        raise ToolUnavailable()
+
+
 @pytest.mark.parametrize(
     "fault",
-    [None, "response-loss", "scope", "schema", "audit-before", "audit-result", "upstream-revoked"],
+    [
+        None,
+        "unavailable",
+        "response-loss",
+        "scope",
+        "schema",
+        "audit-before",
+        "audit-result",
+        "upstream-revoked",
+    ],
 )
 def test_shared_api_durable_wait_resume_and_uncertain_outcomes(
     conversation: dict[str, Any], tmp_path: Path, fault: str | None
@@ -117,6 +133,21 @@ def test_shared_api_durable_wait_resume_and_uncertain_outcomes(
                         "CREATE TRIGGER audit_fault BEFORE INSERT ON markos_control.tool_audit "
                         "FOR EACH ROW EXECUTE FUNCTION markos_control.fault_audit()"
                     )
+            elif fault == "unavailable":
+                down = GovernedConversationWorker(
+                    runtime,
+                    server["issuer"],
+                    transport=OutageTransport(transport.config, confirm_synthetic=True),
+                    confirm_synthetic=True,
+                )
+                assert not await down.run_once()
+                assert rows(conversation, "SELECT enabled FROM markos_control.tool_grants") == [
+                    (True,)
+                ]
+                assert rows(conversation, "SELECT status FROM markos_control.tool_intents") == [
+                    ("approved",)
+                ]
+                assert remote["state"]["methods"] == []
             elif fault == "upstream-revoked":
                 for sid, (subject, _) in list(server["issuer"]._sessions.items()):
                     if subject == "both":
@@ -128,7 +159,7 @@ def test_shared_api_durable_wait_resume_and_uncertain_outcomes(
                 runtime, server["issuer"], transport=transport, confirm_synthetic=True
             )
             completed = await worker.run_once()
-            if fault is None:
+            if fault in {None, "unavailable"}:
                 assert completed
                 assert rows(conversation, "SELECT state FROM markos_control.chat_runs") == [
                     ("succeeded",)

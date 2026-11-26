@@ -9,7 +9,12 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from markos_runtime.tools.transport import FixtureConnection, FixtureTransport, ToolProtocolError
+from markos_runtime.tools.transport import (
+    FixtureConnection,
+    FixtureTransport,
+    ToolProtocolError,
+    ToolUnavailable,
+)
 from tests.integration.conftest import OWNER
 
 if importlib.util.find_spec("mcp") is None:
@@ -58,8 +63,9 @@ def test_discovery_and_protocol_faults_never_call_tool(tmp_path: Path, fault: st
         async with tool_server(tmp_path, UUID(OWNER), "personal") as server:
             server["state"]["fault"] = fault
             transport = connection(server)
-            with pytest.raises(ToolProtocolError):
+            with pytest.raises(ToolProtocolError) as caught:
                 await transport.inspect(time.monotonic() + 3)
+            assert caught.type is ToolProtocolError
             assert server["state"]["operations"] == []
             assert "tools/call" not in server["state"]["methods"]
 
@@ -112,5 +118,33 @@ def test_absolute_deadline_bounds_slow_sdk_response(tmp_path: Path, sse: bool) -
                 await connection(server).call("Synthetic bounded wait", uuid4(), started + 0.15)
             assert time.monotonic() - started < 1
             assert server["state"]["ledger"] == {"Synthetic bounded wait": 1}
+
+    asyncio.run(scenario())
+
+
+def test_missing_response_is_unavailable_not_a_mismatch(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        async with tool_server(tmp_path, UUID(OWNER), "personal") as server:
+            transport = connection(server)
+            with pytest.raises(ToolUnavailable):
+                await transport.inspect(time.monotonic() - 1)
+        # The server has stopped, so the connection is refused.
+        with pytest.raises(ToolUnavailable):
+            await transport.inspect(time.monotonic() + 3)
+
+    asyncio.run(scenario())
+
+
+def test_untrusted_certificate_stays_a_mismatch(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        async with (
+            tool_server(tmp_path / "a", UUID(OWNER), "personal") as server,
+            tool_server(tmp_path / "b", UUID(OWNER), "personal") as other,
+        ):
+            transport = connection({**server, "cert": other["cert"]})
+            with pytest.raises(ToolProtocolError) as caught:
+                await transport.inspect(time.monotonic() + 3)
+            assert caught.type is ToolProtocolError
+            assert server["state"]["methods"] == []
 
     asyncio.run(scenario())
