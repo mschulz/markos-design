@@ -18,6 +18,13 @@
 - Applied first MVP feedback: Sign-in code, Test label, Review test request and Test service access replace visible fixture/credential/grant jargon. Login help and demo notices use plain language.
 - Updated existing browser acceptance locators and the preview walkthrough. Request fields, authentication, exact approvals, stored messages and runtime behavior stay unchanged.
 
+## 2026-11-13 — Local synthetic preview setup
+
+- Reviewed main after PR #25; preserved the exact reviewed merge tree.
+- Added an optional loopback PostgreSQL host-port override so the preview can coexist with an existing local database. Internal ports, owned-service checks, scopes and defaults remain intact; the hosted preview job exercises the alternate port.
+- Replaced a fixed 0.3-second MCP fixture startup sleep with checks of both private readiness endpoints after initial start and restart; protocol/deadline checks remain intact.
+- This is a local synthetic setup correction, not a cloud deployment or production-readiness claim.
+
 
 ## 2026-11-13 — M1-G lean synthetic preview (review PR)
 
