@@ -291,9 +291,10 @@ async def bootstrap() -> None:
                 (login, service, OWNER, "personal", pub, consume, execute),
             )
         # The mail process and the gateway's alert route share this mail-only login.
+        # The table needs publish or consume. Publish fits: M3 publishes "message ingested".
         await conn.execute(
-            "INSERT INTO markos_runtime.service_identities("
-            "login_role,service_id,owner_id,domain,can_ingest_mail) VALUES(%s,%s,%s,%s,true)",
+            "INSERT INTO markos_runtime.service_identities(login_role,service_id,owner_id,"
+            "domain,can_publish,can_ingest_mail) VALUES(%s,%s,%s,%s,true,true)",
             ("m1g_mail", "control-mail", OWNER, "personal"),
         )
     async with HarnessStore.connect(make_conninfo(admin(), user="m1g_gateway")) as store:
