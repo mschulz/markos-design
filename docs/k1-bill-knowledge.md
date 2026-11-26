@@ -136,7 +136,7 @@ Origin was the previous supplier. Most old bills are in Gmail, so this profile l
 
 ## K1-C plan: corrections, history and checked arithmetic
 
-Status: approved. K1-C1 (corrections) is implemented in `knowledge/corrections.py` and migration 0017. K1-C2 (history) is implemented in `knowledge/history.py` and migration 0018. K1-C3 is not started. Owner decisions are under "Decisions".
+Status: approved. K1-C1 (corrections) is implemented in `knowledge/corrections.py` and migration 0017. K1-C2 (history) is implemented in `knowledge/history.py` and migration 0018. K1-C3 (rules, acceptance examples and coverage) is implemented: see "Bill arithmetic rules" below. The owner approved merging K1-C3 on 2026-11-26. Owner decisions are under "Decisions".
 
 K1-C makes stored bills trustworthy over time. The owner can correct a figure without losing what the extractor read, compare bills across suppliers, and rely on written arithmetic rules backed by approved examples.
 
@@ -199,6 +199,52 @@ The owner approved these on 2026-11-26.
 ### Out of scope
 
 Deleting bills, retention and privacy policy, a hosted object store, Gmail ingestion (M2), and model-written answers. These stay unresolved, as listed below.
+
+## Bill arithmetic rules
+
+These rules hold for every stored report and for the effective view after corrections. Each rule names the tests that enforce it. Acceptance examples are in `tests/test_acceptance.py`. The owner approves their expected answers, and changes need the owner's approval.
+
+### GST
+
+- **Amber:** charge lines exclude GST. One "GST – 10%" charge line carries it, and the charges total includes that line. Credits have their own GST line inside the credits total. Tests: `test_amber.py::test_reads_every_summary_figure_with_page_citations`, `test_acceptance.py::test_ordinary_amber_bill`.
+- **Origin:** every amount includes GST. "GST included in total" is stored for reference and is not added again. Tests: `test_origin.py::test_one_rate_quarter_reconciles_with_cited_cells`, `test_acceptance.py::test_ordinary_origin_bill`.
+- **History:** every bill total includes GST, for both profiles. Test: `test_history.py::test_mixed_suppliers_in_period_order_with_per_day_figures`.
+
+### Totals
+
+- **Amber:** charge lines add up to the charges total. Credit lines add up to the credits total. The charges total minus the credits total equals the bill total. Tests: `test_amber.py::test_totals_that_do_not_add_up_are_unreconciled`, `test_amber.py::test_unknown_summary_line_blocks_confident_totals`.
+- **Origin:** each table's rows add up to that table's total. The charges total minus export credits and other credits equals the bill total. Tests: `test_origin.py::test_mismatch_or_unknown_row_marks_money_unreconciled`.
+- If any total fails, every money figure on that bill is "unreconciled" and answers say "not established". Dates and usage are still reported.
+
+### Earlier balances
+
+- **Bill total** is the cost of this period. **Amount owed** (Amber "Total owed", Origin "Amount due") also holds any earlier balance.
+- **Origin:** the bill total plus the balance brought forward equals the amount due. A positive balance adds a notice. A credit balance is negative and adds the notice "The amount due is reduced by a credit from an earlier bill." Tests: `test_origin.py::test_balance_forward_is_added_and_flagged`, `test_origin.py::test_credit_brought_forward_keeps_its_sign`, `test_acceptance.py::test_unpaid_earlier_balance`.
+- **Amber:** the bill shows no balance line. If the total owed differs from the bill total, both are stored and a notice says so. They are never merged. Tests: `test_amber.py::test_earlier_balance_is_flagged_not_merged`, `test_acceptance.py::test_unpaid_earlier_balance`.
+
+### Export credits and credit bills
+
+- Export credits and rebates are stored as positive amounts and subtracted from charges. Origin prints them with a minus sign. Amber lists them under credits. Tests: `test_origin.py::test_credit_brought_forward_keeps_its_sign`, `test_acceptance.py::test_ordinary_origin_bill`.
+- Bill totals, amounts owed and balances keep their sign. A credit bill has a negative total. Test: `test_acceptance.py::test_credit_bill_with_negative_total`.
+- Corrections accept a negative value only for the bill total, amount owed and balance brought forward. Tests: `test_corrections.py::test_values_are_normalised_or_rejected`.
+
+### Estimated reads and unknown lines
+
+- **Origin:** only "This bill is based on an actual reading" is accepted. An estimated read, or any line the profile does not know, makes every money figure unreconciled. Tests: `test_origin.py::test_mismatch_or_unknown_row_marks_money_unreconciled`, `test_acceptance.py::test_estimated_read_needs_review`.
+- **Amber:** any unknown summary line makes the totals unreconciled. Test: `test_amber.py::test_unknown_summary_line_blocks_confident_totals`.
+
+### Tariff structures
+
+- **Split-rate quarters (Origin):** a price change gives one charges table and one exports table per rate period. All tables are added together and each is checked against its own total. Tests: `test_origin.py::test_split_rate_quarter_adds_both_tables`, `test_acceptance.py::test_split_rate_quarter`.
+- **Controlled load (Origin):** controlled-load usage and its daily supply are added to the usage and supply charges. Usage kWh includes controlled load. Test: `test_origin.py::test_one_rate_quarter_reconciles_with_cited_cells`.
+- **Solar meter charge (Origin):** optional. A bill without it shows "missing", not $0.00, and still reconciles. Test: `test_origin.py::test_bill_without_solar_meter_charge_still_reconciles`.
+- **Demand charges and subscriptions (Amber):** each is its own charge line. The subscription may be called "Monthly Subscription" or "Membership". Test: `test_amber.py::test_reads_every_summary_figure_with_page_citations`.
+
+### Measured coverage
+
+`scripts/bill_coverage.py FOLDER` runs every profile over a private folder of PDF bills. It prints counts only: bills per profile, fact states, and bills whose total is not established. It also checks that a second parse gives the same report. Its output is not committed.
+
+On the owner's samples on 2026-11-26: 4 Amber bills with 60 facts found, and 4 Origin bills with 51 found and 1 missing (a bill without a solar meter charge). Every bill total was established, and every report was repeatable.
 
 ## Next slices and unresolved decisions
 

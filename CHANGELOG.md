@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-26 — K1-C3 bill arithmetic rules and acceptance examples
+
+- Added "Bill arithmetic rules" to `docs/k1-bill-knowledge.md`: GST, totals, earlier balances, export credits and credit bills, estimated reads, and tariff structures. Each rule names the tests that enforce it.
+- Added `tests/test_acceptance.py`: six invented bills with expected facts and answers. They cover an ordinary Amber bill, an ordinary Origin bill, an unpaid earlier balance, a credit bill with a negative total, an estimated read and a split-rate quarter.
+- Added `scripts/bill_coverage.py`: counts fact states over a private folder of PDF bills. It prints counts only, never file names or bill values.
+- No code or migration changes.
+
 ## 2026-11-26 — K1-C2 bill history
 
 - Added `GET /api/v1/bills/history`: every bill in the scope, Amber, Origin and pasted text together, in billing-period order. Each row shows the supplier, days, bill total, kWh, export credit, cost per day and kWh per day.
