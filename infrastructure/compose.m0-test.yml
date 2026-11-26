@@ -1,7 +1,7 @@
 # Synthetic acceptance only. Local PostgreSQL, test credentials and test CA are not production.
 x-runtime: &runtime
   build:
-    context: ../services/runtime
+    context: ..
   image: markos-m0f-test:${MARKOS_TEST_COMPOSE_PROJECT:?explicit test project required}
   restart: unless-stopped
   init: true

@@ -40,7 +40,7 @@ __all__ = ["rabbit", "conversation"]
 @pytest.fixture
 def chat_rabbit(rabbit: Harness) -> Harness:
     path = (
-        Path(__file__).resolve().parents[4]
+        Path(__file__).resolve().parents[2]
         / "infrastructure/rabbitmq/definitions.control.example.json"
     )
     definitions = json.loads(path.read_text())

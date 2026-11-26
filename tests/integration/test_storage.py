@@ -322,7 +322,7 @@ def test_admin_identity_not_accepted_by_runtime(database: dict[str, str]) -> Non
 def test_migrations_idempotent_and_changed_bytes_rejected(
     database: dict[str, str], tmp_path: Path
 ) -> None:
-    directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+    directory = Path(__file__).resolve().parents[2] / "infrastructure/migrations"
 
     async def scenario() -> None:
         async with await psycopg.AsyncConnection.connect(
@@ -437,7 +437,7 @@ def test_concurrent_business_operation_dedup(database: dict[str, str]) -> None:
 def test_failed_migration_transaction_rolls_back_ddl_and_ledger(
     database: dict[str, str], tmp_path: Path
 ) -> None:
-    directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+    directory = Path(__file__).resolve().parents[2] / "infrastructure/migrations"
     for existing in directory.glob("*.sql"):
         (tmp_path / existing.name).write_bytes(existing.read_bytes())
     (tmp_path / "0015_fault.sql").write_text(

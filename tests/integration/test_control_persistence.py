@@ -601,7 +601,7 @@ def test_migration_upgrade_preserves_populated_m0_and_checksums(
     async def scenario() -> None:
         from tests.integration.conftest import ROLES
 
-        directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+        directory = Path(__file__).resolve().parents[2] / "infrastructure/migrations"
         for file in sorted(directory.glob("*.sql"))[:5]:
             (tmp_path / file.name).write_bytes(file.read_bytes())
         # Reconstruct an actual M0-only database before admitting an old-wire event.
@@ -967,7 +967,7 @@ def test_upgrade_populated_control_preserves_sessions_and_held_work(
     from tests.integration.conftest import ROLES
 
     async def scenario() -> None:
-        directory = Path(__file__).resolve().parents[4] / "infrastructure/migrations"
+        directory = Path(__file__).resolve().parents[2] / "infrastructure/migrations"
         for file in sorted(directory.glob("*.sql"))[:previous]:
             (tmp_path / file.name).write_bytes(file.read_bytes())
         with psycopg.connect(control["migration"], autocommit=True) as conn:

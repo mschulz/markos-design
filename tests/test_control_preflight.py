@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def test_control_preflight_guarded_outside_checkout(tmp_path: Path) -> None:
-    examples = Path(__file__).resolve().parents[3] / "config/runtime/control"
+    examples = Path(__file__).resolve().parents[1] / "config/runtime/control"
     config = tmp_path / "config.json"
     config.write_bytes((examples / "config.example.json").read_bytes())
     event = tmp_path / "event.json"

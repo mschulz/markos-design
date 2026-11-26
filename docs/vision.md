@@ -27,13 +27,13 @@ MarkOS is an always-on personal agent operating system. It ingests information, 
 
 ## Product direction
 
-The first useful workflow is a lean electricity-bill Knowledge Base: supply bill text, preserve its source, inspect extracted figures and ask questions with evidence. This K1 priority brings a bounded part of knowledge delivery ahead of Gmail ingestion and general classification; see [[MarkOS v0.3 Lean Bill Knowledge MVP]]. Native Gmail ingestion, wider classification, richer electricity analysis and notifications follow demonstrated value. A shared authenticated gateway supports browser/PWA, CLI and optional messaging. Cloud scheduling and processing continue with the MacBook off.
+The first useful workflow is a lean electricity-bill Knowledge Base: supply bill text, preserve its source, inspect extracted figures and ask questions with evidence. This K1 priority brings a bounded part of knowledge delivery ahead of Gmail ingestion and general classification; see [MarkOS v0.3 Lean Bill Knowledge MVP](k1-bill-knowledge.md). Native Gmail ingestion, wider classification, richer electricity analysis and notifications follow demonstrated value. A shared authenticated gateway supports browser/PWA, CLI and optional messaging. Cloud scheduling and processing continue with the MacBook off.
 
 No PARA note hierarchy, Obsidian installation, local Markdown index or native desktop application is a foundation requirement. Source originals remain accessible with provenance; structured records and exports need documented recovery and portability.
 
 ## Supersession
 
-This revision replaces the original Markdown-canonical Personal Knowledge Engine vision following the owner's explicit architecture correction. Previous text remains in Git history. [[docs/decisions|decisions]] defines precedence and boundaries; [[MarkOS v0.3 Specification]] defines the current design. Preserving legacy code does not make it the new implementation baseline.
+This revision replaces the original Markdown-canonical Personal Knowledge Engine vision following the owner's explicit architecture correction. Previous text remains in Git history. [decisions](decisions.md) defines precedence and boundaries; [MarkOS v0.3 Specification](specification.md) defines the current design. Preserving legacy code does not make it the new implementation baseline.
 
 ## Success criteria
 

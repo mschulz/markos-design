@@ -16,16 +16,16 @@ and data only. It is not a deployment manifest.
 
 ## Start
 
-From `services/runtime`:
+From the repo root:
 
 ```console
 export UV_PROJECT_ENVIRONMENT=/tmp/markos-preview-env
 uv sync --locked --extra control --extra tools --group browser
 export MARKOS_TEST_COMPOSE_PROJECT=markos-m1g-local-$(openssl rand -hex 6)
 uv run --no-sync python -m tests.control_process.support prepare --confirm-synthetic --bills
-docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f ../../infrastructure/compose.m1-control-test.yml up -d --wait postgres rabbitmq
+docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml up -d --wait postgres rabbitmq
 uv run --no-sync python -m tests.control_process.support bootstrap --confirm-synthetic
-docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f ../../infrastructure/compose.m1-control-test.yml build gateway
+docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml build gateway
 uv run --no-sync python -m tests.control_process.support start --confirm-synthetic
 ```
 

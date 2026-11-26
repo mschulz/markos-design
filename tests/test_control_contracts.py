@@ -28,7 +28,7 @@ from markos_runtime.contracts.governance import GovernedChatRequest, Reconciliat
 from markos_runtime.control.config import ControlConfig, ControlLimits
 from markos_runtime.schemas import artifacts, models
 
-EXAMPLES = Path(__file__).resolve().parents[3] / "config/runtime/control"
+EXAMPLES = Path(__file__).resolve().parents[1] / "config/runtime/control"
 
 
 def document(name: str) -> dict[str, Any]:

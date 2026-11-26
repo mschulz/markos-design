@@ -1,7 +1,8 @@
-# MarkOS runtime
+# Development
 
-The MarkOS application: package `markos_runtime`, Python 3.13, its own `uv.lock`.
-Design rules and their reasons are in [docs/decisions.md](../../docs/decisions.md).
+The application is the package `markos_runtime` in `src/`, with tests in `tests/`.
+Python 3.13 and uv. Design rules and their reasons are in
+[decisions.md](decisions.md).
 
 Entry points:
 
@@ -16,7 +17,7 @@ the base environment; its isolation tests require them absent.
 
 ## Checks
 
-Use a separate environment outside the repository:
+From the repository root, with an environment outside the repository:
 
 ```console
 export UV_PROJECT_ENVIRONMENT=/tmp/markos-runtime-env
@@ -26,11 +27,13 @@ uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
 uv run --no-sync mypy
 uv run --no-sync pytest --ignore=tests/control_api --ignore=tests/browser --ignore=tests/control_process --ignore=tests/integration/test_volume_loss.py --ignore=tests/integration/test_lifecycle_harness.py
-uv run --no-sync python -m markos_runtime.schemas --output-dir ../../config/runtime/schemas
+uv run --no-sync python -m markos_runtime.schemas --output-dir config/runtime/schemas
+python3 -B scripts/check_docs.py
 ```
 
-The last command fails if the committed JSON schemas differ from the models. Add
-`--write` to regenerate them.
+The schemas command fails if the committed JSON schemas differ from the models.
+Add `--write` to regenerate them. `check_docs.py` fails on broken local links in
+Markdown files.
 
 ## Database and broker tests
 
@@ -52,4 +55,4 @@ To check the optional `control` profile on its own:
 
 ## Local preview
 
-See [docs/local-preview.md](../../docs/local-preview.md).
+See [local-preview.md](local-preview.md).

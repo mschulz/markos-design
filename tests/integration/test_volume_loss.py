@@ -29,7 +29,7 @@ def remove_test_broker_volume() -> None:
     project = os.environ.get("MARKOS_TEST_COMPOSE_PROJECT", "")
     if not re.fullmatch(r"markos-m0e-[0-9]+-[0-9]+", project):
         pytest.fail("volume-loss test requires its own disposable CI Compose project")
-    config = Path(__file__).resolve().parents[4] / "infrastructure/compose.m0-replay-test.yml"
+    config = Path(__file__).resolve().parents[2] / "infrastructure/compose.m0-replay-test.yml"
     prefix = ["docker", "compose", "-p", project, "-f", str(config)]
 
     def run(args: list[str]) -> str:
