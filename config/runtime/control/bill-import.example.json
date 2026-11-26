@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "name": "Sample electricity bill",
+  "text": "SAMPLE ONLY - invented electricity bill, no personal data\nSupplier: Example Energy\nCurrency: AUD\nBilling period: 2026-10-01 to 2026-10-31\nElectricity used: 420 kWh\nUsage charge: $126.00\nSupply charge: $31.00\nExport credit: $8.50\nAmount due: $148.50\nAll amounts include GST. No previous balance on this sample.\n"
+}

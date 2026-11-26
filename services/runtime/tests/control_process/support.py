@@ -170,7 +170,7 @@ def certificates() -> None:
         (CERTS / name).chmod(0o644)
 
 
-def prepare_files() -> None:
+def prepare_files(*, bills: bool = False) -> None:
     project()
     postgres_port()
     if FOLDER.exists():
@@ -183,6 +183,7 @@ def prepare_files() -> None:
     tokens = {name: opaque() for name in ("api", "worker", "issuer_admin", "tool", "tool_admin")}
     state = {
         "project": project(),
+        "bill_knowledge": bills,
         "credentials": credentials,
         "tokens": tokens,
         "session_key": base64.urlsafe_b64encode(os.urandom(32)).decode(),
@@ -345,6 +346,9 @@ async def bootstrap() -> None:
             service_id=cast(Any, service),
             owner_id=UUID(OWNER),
             domain="personal",
+            bill_objects_path="/var/lib/markos/bills"
+            if component == "gateway" and state.get("bill_knowledge")
+            else None,
             health_port=8780 + i,
             listen_host="0.0.0.0",
             ca_file="/etc/test-ca/ca.pem",
@@ -426,10 +430,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Owned synthetic preview only; no deployment")
     parser.add_argument("action", choices=["prepare", "bootstrap", "start", "stop"])
     parser.add_argument("--confirm-synthetic", action="store_true", required=True)
+    parser.add_argument(
+        "--bills", action="store_true", help="Opt in to the bill-text preview on a fresh project"
+    )
     args = parser.parse_args()
     project()
     if args.action == "prepare":
-        prepare_files()
+        prepare_files(bills=args.bills)
     elif args.action == "bootstrap":
         asyncio.run(bootstrap())
     elif args.action == "start":

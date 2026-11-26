@@ -2,11 +2,11 @@
 title: MarkOS v0.3 Roadmap
 type: roadmap
 status: proposed
-version: 2.10
+version: 2.11
 owner: Mark Schulz
 created: 2026-11-12
-updated: 2026-11-13
-reviewed: 2026-11-13
+updated: 2026-11-26
+reviewed: 2026-11-26
 m3_routing_revision: 1.1
 tags:
   - architecture
@@ -26,13 +26,20 @@ Use `markos-design` for code, tests, infrastructure and docs together. Leave `ma
 
 `services/runtime/` is a separate project with its own lock and tests. The first gate forbids imports/dependencies on the old package, DuckDB or note-tree configuration. No bulk deletion or code relocation occurs in this documentation PR.
 
+## Lean Knowledge Base priority — 2026-11-26
+
+M0 and the local M1 sample-data control preview are implemented; full production/operational closeout remains open. PRs #26–#28 are merged. The owner has prioritized a useful electricity-bill Knowledge Base MVP over further manual approval-screen testing and over building every ingestion/classification layer first.
+
+**Next: K1 Bill Knowledge MVP**, bringing a small part of M4/M5 forward. K1-A is the separately reviewable working text slice in [[MarkOS v0.3 Lean Bill Knowledge MVP]]: paste/sample bill text → immutable source object → persisted figures → cited answers in the web interface. K1-B adds bounded text-PDF input and page citations; K1-C adds correction/history and measured extraction coverage. Gmail ingestion follows this useful workflow; M2–M8 identifiers and broader outcomes remain intact. Current M1 approval regression checks stay automated. Neither cloud deployment nor personal-data enablement is implied.
+
 ## Delivery sequence
 
 | Milestone | Outcome | Acceptance |
 |---|---|---|
 | M0 Foundation | Independent contracts/config, PostgreSQL events/outbox/inbox/tasks, RabbitMQ transport, leases/schedules, replay and lifecycle | Synthetic durable workflow survives duplicate delivery, lost confirms, restarts, broker loss and missed schedules; isolated roles deny cross-owner/domain access |
 | M1 Control plane | Authenticated shared gateway, minimal web chat, registry/config/activity, common CLI API | Converse with synthetic agent; inspect health; enforce scopes and approval lifecycle |
-| M2 Gmail | Cloud Pub/Sub ingress, watch renewal, history cursor, source storage, reconciliation | Duplicate/out-of-order mailbox notifications create one durable source/event; recover cursor gaps |
+| K1 Lean bill knowledge — next | Bill text/sample → original source → extracted figures → cited answers; then PDF input and correction/history | K1-A: save/reopen/deduplicate; source-line answers; honest missing/conflicting fields; scoped access; narrow-screen journey. PDF/OCR, real bills and hosted recovery remain later gates. |
+| M2 Gmail — after K1 feedback | Cloud Pub/Sub ingress, watch renewal, history cursor, source storage, reconciliation | Duplicate/out-of-order mailbox notifications create one durable source/event; recover cursor gaps |
 | M3 Classification | Rules-first email routing; interchangeable Jev/LLM classifiers; authorised dispatch and durable review | Held-out comparison of rules-only, rules + Jev and rules + LLM meets agreed category targets; ambiguity, provider failures, isolation, cost/latency and decision traces verified |
 | M4 Electricity | Bill extraction, arithmetic validation, usage/export/charge history and reports | Trace every result to sample evidence; surface uncertainty without invented savings |
 | M5 Knowledge | Structured facts/entities/relationships, keyword/semantic retrieval, consolidation and optional Markdown views | Provenance, temporal updates, contradictions and domain access verified; no PARA or Markdown authority |

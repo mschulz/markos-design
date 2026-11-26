@@ -2,7 +2,7 @@
 title: MarkOS v0.3 M1-G CI and Lean Preview
 type: implementation-record
 status: implemented-synthetic-preview
-version: 1.2
+version: 1.3
 owner: Mark Schulz
 created: 2026-11-13
 updated: 2026-11-25
@@ -77,6 +77,10 @@ Existing M0 lock/schema/type/wheel, real PostgreSQL/RabbitMQ, broker-volume-loss
 The restore drill keeps independent issuer/MCP state current, rotates the SQL epoch **before writers**, reapplies explicit current synthetic deny facts using the migration role, invalidates old sessions/approvals and verifies retained history plus unknown-outcome evidence without repeating fixture calls. The controller is outside the image, checks local Docker context and owned project/container labels and never restarts the daemon. Snapshot bytes stay in memory and are never published. This is evidence for the synthetic path, not a product backup agent or current revocation/deletion service. It does not recover history absent from the snapshot, reverse external effects or claim zero RPO/RTO.
 
 `config/runtime/control/m1-closeout.json` maps every M1-01–M1-22 and MCP-01–MCP-10 to existing/new test families and explicit gaps. **Overall M1 operational closeout and production readiness remain false.** In particular: all process kill points/slow-reader and proxy/resource measurements, independent durable real deletion/revocation feed, daily 7/365-day cleanup and 24-hour alert delivery, 14-day diagnostic operations, production onboarding/OAuth/secret custody, real provider idempotency/reconciliation, cloud sizing/restore/monitoring and MacBook-off evidence remain unpassed. Existing controlled-clock retention tests are evidence for SQL policy, not a running maintenance service.
+
+## Current product priority — 2026-11-26
+
+The owner has authorized [[MarkOS v0.3 Lean Bill Knowledge MVP]] as the next useful slice, ahead of Gmail and broad classification. M1 remains the control foundation; its approval regressions are primarily automated. The K1 PR does not update this running preview or close production/operational gaps. The paragraph below records the earlier M1-G review decision and is superseded for delivery ordering by the K1 priority in [[MarkOS v0.3 Roadmap]].
 
 ## Next review decision
 

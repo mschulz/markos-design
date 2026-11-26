@@ -12,6 +12,10 @@ Its preflight validates synthetic documents only. M0-B adds [explicit PostgreSQL
 
 MCP access for agents is proposed through a governed tool gateway with explicit owner/domain grants, scoped approvals and durable audit. It is not enabled by this documentation; RabbitMQ remains the event bus.
 
+## Next useful workflow: electricity-bill Knowledge Base
+
+The owner has prioritized a lean bill-to-answer workflow ahead of Gmail and general classification. The first working slice adds **Electricity bills** to an explicitly opted-in local preview: paste bill text or load an invented sample, save it, inspect extracted figures, and ask a question with source-line citations. Missing/conflicting values remain explicit. Originals stay private outside Git; PostgreSQL owns facts and provenance. PDF/OCR, real accounts/models and cloud deployment remain off. See [the slice and run instructions](MarkOS%20v0.3%20Lean%20Bill%20Knowledge%20MVP.md) and [updated roadmap](MarkOS%20v0.3%20Roadmap.md). This PR does not update the running preview.
+
 ## Synthetic MVP feedback preview
 
 The [lean M1-G preview and runbook](MarkOS%20v0.3%20M1-G%20CI%20and%20Lean%20Preview.md) packages the existing web/CLI, deterministic chat and exact synthetic approval flow for local feedback. It uses an explicit disposable Docker setup and synthetic credentials. No real account, model, production deployment or full operational closeout is claimed. Review the PR before running it; nothing starts on import or preflight.

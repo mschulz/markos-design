@@ -39,6 +39,7 @@ from markos_runtime.contracts.control import (
 )
 from markos_runtime.control.api_config import (
     SyntheticApiConfig,
+    SyntheticBillApiConfig,
     SyntheticConversationApiConfig,
     SyntheticGovernanceApiConfig,
     SyntheticWebApiConfig,
@@ -295,6 +296,7 @@ def create_app(
     *,
     session_key: bytes,
     confirm_synthetic: bool = False,
+    bill_objects: Any = None,
 ) -> Any:
     # Imports are optional and occur only after an explicit factory invocation.
     api = SyntheticApi(config, store, issuer, session_key, confirm_synthetic=confirm_synthetic)
@@ -312,6 +314,16 @@ def create_app(
     from markos_runtime.api.governance import GovernanceRoutes
 
     governance = GovernanceRoutes(api) if isinstance(config, SyntheticGovernanceApiConfig) else None
+    from markos_runtime.api.bills import BillRoutes
+    from markos_runtime.knowledge.objects import BillObjects
+
+    bills = None
+    if isinstance(config, SyntheticBillApiConfig):
+        if not isinstance(bill_objects, BillObjects):
+            raise ValueError("explicit private bill object adapter required")
+        bills = BillRoutes(api, bill_objects)
+    elif bill_objects is not None:
+        raise ValueError("bill objects require the explicit bill profile")
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False)
 
     def page(
@@ -383,6 +395,8 @@ def create_app(
             return JSONResponse({"ready": ready}, status_code=200 if ready else 503)
         if not await store._call("api_ready", Jsonb(EXPECTED_MIGRATIONS)):
             raise ApiFault("unavailable", 503)
+        if bills is not None and (path == "/api/v1/bills" or path.startswith("/api/v1/bills/")):
+            return await bills.handle(request, data)
         if governance is not None and governance.accepts(path):
             return await governance.handle(request, data)
         if path.startswith("/auth/") and path != "/auth/callback":
@@ -567,6 +581,7 @@ def create_app(
             result = await store._call("api_me", ctx.session_id, ctx.lookup_hash)
             if binding["kind"] == "browser":
                 result["csrf_token"] = api.codec.lookup("csrf", raw)
+            result["bill_knowledge_available"] = bills is not None
             if governance is not None:
                 from markos_runtime.contracts.governance import SCHEMA_SHA256
 

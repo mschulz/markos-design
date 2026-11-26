@@ -60,11 +60,14 @@ class WebRoutes:
             "/app/configuration": "Configuration",
             "/app/sign-in": "Sign in",
         }
+        if hasattr(self.api.config, "bill_profile"):
+            pages["/app/bills"] = "Electricity bills"
         context: dict[str, Any] = {
             "title": pages.get(path, "Sign in"),
             "page": path.removeprefix("/app/") if path != "/app" else "conversations",
             "request": "",
             "proof": "",
+            "bill_knowledge": hasattr(self.api.config, "bill_profile"),
             "synthetic_governance": hasattr(self.api.config, "governance_profile"),
         }
         response_cookie = None

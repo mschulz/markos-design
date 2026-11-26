@@ -137,7 +137,8 @@
     document.getElementById("roles").textContent = scope.roles.join(", ");
     view.replaceChildren(node("p", "Loading…"));
     const agents = await api(scoped("/api/v1/agents")); agent = agents[0];
-    if (page === "conversations") await conversations();
+    if (page === "bills" && me.bill_knowledge_available) await billsPage();
+    else if (page === "conversations") await conversations();
     else if (page === "agents") await agentsPage();
     else if (page === "configuration") await configurationPage();
     else if (page === "activity") {
@@ -146,6 +147,64 @@
       first.items.forEach(addActivity); currentCursor = first.next_cursor;
       watch();
     } else if (page === "approvals") await approvalsPage();
+  }
+  async function billsPage() {
+    view.replaceChildren(node("p", "Save a bill, check its figures, and ask a question with source evidence."));
+    if (can("operator")) {
+      const form = node("form"), name = field(form, "Bill name", "bill-name", "text", 120);
+      const text = field(form, "Bill text", "bill-text", "textarea", 16384);
+      form.append(node("p", "Paste a short bill’s selectable text. PDF files and scans are not supported yet."));
+      form.append(button("Try sample bill", async () => {
+        const sample = await api(scoped("/api/v1/bills/sample")); name.value = sample.name; text.value = sample.text;
+      }));
+      const save = node("button", "Save bill", {type: "submit"}); form.append(save);
+      form.onsubmit = event => { event.preventDefault(); run(async () => {
+        save.disabled = true;
+        try {
+          const value = await api(scoped("/api/v1/bills"), {schema_version: 1, name: name.value, text: text.value});
+          await billsPage(); await showBill(value.bill_id); message("Bill saved. Check the figures and their source lines.");
+        } finally { save.disabled = false; }
+      }); }; view.append(form);
+    }
+    const list = await api(scoped("/api/v1/bills"));
+    view.append(node("h2", "Saved bills"));
+    for (const bill of list.items) view.append(button(bill.name, () => showBill(bill.bill_id)));
+    if (!list.items.length) view.append(node("p", "No saved bills yet. Start with the sample or paste bill text."));
+    view.append(node("section", undefined, {id: "bill-detail", "aria-label": "Bill details"}));
+  }
+  async function showBill(id) {
+    const region = document.getElementById("bill-detail");
+    const bill = await api(scoped("/api/v1/bills/" + id));
+    if (!region.isConnected) return;
+    region.replaceChildren(node("h2", bill.name));
+    for (const notice of bill.report.notices) region.append(node("p", notice));
+    const source = node("section", undefined, {"aria-label": "Original bill text"});
+    region.append(node("h3", "Extracted figures"));
+    for (const fact of bill.report.facts) {
+      const card = node("article");
+      card.append(node("h4", fact.label), node("p", fact.state === "found" ? fact.value + " " + fact.unit : "Needs review: " + fact.state));
+      for (const evidence of fact.evidence) card.append(node("p", "Source line " + evidence.line + ": " + evidence.quote));
+      region.append(card);
+    }
+    const answers = node("section", undefined, {"aria-label": "Bill answer", "aria-live": "polite"});
+    region.append(node("h3", "Ask about this bill"));
+    const ask = async question => {
+      const result = await api(scoped("/api/v1/bills/" + id + "/questions"), {schema_version: 1, question});
+      if (!answers.isConnected) return;
+      answers.replaceChildren(node("p", result.answer));
+      for (const citation of result.citations) answers.append(node("p", "Source line " + citation.line + ": " + citation.quote));
+    };
+    for (const question of ["How much do I owe?", "How much electricity did I use?", "What dates does this bill cover?", "What are the charges?"])
+      region.append(button(question, () => ask(question)));
+    const form = node("form"), question = field(form, "Your question", "bill-question", "text", 500);
+    form.append(node("button", "Ask", {type: "submit"}));
+    form.onsubmit = event => { event.preventDefault(); run(() => ask(question.value)); };
+    region.append(form, answers, button("Show original text", async () => {
+      const result = await api(scoped("/api/v1/bills/" + id + "/source"));
+      if (!source.isConnected) return;
+      source.replaceChildren(node("h3", "Original bill text"), node("p", "Source fingerprint: " + result.source_sha256));
+      result.lines.forEach((line, index) => source.append(node("p", (index + 1) + ": " + line)));
+    }), source);
   }
   async function approvalsPage(cursor) {
     const value = await api(scoped("/api/v1/approvals") + (cursor ? "&cursor=" + encodeURIComponent(cursor) : ""));

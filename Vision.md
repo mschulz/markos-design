@@ -2,11 +2,11 @@
 title: Vision
 type: vision
 status: active
-version: 2.0
+version: 2.1
 owner: Mark Schulz
 created: 2026-11-12
-updated: 2026-11-12
-reviewed: 2026-11-12
+updated: 2026-11-26
+reviewed: 2026-11-26
 tags:
   - architecture
 ---
@@ -27,7 +27,7 @@ MarkOS is an always-on personal agent operating system. It ingests information, 
 
 ## Product direction
 
-The first workflow is Gmail ingestion, classification, electricity-bill processing, source-linked knowledge and notification. A shared authenticated gateway supports browser/PWA, CLI and optional messaging. Cloud scheduling and processing continue with the MacBook off.
+The first useful workflow is a lean electricity-bill Knowledge Base: supply bill text, preserve its source, inspect extracted figures and ask questions with evidence. This K1 priority brings a bounded part of knowledge delivery ahead of Gmail ingestion and general classification; see [[MarkOS v0.3 Lean Bill Knowledge MVP]]. Native Gmail ingestion, wider classification, richer electricity analysis and notifications follow demonstrated value. A shared authenticated gateway supports browser/PWA, CLI and optional messaging. Cloud scheduling and processing continue with the MacBook off.
 
 No PARA note hierarchy, Obsidian installation, local Markdown index or native desktop application is a foundation requirement. Source originals remain accessible with provenance; structured records and exports need documented recovery and portability.
 

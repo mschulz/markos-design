@@ -78,3 +78,9 @@ class SyntheticGovernanceApiConfig(SyntheticWebApiConfig):
     """Separately selected fixed synthetic fixture path; general tool execution stays false."""
 
     governance_profile: Literal["synthetic-governance-v1"]
+
+
+class SyntheticBillApiConfig(SyntheticGovernanceApiConfig):
+    """Explicit local bill-text workflow; no account, model or real-tool enablement."""
+
+    bill_profile: Literal["bill-text-v1"]

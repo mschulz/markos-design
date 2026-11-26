@@ -18,7 +18,7 @@ from psycopg.conninfo import conninfo_to_dict
 from psycopg.types.json import Jsonb
 
 from markos_runtime.api.schema import EXPECTED_MIGRATIONS
-from markos_runtime.control.api_config import SyntheticGovernanceApiConfig
+from markos_runtime.control.api_config import SyntheticBillApiConfig, SyntheticGovernanceApiConfig
 from markos_runtime.control.conversation import ConversationWorker
 from markos_runtime.control.store import ControlStore
 from markos_runtime.control_lifecycle.config import ControlServiceConfig
@@ -211,18 +211,28 @@ class ControlService:
                 from markos_runtime.api.application import create_app
 
                 key = base64.urlsafe_b64decode(value(env, cfg.session_key_secret_ref))
+                from markos_runtime.knowledge.objects import BillObjects
+
+                profile = SyntheticGovernanceApiConfig(
+                    schema_version=1,
+                    api_origin=cfg.api_origin,
+                    conversation_profile="deterministic-conversation-v1",
+                    web_profile="synthetic-web-cli-v1",
+                    governance_profile="synthetic-governance-v1",
+                )
+                objects = None
+                if cfg.bill_objects_path is not None:
+                    objects = BillObjects(Path(cfg.bill_objects_path))
+                    profile = SyntheticBillApiConfig(
+                        **profile.model_dump(), bill_profile="bill-text-v1"
+                    )
                 app = create_app(
-                    SyntheticGovernanceApiConfig(
-                        schema_version=1,
-                        api_origin=cfg.api_origin,
-                        conversation_profile="deterministic-conversation-v1",
-                        web_profile="synthetic-web-cli-v1",
-                        governance_profile="synthetic-governance-v1",
-                    ),
+                    profile,
                     store,
                     issuer,  # type: ignore[arg-type]
                     session_key=key,
                     confirm_synthetic=True,
+                    bill_objects=objects,
                 )
                 server_task = asyncio.create_task(
                     self.http_server(app, int(urlsplit(cfg.api_origin).port or 0))

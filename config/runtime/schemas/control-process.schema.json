@@ -24,6 +24,18 @@
       "title": "Audit User Secret Ref",
       "type": "string"
     },
+    "bill_objects_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Bill Objects Path"
+    },
     "broker_publisher_user": {
       "maxLength": 128,
       "minLength": 1,

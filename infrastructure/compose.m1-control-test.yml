@@ -54,6 +54,12 @@ services:
       - ./rabbitmq/m0-test.conf:/etc/rabbitmq/rabbitmq.conf:ro
   gateway:
     <<: *control
+    volumes:
+      - ./.m1g-preview/config:/etc/markos:ro
+      - ./.test-certs/ca.pem:/etc/test-ca/ca.pem:ro
+      - ./.test-certs/server.pem:/etc/test-ca/server.pem:ro
+      - ./.test-certs/server.key:/etc/test-ca/server.key:ro
+      - bill-objects:/var/lib/markos/bills
     env_file: ./.m1g-preview/gateway.env
     command: ['serve-control-synthetic', '--confirm-synthetic', '--config', '/etc/markos/gateway.json']
     healthcheck:
@@ -185,3 +191,4 @@ services:
 volumes:
   postgres-data:
   rabbitmq-data:
+  bill-objects:
