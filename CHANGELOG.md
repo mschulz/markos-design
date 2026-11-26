@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-26 — Remove duplicated product code
+
+- Shared one chat claim decoder, loopback HTTPS URL check, strict JSON parser and exact int/bool validators.
+- Shared the secret and database checks between the two lifecycle services. `work_seconds` and `shutdown_seconds` are now used.
+- Shared one sealed paging cursor across page lists, activity and governance.
+- Old-format activity cursors now return 400 instead of 409.
+- Removed the write-only API counters and `VerifiedIdentity.nonce`. API errors map through one table.
+
 ## 2026-11-26 — Remove dead code found in the code review
 
 - Removed `RuntimeConfig`, `load_config`, the `preflight` command, its example and schema. `preflight-control` stays.

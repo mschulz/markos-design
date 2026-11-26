@@ -191,7 +191,6 @@ def test_open_https_stream_stops_before_disclosing_revoked_activity(
         "expired",
         "epoch",
         "head",
-        "legacy",
     ],
 )
 def test_activity_cursor_requires_exact_current_resource_and_scope(fault: str) -> None:
@@ -209,24 +208,20 @@ def test_activity_cursor_requires_exact_current_resource_and_scope(fault: str) -
     assert (
         resume(api, api.codec.seal(json.dumps(value)), binding, UUID(OWNER), "personal", head) == 7
     )
-    if fault == "legacy":
-        del value["resource"]
-        del value["epoch"]
-    else:
-        key, replacement = {
-            "resource": ("resource", "messages-v1"),
-            "principal": ("principal_id", OTHER),
-            "owner": ("owner_id", OTHER),
-            "domain": ("domain", "work"),
-            "after-type": ("after", True),
-            "expired": ("expires", 0),
-            "epoch": ("epoch", OTHER),
-            "head": ("after", 8),
-        }[fault]
-        value[key] = replacement
+    key, replacement = {
+        "resource": ("resource", "messages-v1"),
+        "principal": ("principal_id", OTHER),
+        "owner": ("owner_id", OTHER),
+        "domain": ("domain", "work"),
+        "after-type": ("after", True),
+        "expired": ("expires", 0),
+        "epoch": ("epoch", OTHER),
+        "head": ("after", 8),
+    }[fault]
+    value[key] = replacement
     with pytest.raises(ApiFault) as error:
         resume(api, api.codec.seal(json.dumps(value)), binding, UUID(OWNER), "personal", head)
-    assert error.value.status == (409 if fault in {"expired", "epoch", "head", "legacy"} else 400)
+    assert error.value.status == (409 if fault in {"expired", "epoch", "head"} else 400)
 
 
 def test_stream_request_body_keeps_short_request_deadline() -> None:

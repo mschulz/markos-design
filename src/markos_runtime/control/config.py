@@ -7,7 +7,13 @@ from urllib.parse import urlsplit
 from pydantic import Field, field_validator, model_validator
 
 from markos_runtime.config import FileName, SecretRef, read_bounded
-from markos_runtime.contracts.base import MAX_DOCUMENT_BYTES, ContractError, parse_document
+from markos_runtime.contracts.base import (
+    MAX_DOCUMENT_BYTES,
+    ContractError,
+    exact_bool,
+    exact_int,
+    parse_document,
+)
 from markos_runtime.contracts.control import ControlValue
 
 
@@ -50,12 +56,7 @@ class ControlLimits(ControlValue):
     chat_terminal_days: Literal[30] = 30
     session_secret_purge_seconds: Literal[86400] = 86400
 
-    @field_validator("*", mode="before")
-    @classmethod
-    def exact_numbers(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("integer limit required")
-        return value
+    _exact_numbers = field_validator("*", mode="before")(exact_int)
 
 
 class ControlConfig(ControlValue):
@@ -83,7 +84,7 @@ class ControlConfig(ControlValue):
     real_accounts_enabled: Literal[False] = False
     limits: ControlLimits = Field(default_factory=lambda: ControlLimits(schema_version=1))
 
-    @field_validator(
+    _exact_switches = field_validator(
         "cookie_secure",
         "cookie_http_only",
         "gateway_enabled",
@@ -91,26 +92,16 @@ class ControlConfig(ControlValue):
         "tool_execution_enabled",
         "real_accounts_enabled",
         mode="before",
-    )
-    @classmethod
-    def exact_switches(cls, value: object) -> object:
-        if type(value) is not bool:
-            raise ValueError("boolean required")
-        return value
+    )(exact_bool)
 
-    @field_validator(
+    _exact_cache_bounds = field_validator(
         "jwks_cache_seconds",
         "jwks_max_bytes",
         "jwks_fetch_seconds",
         "jwks_refresh_min_seconds",
         "provider_session_cache_seconds",
         mode="before",
-    )
-    @classmethod
-    def exact_cache_bounds(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("integer required")
-        return value
+    )(exact_int)
 
     @field_validator("issuer_url")
     @classmethod

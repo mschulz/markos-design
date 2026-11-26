@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID
 
+from markos_runtime.contracts.base import loads_strict
 from markos_runtime.contracts.governance import (
     INPUT_SCHEMA,
     PROTOCOL,
@@ -28,21 +29,8 @@ class ToolProtocolError(ValueError):
 
 
 def strict_json(body: bytes) -> dict[str, Any]:
-    def pairs(values: list[tuple[str, Any]]) -> dict[str, Any]:
-        answer: dict[str, Any] = {}
-        for key, value in values:
-            if key in answer:
-                raise ValueError
-            answer[key] = value
-        return answer
-
-    def invalid(value: str) -> Any:
-        raise ValueError
-
     try:
-        if len(body) > 1048576:
-            raise ValueError
-        answer = json.loads(body, object_pairs_hook=pairs, parse_constant=invalid)
+        answer = loads_strict(body, 1048576)
         if not isinstance(answer, dict):
             raise ValueError
         # This fixed profile has no float-valued fields; reject overflow/nonfinite recursively.

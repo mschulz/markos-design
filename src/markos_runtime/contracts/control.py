@@ -13,6 +13,8 @@ from markos_runtime.contracts.base import (
     Name,
     OperationKey,
     ValueModel,
+    exact_bool,
+    exact_int,
     parse_document,
 )
 
@@ -55,12 +57,7 @@ def digest_document(document: object) -> str:
 class ControlValue(ValueModel):
     schema_version: Literal[1]
 
-    @field_validator("schema_version", mode="before")
-    @classmethod
-    def integer_version(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("integer version required")
-        return value
+    _integer_version = field_validator("schema_version", mode="before")(exact_int)
 
     @classmethod
     def from_wire(cls, body: bytes) -> Self:
@@ -113,19 +110,9 @@ class AgentRevision(ScopedValue):
     timeout_seconds: Literal[10] = 10
     retries: Literal[0] = 0
 
-    @field_validator("timeout_seconds", "retries", mode="before")
-    @classmethod
-    def numeric_literals(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("integer required")
-        return value
+    _numeric_literals = field_validator("timeout_seconds", "retries", mode="before")(exact_int)
 
-    @field_validator("initially_enabled", mode="before")
-    @classmethod
-    def disabled(cls, value: object) -> object:
-        if type(value) is not bool:
-            raise ValueError("boolean required")
-        return value
+    _disabled = field_validator("initially_enabled", mode="before")(exact_bool)
 
     @model_validator(mode="after")
     def exact_events(self) -> Self:
@@ -272,12 +259,7 @@ class ToolGrant(ScopedValue):
     effect: Literal["read"] = "read"
     enabled: Literal[False] = False
 
-    @field_validator("enabled", mode="before")
-    @classmethod
-    def disabled(cls, value: object) -> object:
-        if type(value) is not bool:
-            raise ValueError("boolean required")
-        return value
+    _disabled = field_validator("enabled", mode="before")(exact_bool)
 
 
 class CallIntent(ScopedValue):
@@ -309,12 +291,7 @@ class CallIntent(ScopedValue):
     expires_at: Utc
     max_attempts: Literal[1] = 1
 
-    @field_validator("max_attempts", mode="before")
-    @classmethod
-    def exact_attempts(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("integer required")
-        return value
+    _exact_attempts = field_validator("max_attempts", mode="before")(exact_int)
 
     @model_validator(mode="after")
     def bindings(self) -> Self:

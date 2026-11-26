@@ -28,6 +28,8 @@ class ChatClaim:
 
 
 class ConversationWorker:
+    claim_function = "claim_chat"
+
     def __init__(
         self,
         store: DurableStore,
@@ -66,7 +68,7 @@ class ConversationWorker:
     async def claim(self, *, lease_seconds: int = 30) -> ChatClaim | None:
         if type(lease_seconds) is not int or not 1 <= lease_seconds <= 30:
             raise StorageError("invalid conversation lease")
-        row = await self._call("claim_chat", self.executor_id, lease_seconds)
+        row = await self._call(self.claim_function, self.executor_id, lease_seconds)
         if row is None:
             return None
         return ChatClaim(

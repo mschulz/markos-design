@@ -14,7 +14,6 @@ from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
-from psycopg.conninfo import conninfo_to_dict
 from psycopg.types.json import Jsonb
 
 from markos_runtime.api.schema import EXPECTED_MIGRATIONS
@@ -24,7 +23,7 @@ from markos_runtime.control.store import ControlStore
 from markos_runtime.control_lifecycle.config import ControlServiceConfig
 from markos_runtime.control_lifecycle.issuer import DurableFixtureIssuer, RemoteFixtureIssuer
 from markos_runtime.lifecycle.health import HealthServer, HealthState
-from markos_runtime.lifecycle.service import FatalServiceError
+from markos_runtime.lifecycle.service import FatalServiceError, isolated_dsn, secret
 from markos_runtime.store.database import DurableStore, StorageError
 from markos_runtime.tools.transport import FixtureConnection, FixtureTransport
 from markos_runtime.tools.worker import GovernedConversationWorker
@@ -32,23 +31,6 @@ from markos_runtime.transport.broker import BrokerSession, endpoint
 from markos_runtime.transport.consumer import Consumer
 from markos_runtime.transport.management import TopologyAudit
 from markos_runtime.transport.publisher import Publisher
-
-
-def value(environ: Mapping[str, str], name: str) -> str:
-    result = environ.get(name, "")
-    if not result or len(result) > 8192:
-        raise FatalServiceError("explicit fixture credential required")
-    return result
-
-
-def isolated_dsn(raw: str) -> None:
-    data = conninfo_to_dict(raw)
-    host = str(data.get("host", ""))
-    if not (
-        host in {"127.0.0.1", "localhost", "::1", "postgres"}
-        or host.startswith("/private/tmp/markos-m0b-")
-    ) or not str(data.get("dbname", "")).startswith(("markos_test_", "markos_m1g")):
-        raise FatalServiceError("owned synthetic database required")
 
 
 class ControlService:
@@ -69,7 +51,9 @@ class ControlService:
         self.stop.set()
         if self.http is not None:
             self.http.should_exit = True
-        self.hard_stop = asyncio.get_running_loop().call_later(15, os._exit, 1)
+        self.hard_stop = asyncio.get_running_loop().call_later(
+            self.config.shutdown_seconds, os._exit, 1
+        )
 
     async def pause(self, seconds: float) -> None:
         with suppress(TimeoutError):
@@ -138,7 +122,7 @@ class ControlService:
 
             issuer = DurableFixtureIssuer(Path(cfg.fixture_state_file), Path(cfg.fixture_seed_file))
             tokens = [
-                value(env, x)
+                secret(env, x)
                 for x in (
                     cfg.issuer_api_secret_ref,
                     cfg.issuer_worker_secret_ref,
@@ -157,8 +141,8 @@ class ControlService:
                 cfg.owner_id,
                 cfg.domain,
                 cfg.tool_endpoint,
-                value(env, cfg.tool_secret_ref),
-                value(env, cfg.fixture_admin_secret_ref),
+                secret(env, cfg.tool_secret_ref),
+                secret(env, cfg.fixture_admin_secret_ref),
             )
             port = urlsplit(cfg.tool_endpoint).port
         task = asyncio.create_task(
@@ -179,8 +163,8 @@ class ControlService:
 
     async def session(self) -> None:
         cfg, env = self.config, self.environ
-        dsn = value(env, cfg.database_secret_ref)
-        isolated_dsn(dsn)
+        dsn = secret(env, cfg.database_secret_ref)
+        isolated_dsn(dsn, ("markos_test_", "markos_m1g"))
         async with AsyncExitStack() as stack:
             store: Any
             if cfg.component == "gateway":
@@ -201,7 +185,7 @@ class ControlService:
                 issuer = RemoteFixtureIssuer(
                     cfg.issuer_endpoint,
                     Path(cfg.ca_file),
-                    value(
+                    secret(
                         env,
                         cfg.issuer_api_secret_ref
                         if cfg.component == "gateway"
@@ -211,7 +195,7 @@ class ControlService:
             if cfg.component == "gateway":
                 from markos_runtime.api.application import create_app
 
-                key = base64.urlsafe_b64decode(value(env, cfg.session_key_secret_ref))
+                key = base64.urlsafe_b64decode(secret(env, cfg.session_key_secret_ref))
                 from markos_runtime.knowledge.objects import BillObjects
 
                 profile = SyntheticGovernanceApiConfig(
@@ -245,16 +229,25 @@ class ControlService:
                         cfg.owner_id,
                         cfg.domain,
                         Path(cfg.ca_file),
-                        value(env, cfg.tool_secret_ref),
+                        secret(env, cfg.tool_secret_ref),
                     ),
                     confirm_synthetic=True,
                 )
-                plain_worker = ConversationWorker(store, issuer, confirm_synthetic=True)  # type: ignore[arg-type]
+                plain_worker = ConversationWorker(
+                    store,
+                    issuer,  # type: ignore[arg-type]
+                    confirm_synthetic=True,
+                    timeout_seconds=cfg.work_seconds,
+                )
                 worker = GovernedConversationWorker(
-                    store, issuer, transport=transport, confirm_synthetic=True
+                    store,
+                    issuer,
+                    transport=transport,
+                    confirm_synthetic=True,
+                    timeout_seconds=cfg.work_seconds,
                 )
             elif cfg.component in {"publisher", "completion-publisher", "consumer", "activity"}:
-                raw = value(env, cfg.broker_secret_ref)
+                raw = secret(env, cfg.broker_secret_ref)
                 target = endpoint(raw)
                 if (
                     target.host not in {"127.0.0.1", "localhost", "rabbitmq"}
@@ -266,8 +259,8 @@ class ControlService:
                 if cfg.component in {"publisher", "completion-publisher"}:
                     audit = TopologyAudit(
                         cfg.audit_url,
-                        value(env, cfg.audit_user_secret_ref),
-                        value(env, cfg.audit_password_secret_ref),
+                        secret(env, cfg.audit_user_secret_ref),
+                        secret(env, cfg.audit_password_secret_ref),
                         broker.vhost,
                     )
                     publisher = Publisher(

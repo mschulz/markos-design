@@ -17,33 +17,14 @@ from markos_runtime.tools.transport import FixtureTransport, ToolProtocolError
 
 
 class GovernedConversationWorker(ConversationWorker):
+    # Same claim decoder; this profile claims only governed chats.
+    claim_function = "claim_governed_chat"
+
     def __init__(self, *args: Any, transport: FixtureTransport, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         if not isinstance(transport, FixtureTransport):
             raise StorageError("fixed synthetic fixture transport required")
         self.transport = transport
-
-    async def claim(self, *, lease_seconds: int = 30) -> ChatClaim | None:
-        # Reuse the checked decoder, but select only this separately enabled durable profile.
-        if type(lease_seconds) is not int or not 1 <= lease_seconds <= 30:
-            raise StorageError("invalid conversation lease")
-        row = await self._call("claim_governed_chat", self.executor_id, lease_seconds)
-        if row is None:
-            return None
-        from datetime import datetime
-
-        return ChatClaim(
-            UUID(row["task_id"]),
-            UUID(row["event_id"]),
-            row["fence"],
-            row["attempt"],
-            UUID(row["epoch"]),
-            datetime.fromisoformat(row["lease_until"]),
-            row["message_sha256"],
-            row["subject"],
-            UUID(row["provider_session_id"]),
-            datetime.fromisoformat(row["provider_expires_at"]),
-        )
 
     def _identity(self, claim: ChatClaim) -> tuple[object, ...]:
         return claim.task_id, claim.fence, self.executor_id, claim.epoch

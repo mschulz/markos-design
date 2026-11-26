@@ -9,26 +9,29 @@ from uuid import UUID
 
 from anyio import CancelScope  # type: ignore[import-not-found]
 
-from markos_runtime.api.application import ApiFault, SyntheticApi, wire
+from markos_runtime.api.application import (
+    ApiFault,
+    SyntheticApi,
+    open_cursor,
+    seal_cursor,
+    wire,
+)
 from markos_runtime.contracts.base import Domain
+
+
+def bound(binding: dict[str, Any], owner: UUID, domain: Domain) -> dict[str, Any]:
+    return {
+        "resource": "activity-v1",
+        "principal_id": binding["principal_id"],
+        "owner_id": str(owner),
+        "domain": domain,
+    }
 
 
 def cursor(
     api: SyntheticApi, binding: dict[str, Any], owner: UUID, domain: Domain, epoch: str, after: int
 ) -> str:
-    return api.codec.seal(
-        json.dumps(
-            {
-                "resource": "activity-v1",
-                "principal_id": binding["principal_id"],
-                "owner_id": str(owner),
-                "domain": domain,
-                "epoch": epoch,
-                "after": after,
-                "expires": int(time.time()) + 600,
-            }
-        )
-    )
+    return seal_cursor(api.codec, {**bound(binding, owner, domain), "epoch": epoch}, after)
 
 
 def resume(
@@ -41,31 +44,7 @@ def resume(
 ) -> int:
     if token is None:
         return 0
-    try:
-        value = json.loads(api.codec.open(token))
-        if (
-            set(value) == {"principal_id", "owner_id", "domain", "after", "expires"}
-            and value.get("principal_id") == binding["principal_id"]
-            and value.get("owner_id") == str(owner)
-            and value.get("domain") == domain
-        ):
-            raise ApiFault("resync-required", 409)
-        if (
-            set(value)
-            != {"resource", "principal_id", "owner_id", "domain", "epoch", "after", "expires"}
-            or value["resource"] != "activity-v1"
-            or value["principal_id"] != binding["principal_id"]
-            or value["owner_id"] != str(owner)
-            or value["domain"] != domain
-            or type(value["after"]) is not int
-            or not 0 <= value["after"] <= 9223372036854775807
-            or type(value["expires"]) is not int
-        ):
-            raise ValueError
-    except ApiFault:
-        raise
-    except Exception:
-        raise ApiFault("invalid", 400) from None
+    value = open_cursor(api.codec, token, bound(binding, owner, domain), free=("epoch",))
     if (
         value["expires"] <= time.time()
         or value["epoch"] != head["epoch"]

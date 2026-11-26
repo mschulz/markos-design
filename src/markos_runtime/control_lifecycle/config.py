@@ -2,15 +2,13 @@
 
 from pathlib import Path
 from typing import Annotated, Literal, Self
-from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from markos_runtime.config import read_bounded
-from markos_runtime.contracts.base import ContractError, Domain
+from markos_runtime.contracts.base import ContractError, Domain, exact_int, loopback_https
 from markos_runtime.contracts.control import ControlValue
-from markos_runtime.contracts.governance import fixture_endpoint
 
 ControlSecretRef = Annotated[str, Field(pattern=r"^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$")]
 
@@ -60,12 +58,9 @@ class ControlServiceConfig(ControlValue):
     real_tools_enabled: Literal[False] = False
     migrate_on_start: Literal[False] = False
 
-    @field_validator("health_port", "shutdown_seconds", "work_seconds", mode="before")
-    @classmethod
-    def exact_number(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("exact integer required")
-        return value
+    _exact_number = field_validator(
+        "health_port", "shutdown_seconds", "work_seconds", mode="before"
+    )(exact_int)
 
     @field_validator("audit_url")
     @classmethod
@@ -76,21 +71,9 @@ class ControlServiceConfig(ControlValue):
 
     @field_validator("api_origin", "issuer_endpoint", "tool_endpoint")
     @classmethod
-    def endpoints(cls, value: str) -> str:
-        u = urlsplit(value)
-        if (
-            u.scheme != "https"
-            or u.hostname != "127.0.0.1"
-            or not u.port
-            or not 1024 <= u.port <= 65535
-            or u.netloc != f"127.0.0.1:{u.port}"
-            or u.username
-            or u.password
-            or u.query
-            or u.fragment
-            or u.path not in {"", "/fixture", "/mcp"}
-        ):
-            raise ValueError("fixed numeric loopback HTTPS fixture required")
+    def endpoints(cls, value: str, info: ValidationInfo) -> str:
+        path = {"api_origin": "", "issuer_endpoint": "/fixture", "tool_endpoint": "/mcp"}
+        loopback_https(value, paths=frozenset({path[str(info.field_name)]}))
         return value
 
     @field_validator(
@@ -131,9 +114,6 @@ class ControlServiceConfig(ControlValue):
         }
         if self.service_id != expected[self.component]:
             raise ValueError("fixed component/service binding required")
-        if urlsplit(self.api_origin).path or not self.issuer_endpoint.endswith("/fixture"):
-            raise ValueError("fixed service path required")
-        fixture_endpoint(self.tool_endpoint)
         if (
             len(
                 {

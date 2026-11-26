@@ -19,6 +19,7 @@ from cryptography.hazmat.primitives.asymmetric import ec  # type: ignore[import-
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF  # type: ignore[import-not-found]
 from psycopg.types.json import Jsonb
 
+from markos_runtime.contracts.base import loads_strict
 from markos_runtime.control.store import ControlStore
 
 ISSUER = "https://auth.markos.test"
@@ -47,21 +48,8 @@ def challenge(verifier: str) -> str:
 
 
 def strict_json(body: bytes, limit: int) -> dict[str, Any]:
-    def unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        for k, v in pairs:
-            if k in result:
-                raise ValueError("duplicate")
-            result[k] = v
-        return result
-
-    def constant(value: str) -> object:
-        raise ValueError("nonfinite")
-
     try:
-        if len(body) > limit:
-            raise ValueError("size")
-        result = json.loads(body.decode("utf-8"), object_pairs_hook=unique, parse_constant=constant)
+        result = loads_strict(body, limit)
         if not isinstance(result, dict):
             raise ValueError("object")
         return cast(dict[str, Any], result)
@@ -106,7 +94,6 @@ class SecretCodec:
 class VerifiedIdentity:
     subject: str
     provider_session_id: UUID
-    nonce: str
     expires_at: int
 
 
@@ -328,7 +315,7 @@ class IdentityVerifier:
                 audience=AUDIENCE,
                 options={"require": sorted(required), "strict_aud": True},
             )
-            verified = VerifiedIdentity(raw["sub"], sid, nonce, raw["exp"])
+            verified = VerifiedIdentity(raw["sub"], sid, raw["exp"])
             if not await self.provider_call("session", verified):
                 raise ValueError
             return verified
