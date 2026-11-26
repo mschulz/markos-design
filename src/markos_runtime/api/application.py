@@ -144,6 +144,7 @@ class SyntheticApi:
         self.config, self.store, self.issuer = config, store, issuer
         self.codec = SecretCodec(key)
         self.identity = IdentityVerifier(store, issuer)
+        self.mail_available = False
 
     def context(self, raw: str) -> SessionContext:
         try:
@@ -337,6 +338,7 @@ def create_app(
     confirm_synthetic: bool = False,
     bill_objects: Any = None,
     mail_alerts: Any = None,
+    mail_connect: Any = None,
 ) -> Any:
     # Imports are optional and occur only after an explicit factory invocation.
     api = SyntheticApi(config, store, issuer, session_key, confirm_synthetic=confirm_synthetic)
@@ -370,6 +372,12 @@ def create_app(
     # The Gmail alert route is off unless an explicit adapter is given.
     if mail_alerts is not None and not isinstance(mail_alerts, MailAlerts):
         raise ValueError("explicit mail alert adapter required")
+    from markos_runtime.api.mail_connect import MAIL_PATH, MailConnect
+
+    # The owner opt-in routes are off unless an explicit adapter is given.
+    if mail_connect is not None and not isinstance(mail_connect, MailConnect):
+        raise ValueError("explicit mail connect adapter required")
+    api.mail_available = mail_connect is not None
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False)
 
     def page(
@@ -423,6 +431,7 @@ def create_app(
         if binding["kind"] == "browser":
             result["csrf_token"] = api.codec.lookup("csrf", raw)
         result["bill_knowledge_available"] = bills is not None
+        result["mail_available"] = mail_connect is not None
         if governance is not None:
             from markos_runtime.contracts.governance import SCHEMA_SHA256
 
@@ -534,6 +543,8 @@ def create_app(
             return await bills.handle(request, data)
         if mail_alerts is not None and path == ALERT_PATH:
             return await mail_alerts.handle(request, data)
+        if mail_connect is not None and (path == MAIL_PATH or path.startswith(MAIL_PATH + "/")):
+            return await mail_connect.handle(api, request, data)
         if governance is not None and governance.accepts(path):
             return await governance.handle(request, data)
         if path.startswith("/auth/") and path != "/auth/callback":

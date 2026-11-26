@@ -139,6 +139,7 @@
     view.replaceChildren(node("p", "Loading…"));
     const agents = await api(scoped("/api/v1/agents")); agent = agents[0];
     if (page === "bills" && me.bill_knowledge_available) await billsPage();
+    else if (page === "mail" && me.mail_available) await mailPage();
     else if (page === "conversations") await conversations();
     else if (page === "agents") await agentsPage();
     else if (page === "configuration") await configurationPage();
@@ -148,6 +149,44 @@
       first.items.forEach(addActivity); currentCursor = first.next_cursor;
       watch();
     } else if (page === "approvals") await approvalsPage();
+  }
+  async function mailPage() {
+    const results = {connected: "Gmail is connected. The first import starts shortly.", declined: "Google access was not given. Nothing changed.",
+      expired: "The connection request expired. Start again.", conflict: "Another Gmail address is connected, or a disconnect is still running. Nothing changed.",
+      failed: "Gmail could not be connected. Nothing was stored."};
+    if (results[location.hash.slice(1)]) { message(results[location.hash.slice(1)]); history.replaceState(null, "", location.pathname); }
+    const box = await api(scoped("/api/v1/mail"));
+    const states = {none: "No Gmail account is connected.", connected: "Gmail is connected. MarkOS reads only the labels below.",
+      disconnecting: "Disconnecting. MarkOS is stopping the watch and deleting its access.", disconnected: "Gmail is disconnected. Stored records are kept."};
+    view.replaceChildren(node("p", states[box.state]));
+    if (box.state === "connected") {
+      view.append(node("h2", "Allowed labels"), node("p", box.labels.join(", ")));
+      if (box.watch_expires_at) view.append(node("p", "Change alerts are active until " + new Date(box.watch_expires_at).toLocaleString() + ". They renew daily."));
+    }
+    if (!can("administrator")) { view.append(node("p", "Only a workspace administrator can change the mail connection.")); return; }
+    if (box.state === "disconnecting") return;
+    const form = node("form"), labels = field(form, "Allowed Gmail label IDs, separated by commas", "mail-labels", "text", 1400);
+    if (box.labels) labels.value = box.labels.join(", ");
+    const chosen = () => labels.value.split(",").map(label => label.trim()).filter(Boolean);
+    form.append(node("p", "MarkOS reads only mail with at least one of these labels. Use label IDs such as Label_123, not names."));
+    if (box.state === "connected") {
+      form.append(button("Save labels", async () => {
+        const body = {schema_version: 1, labels: chosen()};
+        review("Change allowed labels", [["Labels", body.labels.join(", ")], ["Effect", "The watch is renewed with the new labels."]], async () => {
+          await api(scoped("/api/v1/mail/labels"), body); await mailPage(); message("Labels saved.");
+        });
+      }), button("Disconnect Gmail", async () => {
+        review("Disconnect Gmail", [["Effect", "MarkOS stops reading mail now, then revokes and deletes its access."], ["Stored records", "Kept"]], async () => {
+          await api(scoped("/api/v1/mail/disconnect"), {schema_version: 1}); await mailPage(); message("Disconnect started.");
+        });
+      }));
+    } else {
+      form.append(button("Connect Gmail", async () => {
+        const flow = await api(scoped("/api/v1/mail/connect"), {schema_version: 1, labels: chosen()});
+        location.assign(flow.authorization_url);
+      }));
+    }
+    view.append(form);
   }
   async function billsPage() {
     view.replaceChildren(node("p", "Save a bill, check its figures, and ask a question with source evidence."));

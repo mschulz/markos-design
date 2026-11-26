@@ -62,12 +62,15 @@ class WebRoutes:
         }
         if hasattr(self.api.config, "bill_profile"):
             pages["/app/bills"] = "Electricity bills"
+        if getattr(self.api, "mail_available", False):
+            pages["/app/mail"] = "Mail"
         context: dict[str, Any] = {
             "title": pages.get(path, "Sign in"),
             "page": path.removeprefix("/app/") if path != "/app" else "conversations",
             "request": "",
             "proof": "",
             "bill_knowledge": hasattr(self.api.config, "bill_profile"),
+            "mail": getattr(self.api, "mail_available", False),
             "synthetic_governance": hasattr(self.api.config, "governance_profile"),
         }
         response_cookie = None
