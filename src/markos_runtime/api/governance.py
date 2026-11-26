@@ -8,7 +8,7 @@ from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
-from markos_runtime.api.application import ApiFault
+from markos_runtime.api.application import ApiFault, open_cursor, seal_cursor
 from markos_runtime.contracts.control import ApprovalDecisionRequest
 from markos_runtime.contracts.governance import (
     GovernanceAudit,
@@ -174,23 +174,10 @@ class GovernanceRoutes:
             "epoch": head["epoch"],
         }
         if params.get("cursor"):
-            try:
-                value = json.loads(api.codec.open(params["cursor"]))
-                if (
-                    set(value) != {*expected, "after", "expires"}
-                    or any(value[k] != v for k, v in expected.items())
-                    or type(value["after"]) is not int
-                    or not 0 <= value["after"] <= 9223372036854775807
-                    or type(value["expires"]) is not int
-                ):
-                    raise ValueError
-                if value["expires"] <= time.time():
-                    raise ApiFault("resync-required", 409)
-                after = value["after"]
-            except ApiFault:
-                raise
-            except Exception:
-                raise ApiFault("invalid", 400) from None
+            value = open_cursor(api.codec, params["cursor"], expected)
+            if value["expires"] <= time.time():
+                raise ApiFault("resync-required", 409)
+            after = value["after"]
         items = await api.store._call(
             "read_tool_records",
             ctx.session_id,
@@ -217,9 +204,7 @@ class GovernanceRoutes:
             )
             for item in items
         ]
-        token = api.codec.seal(
-            json.dumps({**expected, "after": next_after, "expires": int(time.time()) + 600})
-        )
+        token = seal_cursor(api.codec, expected, next_after)
         return JSONResponse(
             {"schema_version": 1, "available": True, "items": items, "next_cursor": token}
         )

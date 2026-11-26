@@ -72,6 +72,38 @@ class ApiFault(ValueError):
         self.code, self.status = code, status
 
 
+CURSOR_SECONDS = 600
+
+
+def seal_cursor(codec: SecretCodec, bound: dict[str, Any], after: int) -> str:
+    """Seal a paging cursor tied to `bound` that expires after ten minutes."""
+    return codec.seal(
+        json.dumps({**bound, "after": after, "expires": int(time.time()) + CURSOR_SECONDS})
+    )
+
+
+def open_cursor(
+    codec: SecretCodec, token: str, bound: dict[str, Any], free: tuple[str, ...] = ()
+) -> dict[str, Any]:
+    """Open a cursor and check its shape and `bound` values; `free` keys are left to the caller.
+
+    Raises ApiFault("invalid") on any mismatch. Expiry is the caller's choice of status.
+    """
+    try:
+        value = json.loads(codec.open(token))
+        if (
+            set(value) != {*bound, *free, "after", "expires"}
+            or any(value[k] != v for k, v in bound.items())
+            or type(value["after"]) is not int
+            or not 0 <= value["after"] <= 9223372036854775807
+            or type(value["expires"]) is not int
+        ):
+            raise ValueError
+    except Exception:
+        raise ApiFault("invalid", 400) from None
+    return cast(dict[str, Any], value)
+
+
 def wire(value: Any) -> Any:
     if hasattr(value, "model_dump"):
         return value.model_dump(mode="json")
@@ -343,42 +375,30 @@ def create_app(
         if not 1 <= limit <= 100:
             raise ApiFault("invalid", 400)
         if "cursor" in params:
-            try:
-                cursor = json.loads(api.codec.open(params["cursor"]))
-                if (
-                    set(cursor)
-                    != {"principal_id", "owner_id", "domain", "resource", "after", "expires"}
-                    or cursor["principal_id"] != binding["principal_id"]
-                    or cursor["owner_id"] != str(owner)
-                    or cursor["domain"] != domain
-                    or cursor["resource"] != resource
-                    or cursor["expires"] <= time.time()
-                    or type(cursor["after"]) is not int
-                    or not 0 <= cursor["after"] <= 9223372036854775807
-                ):
-                    raise ValueError
-                after = cursor["after"]
-            except Exception:
-                raise ApiFault("invalid", 400) from None
+            cursor = open_cursor(
+                api.codec, params["cursor"], page_bound(binding, owner, domain, resource)
+            )
+            if cursor["expires"] <= time.time():
+                raise ApiFault("invalid", 400)
+            after = cursor["after"]
         return after, limit
+
+    def page_bound(
+        binding: dict[str, Any], owner: UUID, domain: Domain, resource: str
+    ) -> dict[str, Any]:
+        return {
+            "principal_id": binding["principal_id"],
+            "owner_id": str(owner),
+            "domain": domain,
+            "resource": resource,
+        }
 
     def encode_page_cursor(
         after: int | None, binding: dict[str, Any], owner: UUID, domain: Domain, resource: str
     ) -> str | None:
         if after is None:
             return None
-        return api.codec.seal(
-            json.dumps(
-                {
-                    "principal_id": binding["principal_id"],
-                    "owner_id": str(owner),
-                    "domain": domain,
-                    "resource": resource,
-                    "after": after,
-                    "expires": int(time.time()) + 600,
-                }
-            )
-        )
+        return seal_cursor(api.codec, page_bound(binding, owner, domain, resource), after)
 
     async def dispatch(request: Request) -> Any:
         response: Any
