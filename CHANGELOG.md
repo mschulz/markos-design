@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-26 — Lean electricity-bill Knowledge Base first slice
+
+- Bring a useful K1 bill-to-answer workflow ahead of Gmail and broad classification, preserving the event-driven architecture and later milestone identifiers.
+- Add an opt-in Electricity bills screen with pasted/sample text import, immutable private original objects, scoped PostgreSQL figures/provenance, deduplication and source-line answers. Missing/conflicting figures and unsupported questions remain explicit.
+- Add migration 0014 and extraction/object/API/browser acceptance. Preserve 0001–0013, the archived application and the running local preview. PDF/OCR, real providers/bills, model use, merging and deployment remain separate work.
+
 ## 2026-11-25 — Preserve cancellation reasons during concurrent service failures
 
 - Fix PR #28’s service-check handler so it cannot overwrite another request’s saved cancellation reason while waiting for the execution fence.

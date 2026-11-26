@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "question": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "question"
+  ],
+  "title": "BillQuestion",
+  "type": "object"
+}

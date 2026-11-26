@@ -264,7 +264,7 @@ jobs:
       - run: uv sync --project services/runtime --locked --extra control --extra tools --group browser
       - name: Prepare owned synthetic preview and TLS
         working-directory: services/runtime
-        run: uv run --no-sync python -m tests.control_process.support prepare --confirm-synthetic
+        run: uv run --no-sync python -m tests.control_process.support prepare --confirm-synthetic --bills
       - name: Start disposable dependencies
         run: docker compose -p "$MARKOS_TEST_COMPOSE_PROJECT" -f infrastructure/compose.m1-control-test.yml up -d --wait --wait-timeout 120 postgres rabbitmq
       - name: Explicit migrations, fixture accounts and reviewed topology

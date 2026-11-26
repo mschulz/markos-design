@@ -1,0 +1,176 @@
+{
+  "$defs": {
+    "BillFacts": {
+      "additionalProperties": false,
+      "properties": {
+        "extractor": {
+          "const": "bill-text-v1",
+          "default": "bill-text-v1",
+          "title": "Extractor",
+          "type": "string"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/Fact"
+          },
+          "title": "Facts",
+          "type": "array"
+        },
+        "notices": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notices",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_sha256",
+        "facts",
+        "notices"
+      ],
+      "title": "BillFacts",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "line": {
+          "minimum": 1,
+          "title": "Line",
+          "type": "integer"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "line",
+        "quote"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Fact": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "key": {
+          "enum": [
+            "period",
+            "usage_kwh",
+            "usage_charge",
+            "supply_charge",
+            "export_credit",
+            "total_due"
+          ],
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "found",
+            "missing",
+            "conflicting",
+            "invalid"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "schema_version",
+        "key",
+        "label",
+        "value",
+        "unit",
+        "state",
+        "evidence"
+      ],
+      "title": "Fact",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "bill_id": {
+      "format": "uuid",
+      "title": "Bill Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "report": {
+      "$ref": "#/$defs/BillFacts"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_sha256": {
+      "title": "Source Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "bill_id",
+    "name",
+    "source_sha256",
+    "report"
+  ],
+  "title": "BillRecord",
+  "type": "object"
+}

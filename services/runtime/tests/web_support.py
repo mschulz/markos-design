@@ -11,7 +11,11 @@ import uvicorn  # type: ignore[import-not-found]
 
 from markos_runtime.api.application import create_app
 from markos_runtime.api.identity import FixtureIssuer, opaque
-from markos_runtime.control.api_config import SyntheticGovernanceApiConfig, SyntheticWebApiConfig
+from markos_runtime.control.api_config import (
+    SyntheticBillApiConfig,
+    SyntheticGovernanceApiConfig,
+    SyntheticWebApiConfig,
+)
 from markos_runtime.control.store import ControlStore
 from tests.control_api.test_https import HttpClient as FixtureBrowserClient
 from tests.control_api.test_https import certificate
@@ -20,7 +24,12 @@ from tests.integration.test_control_persistence import prepare, session
 
 @asynccontextmanager
 async def web_server(
-    data: dict[str, Any], directory: Path, *, prepare_agent: bool = True, governance: bool = False
+    data: dict[str, Any],
+    directory: Path,
+    *,
+    prepare_agent: bool = True,
+    governance: bool = False,
+    bills: bool = False,
 ) -> AsyncIterator[dict[str, Any]]:
     cert, key = certificate(directory)
     listener = socket.socket()
@@ -34,10 +43,25 @@ async def web_server(
     async with ControlStore.connect(data["gateway"]) as store:
         if prepare_agent:
             await prepare(store, await session(store))
-        profile_type = SyntheticGovernanceApiConfig if governance else SyntheticWebApiConfig
-        extra: dict[str, Any] = (
-            {"governance_profile": "synthetic-governance-v1"} if governance else {}
+        profile_type = (
+            SyntheticBillApiConfig
+            if bills
+            else SyntheticGovernanceApiConfig
+            if governance
+            else SyntheticWebApiConfig
         )
+        extra: dict[str, Any] = (
+            {"governance_profile": "synthetic-governance-v1"} if governance or bills else {}
+        )
+        if bills:
+            extra["bill_profile"] = "bill-text-v1"
+        objects = None
+        if bills:
+            from markos_runtime.knowledge.objects import BillObjects
+
+            folder = directory / "bill-objects"
+            folder.mkdir(mode=0o700)
+            objects = BillObjects(folder)
         profile = profile_type(
             schema_version=1,
             api_origin=origin,
@@ -45,7 +69,14 @@ async def web_server(
             web_profile="synthetic-web-cli-v1",
             **extra,
         )
-        app = create_app(profile, store, issuer, session_key=b"s" * 32, confirm_synthetic=True)
+        app = create_app(
+            profile,
+            store,
+            issuer,
+            session_key=b"s" * 32,
+            confirm_synthetic=True,
+            bill_objects=objects,
+        )
         server = uvicorn.Server(
             uvicorn.Config(
                 app,
@@ -74,6 +105,7 @@ async def web_server(
                 "store": store,
                 "app": app,
                 "server": server,
+                "bill_objects": objects,
             }
         finally:
             server.should_exit = True

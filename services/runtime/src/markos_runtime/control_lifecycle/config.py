@@ -53,6 +53,7 @@ class ControlServiceConfig(ControlValue):
     tool_secret_ref: ControlSecretRef = "MARKOS_CONTROL_TOOL_TOKEN"
     fixture_admin_secret_ref: ControlSecretRef = "MARKOS_CONTROL_FIXTURE_ADMIN_TOKEN"
     session_key_secret_ref: ControlSecretRef = "MARKOS_CONTROL_SESSION_KEY"
+    bill_objects_path: str | None = None
     shutdown_seconds: Literal[15] = 15
     work_seconds: Literal[10] = 10
     real_accounts_enabled: Literal[False] = False
@@ -112,6 +113,12 @@ class ControlServiceConfig(ControlValue):
 
     @model_validator(mode="after")
     def role(self) -> Self:
+        if self.bill_objects_path is not None and (
+            self.component != "gateway"
+            or not Path(self.bill_objects_path).is_absolute()
+            or ".." in Path(self.bill_objects_path).parts
+        ):
+            raise ValueError("bill originals require an explicit gateway-only directory")
         expected = {
             "gateway": "control-gateway",
             "issuer": "control-gateway",

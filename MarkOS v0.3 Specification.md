@@ -2,11 +2,11 @@
 title: MarkOS v0.3 Specification
 type: specification
 status: proposed
-version: 0.3.16
+version: 0.3.17
 owner: Mark Schulz
 created: 2026-11-10
-updated: 2026-11-13
-reviewed: 2026-11-13
+updated: 2026-11-26
+reviewed: 2026-11-26
 m3_routing_revision: 1.1
 tags:
   - architecture
@@ -218,6 +218,10 @@ Require encrypted off-VM database backups, independent recoverable exports, sepa
 
 9. User opens MarkOS conversation to inspect, question or approve follow-up research.
 All stages must survive duplicate notifications and service restarts.
+
+## Lean Knowledge Base delivery priority — 2026-11-26
+
+The owner authorized a lean electricity-bill Knowledge Base MVP before Gmail and broad classification. [[MarkOS v0.3 Lean Bill Knowledge MVP]] defines K1-A: local pasted/sample bill text, separate immutable source objects, PostgreSQL facts/provenance and deterministic cited answers through the scoped shared web API. This brings a bounded subset of M4/M5 forward while retaining M0/M1 safety and the M2–M8 identifiers. PDF/OCR, corrections/history, real providers/personal bills, broader semantic retrieval and production recovery remain later slices. PostgreSQL authority, RabbitMQ, source-object separation, derived Markdown and the abandoned legacy boundary are unchanged. No merge or deployment is authorized by this implementation PR.
 
 ## 14. Milestones and acceptance criteria
 

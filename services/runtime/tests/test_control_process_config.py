@@ -60,3 +60,16 @@ def test_process_profile_keeps_preflight_inert_and_secrets_explicit() -> None:
     assert profile.migrate_on_start is False and profile.real_accounts_enabled is False
     assert profile.real_tools_enabled is False
     assert profile.database_secret_ref == "MARKOS_CONTROL_DATABASE_DSN"
+
+
+def test_bill_storage_is_an_explicit_gateway_only_opt_in() -> None:
+    profile = ControlServiceConfig.from_wire(json.dumps(config()).encode())
+    assert profile.bill_objects_path is None
+    document = {**config(), "bill_objects_path": "/var/lib/markos/bills"}
+    assert ControlServiceConfig.from_wire(json.dumps(document).encode()).bill_objects_path
+    for changes in [
+        {"bill_objects_path": "../bills"},
+        {"component": "worker", "service_id": "control-test-agent"},
+    ]:
+        with pytest.raises(ContractError):
+            ControlServiceConfig.from_wire(json.dumps({**document, **changes}).encode())

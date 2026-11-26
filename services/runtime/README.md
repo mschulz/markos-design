@@ -107,3 +107,10 @@ owned cleanup and recovery limits in
 The base installation remains independent; process/browser tests live in separate
 optional jobs. When running the base suite, exclude `tests/control_api`,
 `tests/browser` and `tests/control_process`. Real integrations and deployment remain disabled.
+
+
+## Lean bill Knowledge Base (K1-A)
+
+Explicit opt-in local text workflow: `SyntheticBillApiConfig` plus a private `BillObjects` adapter. Paste/sample bill text, save/reopen a bill, inspect figures and ask one of the grounded questions with exact source lines. PostgreSQL stores facts/provenance through migration 0014; immutable UTF-8 originals use the scoped local object adapter outside Git. Existing API profiles keep bill routes disabled. No PDF/OCR, model/provider, legacy Markdown authority or real-account enablement is added.
+
+On a **fresh owned project**, add `--bills` to the normal `tests.control_process.support prepare --confirm-synthetic` step; the gateway alone receives the private object volume. Existing preview state is never reprovisioned. Follow [[MarkOS v0.3 Lean Bill Knowledge MVP]] for acceptance, limits, run sequence and unresolved decisions.

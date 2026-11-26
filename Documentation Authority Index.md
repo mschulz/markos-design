@@ -2,11 +2,11 @@
 title: Documentation Authority Index
 type: governance
 status: active
-version: 1.14
+version: 1.15
 owner: Mark Schulz
 created: 2026-11-12
-updated: 2026-11-13
-reviewed: 2026-11-13
+updated: 2026-11-26
+reviewed: 2026-11-26
 tags:
   - architecture
 ---
@@ -25,6 +25,7 @@ This table covers every Markdown file in this PR's repository tree, including hi
 
 | Document | Authority and disposition |
 |---|---|
+| [MarkOS v0.3 Lean Bill Knowledge MVP](MarkOS%20v0.3%20Lean%20Bill%20Knowledge%20MVP.md) | Current K1 first-slice implementation record; opt-in local bill text, pending review, no deployment |
 | [PULL_REQUEST_TEMPLATE](.github/PULL_REQUEST_TEMPLATE.md) | Current review template with independent-architecture check |
 | [ADR-0002 GitHub as Canonical Project Record](ADR-0002%20GitHub%20as%20Canonical%20Project%20Record.md) | Accepted project-source governance; runtime data is separate |
 | [ADR-002 Cloud-first Deployment](ADR-002%20Cloud-first%20Deployment.md) | Accepted placement; earlier MQTT wording amended by ADR-003 |
