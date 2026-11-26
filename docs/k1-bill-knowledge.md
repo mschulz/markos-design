@@ -136,7 +136,7 @@ Origin was the previous supplier. Most old bills are in Gmail, so this profile l
 
 ## K1-C plan: corrections, history and checked arithmetic
 
-Status: draft. The owner has not approved it. Questions for the owner are under "Decisions needed".
+Status: approved, not yet implemented. Owner decisions are under "Decisions".
 
 K1-C makes stored bills trustworthy over time. The owner can correct a figure without losing what the extractor read, compare bills across suppliers, and rely on written arithmetic rules backed by approved examples.
 
@@ -174,7 +174,7 @@ K1-C makes stored bills trustworthy over time. The owner can correct a figure wi
 
 Three PRs, each reviewed and merged separately:
 
-1. **K1-C1 corrections:** migration 0017, correction API, effective values, re-checked arithmetic, and correction controls on the bill page.
+1. **K1-C1 corrections:** migration 0017 (corrections table and the 500-bill limit), correction API, effective values, re-checked arithmetic, and correction controls on the bill page.
 2. **K1-C2 history:** shared vocabulary, history route and page, and the two new questions.
 3. **K1-C3 rules and acceptance:** the rules section, the approved examples as tests, and the coverage script.
 
@@ -186,13 +186,15 @@ Three PRs, each reviewed and merged separately:
 - Viewers cannot correct. CSRF and scope checks apply, as on other bill writes.
 - History orders mixed Amber and Origin bills by period, finds gaps and overlaps, and never shows an unreconciled figure as a number.
 
-### Decisions needed
+### Decisions
 
-1. **Who can correct?** Proposed: only the operator role, with a required reason of up to 200 characters.
-2. **What can be corrected?** Proposed: any fact, including period and due date. The alternative is money facts only.
-3. **Mixed suppliers in history?** Proposed: one combined history across Amber and Origin, with the supplier shown on each row.
-4. **Which acceptance examples?** Proposed: the four edge cases above plus one ordinary bill per profile. The owner approves the expected answers before C3 merges.
-5. **Bill limit.** Each scope holds at most 100 bills. That covers about 25 years of quarterly bills. Keep it?
+The owner approved these on 2026-11-26.
+
+1. **Who can correct:** only the operator role, with a required reason of up to 200 characters.
+2. **What can be corrected:** any fact, including period and due date.
+3. **History:** one combined history across Amber and Origin, with the supplier shown on each row.
+4. **Acceptance examples:** the four edge cases above plus one ordinary bill per profile. The owner approves the expected answers before C3 merges.
+5. **Bill limit:** raised from 100 to 500 per scope in migration 0017 (K1-C1). Amber bills monthly, so 10 years is 120 bills. 500 holds about 40 years of monthly bills.
 
 ### Out of scope
 
