@@ -35,7 +35,7 @@ def emit(code: str) -> None:
 def secret(environ: Mapping[str, str], name: str) -> str:
     value = environ.get(name, "")
     if not value or len(value) > 8192:
-        raise StorageError("explicit service credential missing")
+        raise FatalServiceError("explicit service credential missing")
     return value
 
 
@@ -154,7 +154,6 @@ class Service:
             worker = SyntheticWorker(store, cfg.synthetic_work_seconds)
             self.health.reconnects += 1
             emit("connected")
-            cleanup_at = 0.0
             try:
                 while not self.stop.is_set():
                     async with asyncio.timeout(30):
@@ -192,10 +191,6 @@ class Service:
                             await Scheduler(store).scan_once()
                         elif cfg.component == "recovery":
                             await Recovery(store).reconcile_once()
-                            now = asyncio.get_running_loop().time()
-                            if cfg.cleanup_enabled and now >= cleanup_at:
-                                await Recovery(store).cleanup_once(dry_run=False)
-                                cleanup_at = now + 86400
                         if await store.current_epoch() != epoch:
                             raise FatalServiceError("restored generation")
                         await store.heartbeat(

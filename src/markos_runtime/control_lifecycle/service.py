@@ -24,6 +24,7 @@ from markos_runtime.control.store import ControlStore
 from markos_runtime.control_lifecycle.config import ControlServiceConfig
 from markos_runtime.control_lifecycle.issuer import DurableFixtureIssuer, RemoteFixtureIssuer
 from markos_runtime.lifecycle.health import HealthServer, HealthState
+from markos_runtime.lifecycle.service import FatalServiceError
 from markos_runtime.store.database import DurableStore, StorageError
 from markos_runtime.tools.transport import FixtureConnection, FixtureTransport
 from markos_runtime.tools.worker import GovernedConversationWorker
@@ -36,7 +37,7 @@ from markos_runtime.transport.publisher import Publisher
 def value(environ: Mapping[str, str], name: str) -> str:
     result = environ.get(name, "")
     if not result or len(result) > 8192:
-        raise StorageError("explicit fixture credential required")
+        raise FatalServiceError("explicit fixture credential required")
     return result
 
 
@@ -47,7 +48,7 @@ def isolated_dsn(raw: str) -> None:
         host in {"127.0.0.1", "localhost", "::1", "postgres"}
         or host.startswith("/private/tmp/markos-m0b-")
     ) or not str(data.get("dbname", "")).startswith(("markos_test_", "markos_m1g")):
-        raise StorageError("owned synthetic database required")
+        raise FatalServiceError("owned synthetic database required")
 
 
 class ControlService:
@@ -83,7 +84,7 @@ class ControlService:
                 self.config.owner_id,
                 self.config.domain,
             ):
-                raise StorageError("fixed runtime identity mismatch")
+                raise FatalServiceError("fixed runtime identity mismatch")
             async with store._transaction() as conn:
                 row = await (
                     await conn.execute(
@@ -145,7 +146,7 @@ class ControlService:
                 )
             ]
             if len(set(tokens)) != 3 or any(len(x) != 43 for x in tokens):
-                raise StorageError("separate fixture scopes required")
+                raise FatalServiceError("separate fixture scopes required")
             app = issuer_app(issuer, cfg.issuer_endpoint, *tokens)
             port = urlsplit(cfg.issuer_endpoint).port
         else:
@@ -260,7 +261,7 @@ class ControlService:
                     or not target.path[1:].startswith("markos-test")
                     or target.scheme != "amqps"
                 ):
-                    raise StorageError("owned TLS broker required")
+                    raise FatalServiceError("owned TLS broker required")
                 broker = await stack.enter_async_context(BrokerSession.connect(raw))
                 if cfg.component in {"publisher", "completion-publisher"}:
                     audit = TopologyAudit(

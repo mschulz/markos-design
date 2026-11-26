@@ -26,11 +26,6 @@
       "title": "Broker Secret Ref",
       "type": "string"
     },
-    "cleanup_enabled": {
-      "default": false,
-      "title": "Cleanup Enabled",
-      "type": "boolean"
-    },
     "component": {
       "enum": [
         "publisher",

@@ -55,7 +55,8 @@ commands are in `docs/development.md`.
 
 - **Database tests drop databases and create roles.** Point
   `MARKOS_TEST_ADMIN_DSN` only at a disposable local cluster. **Never at port
-  15432 (the running preview) or 5432 (the Mac's own PostgreSQL).** → decisions:
+  5432 (the Mac's own PostgreSQL), 15432 or 25432 (previews).** The test guard
+  refuses those ports; CI uses 55432. → decisions:
   Tests use disposable databases and brokers only
 - **A skipped test is not evidence.** CI requires every service. → decisions: CI
   fails on missing services instead of skipping
@@ -73,10 +74,11 @@ commands are in `docs/development.md`.
 
 ## Local preview
 
-A preview runs from
-`~/Documents/Codex/2026-11-10/referenced-chatgpt-conversation-this-is-an/work/markos-preview`
-(PostgreSQL on 15432). **Never update, reprovision or delete it** without Mark's
-instruction. A fresh preview from this repo follows `docs/local-preview.md`.
+The current preview runs from this repo (PostgreSQL on 25432). Its settings are in
+`~/.config/markos/preview.env`; see `docs/local-preview.md`. An older preview
+(PostgreSQL on 15432) is paused under `~/Documents/Codex`. Both use the same
+fixed ports, so only one runs at a time. **Never reprovision or delete either
+preview** without Mark's instruction.
 
 ## Workflow
 
@@ -86,3 +88,14 @@ instruction. A fresh preview from this repo follows `docs/local-preview.md`.
 - **Lean delivery:** show working product results early; automate regression
   tests rather than asking Mark to run them. → decisions: Lean delivery: runnable
   feedback first, real gates before real data
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- When graphify-out/graph.json exists, run `graphify query "<question>"` before your first grep, search or source-file read for a codebase question, and put this rule in every subagent prompt that explores code. Read raw files only for lines the graph or an earlier read already located. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.

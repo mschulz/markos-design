@@ -30,6 +30,12 @@ def test_sample_figures_and_each_citation_match_original_lines() -> None:
     assert result["citations"] == [{"line": 9, "quote": "Amount due: $148.50"}]
 
 
+def test_period_with_extra_spaces_is_normalised() -> None:
+    report = extract("Billing period: 2026-10-01  to   2026-10-31")
+    fact = next(f for f in report.facts if f.key == "period")
+    assert fact.state == "found" and fact.value == "2026-10-01 to 2026-10-31"
+
+
 @pytest.mark.parametrize(
     "suffix,state",
     [

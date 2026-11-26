@@ -546,8 +546,10 @@ def create_app(
             return await open_stream(api, request)
         if path == "/api/v1/approvals" and method == "GET" and web is not None:
             ctx, binding, raw = await api.authenticate(request)
-            params = api.query(request, {"owner_id", "domain"})
+            # The CLI pages every list, so accept paging parameters even though this is empty.
+            params = api.query(request, {"owner_id", "domain", "cursor", "limit"})
             owner, domain = api.scope(params)
+            # Reading agents is the scope authorization check for this placeholder.
             await store.read_agents(ctx, owner, domain)
             return JSONResponse(
                 {"schema_version": 1, "available": False, "items": [], "reason": "not-enabled"}

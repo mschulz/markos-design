@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-26 — Safety and bug fixes from the code review
+
+- Database tests refuse ports 5432, 15432 and 25432 and host redirection. CI uses 55432.
+- Missing credentials and wrong database or broker targets now stop a service instead of retrying forever.
+- Removed the daily non-dry-run cleanup branch, which the decisions forbid.
+- Oversize review records hash the committed bytes. Bill periods accept extra spaces. CLI `approvals` works without governance.
+- The dependency test checks the base install only, so it passes with extras installed.
+- The preview CI job prints task and approval state counts on failure.
+
 ## 2026-11-26 — Move the runtime to the repo root and the docs into docs/
 
 - `services/runtime/` is now the repo root: `src/`, `tests/`, `pyproject.toml`, `uv.lock`, Dockerfiles.

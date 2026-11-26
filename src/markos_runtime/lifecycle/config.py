@@ -30,7 +30,6 @@ class ServiceConfig(ValueModel):
     tick_seconds: float = Field(default=1.0, ge=0.1, le=30)
     shutdown_seconds: int = Field(default=10, ge=5, le=15)
     synthetic_work_seconds: float = Field(default=0.0, ge=0, le=5)
-    cleanup_enabled: bool = False
     database_secret_ref: SecretRef = "MARKOS_RUNTIME_DATABASE_DSN"
     broker_secret_ref: SecretRef = "MARKOS_RUNTIME_BROKER_DSN"
     audit_user_secret_ref: SecretRef = "MARKOS_RUNTIME_AUDIT_USER"
@@ -75,8 +74,6 @@ class ServiceConfig(ValueModel):
             raise ValueError("distinct credential references required")
         if self.component != "worker" and self.synthetic_work_seconds:
             raise ValueError("delay only for synthetic worker")
-        if self.component != "recovery" and self.cleanup_enabled:
-            raise ValueError("cleanup only for recovery")
         return self
 
 

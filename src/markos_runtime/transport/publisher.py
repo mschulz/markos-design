@@ -41,7 +41,7 @@ class Publisher:
                 if parse_event(body) != claim.event:
                     raise TransportError("outbox wire mismatch")
                 if len(body) > self.limits.max_message_bytes:
-                    await self.store.review_delivery(claim.event.to_wire(), "oversize")
+                    await self.store.review_delivery(body, "oversize")
                     await self.store.hold_for_review(claim, "oversize")
                     return False
                 if not await self.store.authorize_publication(

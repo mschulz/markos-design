@@ -1,19 +1,17 @@
 import importlib.metadata
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 
-def test_runtime_dependency_set_excludes_archive() -> None:
+def test_base_dependencies_exclude_optional_extras() -> None:
+    # Optional extras carry an `extra ==` marker; everything else is installed by default.
     requirements = importlib.metadata.requires("markos-runtime") or []
-    assert any(r.startswith("pydantic==") for r in requirements)
-    forbidden = {"markos", "duckdb", "fastapi", "markdown-it-py"}
-    installed = {
-        d.metadata["Name"].lower().replace("_", "-") for d in importlib.metadata.distributions()
-    }
-    assert not installed & forbidden
+    base = {re.split(r"[\[=; ]", r)[0] for r in requirements if "extra ==" not in r}
+    assert base == {"aio-pika", "psycopg", "psycopg-pool", "pydantic"}
 
 
 def test_guarded_preflight_outside_repository(config_file: Path, tmp_path: Path) -> None:
