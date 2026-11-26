@@ -15,7 +15,7 @@ from markos_runtime.api.application import create_app
 from markos_runtime.api.identity import FixtureIssuer, opaque
 from markos_runtime.control.api_config import SyntheticConversationApiConfig
 from markos_runtime.control.conversation import ConversationWorker
-from markos_runtime.control.store import ControlStore, SessionContext
+from markos_runtime.control.store import SessionContext
 from markos_runtime.store.database import DurableStore
 from markos_runtime.transport.broker import BrokerSession, TransportError
 from markos_runtime.transport.consumer import Consumer
@@ -31,6 +31,7 @@ from tests.control_api.test_conversation import (
     scenario_api,
 )
 from tests.control_api.test_https import HttpClient, certificate
+from tests.control_store_support import HarnessStore
 from tests.integration.test_control_persistence import prepare, session
 from tests.integration.test_rabbitmq import Harness, rabbit
 
@@ -107,7 +108,7 @@ def test_real_https_conversation_with_two_workers_and_completion_handoff(
             conversation_profile="deterministic-conversation-v1",
         )
         async with (
-            ControlStore.connect(conversation["gateway"]) as gateway,
+            HarnessStore.connect(conversation["gateway"]) as gateway,
             DurableStore.connect(conversation["chatpub"]) as pub,
             DurableStore.connect(conversation["chatworker"]) as worker_store,
             DurableStore.connect(conversation["chatworker"]) as competing_store,
@@ -236,7 +237,7 @@ def test_chat_handoff_crash_redelivers_one_task(
     async def action(
         client: Client,
         issuer: FixtureIssuer,
-        gateway: ControlStore,
+        gateway: HarnessStore,
         conv: UUID,
         ctx: SessionContext,
     ) -> None:
@@ -305,7 +306,7 @@ def test_completion_topology_failure_preserves_reply_and_retries_same_event(
     async def action(
         client: Client,
         issuer: FixtureIssuer,
-        gateway: ControlStore,
+        gateway: HarnessStore,
         conv: UUID,
         ctx: SessionContext,
     ) -> None:

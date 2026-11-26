@@ -1,12 +1,11 @@
-"""Explicit non-admin control persistence; a trusted future gateway must verify identity first."""
+"""Non-admin control persistence. The gateway verifies identity before every call."""
 
 import asyncio
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Literal, Self
+from typing import Any, Self
 from uuid import UUID
 
 import psycopg
@@ -53,27 +52,9 @@ class SessionContext:
 
 
 @dataclass(frozen=True)
-class OpenedSession:
-    context: SessionContext
-    principal_id: UUID
-    epoch: UUID
-    expires_at: datetime
-
-
-@dataclass(frozen=True)
 class StoredAgent:
     manifest: AgentRevision
     enabled: bool
-
-
-@dataclass(frozen=True)
-class StagedMessage:
-    message_id: UUID
-    event_id: UUID
-    sequence: int
-    state: Literal["held"]
-    agent_revision: int
-    config_revision: int
 
 
 @dataclass(frozen=True)
@@ -152,78 +133,6 @@ class ControlStore:
     def _context(context: SessionContext, owner: UUID, domain: Domain) -> tuple[object, ...]:
         return context.session_id, context.lookup_hash, owner, domain
 
-    async def open_session(
-        self,
-        *,
-        issuer: str,
-        subject: str,
-        provider_session_id: UUID,
-        lookup_hash: str,
-        kind: Literal["browser", "cli"],
-        provider_expires_at: datetime,
-    ) -> OpenedSession:
-        """Persist the future trusted verifier's binding; does NOT verify a JWT/PKCE flow."""
-        row = await self._call(
-            "open_session",
-            issuer,
-            subject,
-            provider_session_id,
-            lookup_hash,
-            kind,
-            provider_expires_at,
-        )
-        return OpenedSession(
-            SessionContext(UUID(row["session_id"]), lookup_hash),
-            UUID(row["principal_id"]),
-            UUID(row["epoch"]),
-            datetime.fromisoformat(row["expires_at"]),
-        )
-
-    async def rotate_session(
-        self,
-        context: SessionContext,
-        *,
-        issuer: str,
-        subject: str,
-        provider_session_id: UUID,
-        lookup_hash: str,
-        kind: Literal["browser", "cli"],
-        provider_expires_at: datetime,
-    ) -> OpenedSession:
-        row = await self._call(
-            "rotate_session",
-            context.session_id,
-            context.lookup_hash,
-            issuer,
-            subject,
-            provider_session_id,
-            lookup_hash,
-            kind,
-            provider_expires_at,
-        )
-        return OpenedSession(
-            SessionContext(UUID(row["session_id"]), lookup_hash),
-            UUID(row["principal_id"]),
-            UUID(row["epoch"]),
-            datetime.fromisoformat(row["expires_at"]),
-        )
-
-    async def refresh_session(
-        self, context: SessionContext, provider_expires_at: datetime
-    ) -> OpenedSession:
-        row = await self._call(
-            "refresh_session", context.session_id, context.lookup_hash, provider_expires_at
-        )
-        return OpenedSession(
-            context,
-            UUID(row["principal_id"]),
-            UUID(row["epoch"]),
-            datetime.fromisoformat(row["expires_at"]),
-        )
-
-    async def revoke_session(self, context: SessionContext) -> bool:
-        return bool(await self._call("revoke_session", context.session_id, context.lookup_hash))
-
     async def save_agent(
         self, context: SessionContext, agent: AgentRevision, *, expected_revision: int
     ) -> StoredAgent:
@@ -298,26 +207,6 @@ class ControlStore:
             operation_key,
         )
         return Conversation.model_validate_json(json.dumps(row))
-
-    async def stage_message(
-        self, context: SessionContext, owner: UUID, request: ChatRequest
-    ) -> StagedMessage:
-        checked = ChatRequest.from_wire(request.to_wire())
-        row = await self._call(
-            "stage_message",
-            *self._context(context, owner, checked.domain),
-            Jsonb(checked.model_dump(mode="json")),
-        )
-        if row["state"] != "held":
-            raise StorageError("unexpected control staging state")
-        return StagedMessage(
-            UUID(row["message_id"]),
-            UUID(row["event_id"]),
-            row["sequence"],
-            "held",
-            row["agent_revision"],
-            row["config_revision"],
-        )
 
     async def read_conversations(
         self,

@@ -1,5 +1,3 @@
-import json
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -53,14 +51,3 @@ def manifest_document() -> dict[str, Any]:
             }
         ],
     }
-
-
-@pytest.fixture
-def config_file(tmp_path: Path, manifest_document: dict[str, Any]) -> Path:
-    (tmp_path / "subscriptions.json").write_text(json.dumps(manifest_document))
-    path = tmp_path / "runtime.toml"
-    path.write_text(
-        '[runtime]\nenvironment="test"\nrole="publisher"\n'
-        'service_id="foundation-generator"\nmanifest_file="subscriptions.json"\n'
-    )
-    return path

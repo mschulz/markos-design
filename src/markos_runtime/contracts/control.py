@@ -100,16 +100,6 @@ class Membership(ScopedValue):
             raise ValueError("duplicate role")
         return value
 
-    def supports(self, capability: Capability) -> bool:
-        # Pure role matrix, NOT request authorization. Current DB membership/session is mandatory.
-        required = {
-            "inspect": {"viewer", "operator", "approver", "administrator"},
-            "chat": {"operator"},
-            "configure": {"administrator"},
-            "decide-approval": {"approver"},
-        }
-        return bool(set(self.roles) & required.get(capability, set()))
-
 
 class AgentRevision(ScopedValue):
     agent_id: Literal["control-test-agent"]
@@ -223,14 +213,6 @@ class ChatEvent(ScopedValue):
     operation_key: OperationKey
     message: MessageReference
     expires_at: Utc | None = None
-
-    def require_live(self, now: datetime) -> None:
-        from markos_runtime.contracts.base import ContractError
-
-        if now.utcoffset() != timedelta(0):
-            raise ContractError("UTC clock required")
-        if self.expires_at is not None and now >= self.expires_at:
-            raise ContractError("event expired")
 
     @model_validator(mode="after")
     def binding(self) -> Self:

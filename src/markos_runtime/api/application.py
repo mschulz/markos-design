@@ -558,7 +558,6 @@ def create_app(
             "/api/v1/me",
             "/api/v1/agents",
             "/api/v1/agents/control-test-agent/state",
-            "/api/v1/agents/control-test-agent/revisions",
             "/api/v1/configuration",
             "/api/v1/configuration/revisions",
             "/api/v1/status",
@@ -606,19 +605,10 @@ def create_app(
                 wire(await store.save_agent(ctx, agent, expected_revision=agent.revision - 1)),
                 status_code=201,
             )
-        if (
-            path in {"/api/v1/configuration", "/api/v1/configuration/revisions"}
-            and method == "POST"
-        ):
+        if path == "/api/v1/configuration/revisions" and method == "POST":
             api.query(request, set())
             return JSONResponse(
                 wire(await store.save_configuration(ctx, ConfigRevision.from_wire(data)))
-            )
-        if path == "/api/v1/agents/control-test-agent/revisions" and method == "POST":
-            api.query(request, set())
-            agent = AgentRevision.from_wire(data)
-            return JSONResponse(
-                wire(await store.save_agent(ctx, agent, expected_revision=agent.revision - 1))
             )
         params = api.query(
             request,

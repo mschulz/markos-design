@@ -1,7 +1,7 @@
 [project]
 name = "markos-runtime"
 version = "0.1.0"
-description = "Independent MarkOS event-runtime contracts and explicit preflight"
+description = "Independent MarkOS event runtime, control API and synthetic services"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [

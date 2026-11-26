@@ -15,16 +15,17 @@ import pytest
 from markos_runtime.api.application import create_app
 from markos_runtime.api.identity import FixtureIssuer, challenge, opaque
 from markos_runtime.control.api_config import SyntheticApiConfig
-from markos_runtime.control.store import ControlDenied, ControlStore
+from markos_runtime.control.store import ControlDenied
 from markos_runtime.control_lifecycle.issuer import DurableFixtureIssuer, private_json, save_private
 from markos_runtime.http_bounds import bounded_connection
+from tests.control_store_support import HarnessStore
 
 
 def test_shared_short_request_budget_and_expired_process_leases(control: dict[str, Any]) -> None:
     async def scenario() -> None:
         async with (
-            ControlStore.connect(control["gateway"]) as one,
-            ControlStore.connect(control["gateway"]) as two,
+            HarnessStore.connect(control["gateway"]) as one,
+            HarnessStore.connect(control["gateway"]) as two,
         ):
             leases = [await (one if i % 2 else two)._call("claim_http_request") for i in range(16)]
             assert all(leases) and len(set(leases)) == 16
@@ -42,7 +43,7 @@ def test_shared_short_request_budget_and_expired_process_leases(control: dict[st
                     "SELECT count(*) FROM markos_control.http_requests"
                 ).fetchone() == (1,)
         with pytest.raises(ControlDenied):
-            async with ControlStore.connect(control["unmapped"]) as bad:
+            async with HarnessStore.connect(control["unmapped"]) as bad:
                 await bad._call("claim_http_request")
 
     asyncio.run(scenario())

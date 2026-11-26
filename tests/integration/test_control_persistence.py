@@ -25,11 +25,11 @@ from markos_runtime.control.store import (
     ControlConflict,
     ControlDenied,
     ControlLimited,
-    ControlStore,
     SessionContext,
 )
 from markos_runtime.store.database import DurableStore, StorageError
 from markos_runtime.store.migrations import migrate
+from tests.control_store_support import HarnessStore
 from tests.integration.conftest import OTHER, OWNER
 from tests.integration.test_storage import event
 
@@ -68,7 +68,7 @@ def control(database: dict[str, str]) -> dict[str, Any]:
 
 
 async def session(
-    store: ControlStore, who: str = "both", *, kind: str = "browser"
+    store: HarnessStore, who: str = "both", *, kind: str = "browser"
 ) -> SessionContext:
     opened = await store.open_session(
         issuer="synthetic-issuer",
@@ -82,7 +82,7 @@ async def session(
 
 
 async def prepare(
-    store: ControlStore, ctx: SessionContext, owner: UUID = OWN, domain: Domain = "personal"
+    store: HarnessStore, ctx: SessionContext, owner: UUID = OWN, domain: Domain = "personal"
 ) -> UUID:
     agent = AgentRevision(
         schema_version=1,
@@ -154,7 +154,7 @@ def counts(data: dict[str, Any]) -> tuple[int, ...]:
 
 def test_persisted_registry_conversation_message_and_held_intent(control: dict[str, Any]) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             staged = await store.stage_message(ctx, OWN, request(conv))
@@ -187,7 +187,7 @@ def test_persisted_registry_conversation_message_and_held_intent(control: dict[s
 @pytest.mark.parametrize("role", ["viewer", "approver", "administrator"])
 def test_nonoperator_roles_cannot_create_conversations(control: dict[str, Any], role: str) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store, role)
             assert await store.read_agents(ctx, OWN, "personal") == ()
             with pytest.raises(ControlDenied):
@@ -199,7 +199,7 @@ def test_nonoperator_roles_cannot_create_conversations(control: dict[str, Any], 
 @pytest.mark.parametrize("role", ["viewer", "approver", "operator"])
 def test_nonadministrator_roles_cannot_change_registry(control: dict[str, Any], role: str) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store, role)
             agent = AgentRevision(
                 schema_version=1,
@@ -221,7 +221,7 @@ def test_gateway_binding_rejects_runtime_and_privileged_logins(
 ) -> None:
     async def scenario() -> None:
         with pytest.raises(StorageError):
-            async with ControlStore.connect(control[target]):
+            async with HarnessStore.connect(control[target]):
                 pass
 
     asyncio.run(scenario())
@@ -261,7 +261,7 @@ def test_gateway_cannot_bypass_functions_or_edit_history(
 
 def test_cross_owner_domain_pool_reuse_and_forged_session_settings(control: dict[str, Any]) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"], max_connections=1) as store:
+        async with HarnessStore.connect(control["gateway"], max_connections=1) as store:
             own = await session(store)
             other = await session(store, "other")
             conv = await prepare(store, own)
@@ -307,7 +307,7 @@ def test_session_and_membership_revalidated_on_every_call(
     control: dict[str, Any], change: str
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             assert await store.read_agents(ctx, OWN, "personal") == ()
             with psycopg.connect(control["migration"], autocommit=True) as conn:
@@ -362,7 +362,7 @@ def test_session_and_membership_revalidated_on_every_call(
 
 def test_session_hash_only_storage_budget_and_logout(control: dict[str, Any]) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             contexts = [await session(store) for _ in range(10)]
             with pytest.raises(ControlLimited):
                 await session(store)
@@ -393,7 +393,7 @@ def test_duplicate_requests_concurrency_and_changed_content_conflict(
     control: dict[str, Any],
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             receipts = await asyncio.gather(
@@ -413,7 +413,7 @@ def test_staged_message_transaction_rolls_back_at_each_persistence_boundary(
     control: dict[str, Any], fault_table: str
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             before = counts(control)
@@ -453,7 +453,7 @@ def test_conversation_sequence_order_and_actor_scoped_operation_keys(
     control: dict[str, Any],
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             operator = await session(store, "operator")
             conv = await prepare(store, ctx)
@@ -474,7 +474,7 @@ def test_conversation_sequence_order_and_actor_scoped_operation_keys(
 
 def test_configuration_and_agent_expected_revision_races(control: dict[str, Any]) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             await prepare(store, ctx)
             current = await store.read_configuration(ctx, OWN, "personal")
@@ -514,7 +514,7 @@ def test_configuration_and_agent_expected_revision_races(control: dict[str, Any]
 
 def test_disable_and_stale_configuration_block_new_staging(control: dict[str, Any]) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             first = await store.stage_message(ctx, OWN, request(conv))
@@ -547,7 +547,7 @@ def test_disable_and_stale_configuration_block_new_staging(control: dict[str, An
 
 def test_staging_scope_budget_and_cross_scope_isolation(control: dict[str, Any]) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             for i in range(10):
@@ -568,7 +568,7 @@ def test_restore_generation_invalidates_sessions_preserves_history_and_m0_fences
     control: dict[str, Any],
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             staged = await store.stage_message(ctx, OWN, request(conv))
@@ -645,7 +645,7 @@ def test_rotation_is_atomic_and_refresh_cannot_extend_absolute_lifetime(
     control: dict[str, Any],
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             old = await session(store)
             new_hash = hashlib.sha256(uuid4().bytes).hexdigest()
             renewed = await store.rotate_session(
@@ -703,7 +703,7 @@ def test_sql_registry_functions_independently_reject_bypassed_python_validation(
     control: dict[str, Any], mutation: str
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             agent = AgentRevision(
                 schema_version=1,
@@ -741,7 +741,7 @@ def test_sql_message_function_rejects_forged_authority_and_oversize(
     control: dict[str, Any], mutation: str
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             value = request(conv).model_dump(mode="json")
@@ -771,7 +771,7 @@ def test_response_pages_bound_rows_bytes_and_filter_before_pagination(
     control: dict[str, Any],
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             with psycopg.connect(control["migration"], autocommit=True) as conn:
@@ -831,7 +831,7 @@ def test_global_session_budget_is_atomic_and_old_generations_do_not_reserve_capa
             )
 
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             with pytest.raises(ControlLimited):
                 await session(store)
             with psycopg.connect(control["migration"], autocommit=True) as conn:
@@ -844,7 +844,7 @@ def test_global_session_budget_is_atomic_and_old_generations_do_not_reserve_capa
 
 def test_pending_membership_revocation_prevents_later_staging(control: dict[str, Any]) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             async with await psycopg.AsyncConnection.connect(
@@ -872,8 +872,8 @@ def test_pending_membership_revocation_prevents_later_staging(control: dict[str,
 def test_cross_session_last_slot_admission_race(control: dict[str, Any]) -> None:
     async def scenario() -> None:
         async with (
-            ControlStore.connect(control["gateway"]) as first,
-            ControlStore.connect(control["gateway"]) as second,
+            HarnessStore.connect(control["gateway"]) as first,
+            HarnessStore.connect(control["gateway"]) as second,
         ):
             admin = await session(first)
             operator = await session(second, "operator")
@@ -893,7 +893,7 @@ def test_cross_session_last_slot_admission_race(control: dict[str, Any]) -> None
 
 def test_global_held_work_budget_is_independent_of_scope_budget(control: dict[str, Any]) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             for i in range(10):
                 owner = uuid4()
@@ -919,7 +919,7 @@ def test_temporary_table_shadow_cannot_replace_session_or_membership_authority(
     control: dict[str, Any],
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             with psycopg.connect(control["gateway"], autocommit=True) as conn:
                 conn.execute("CREATE TEMP TABLE sessions(session_id uuid,lookup_hash text)")
@@ -951,7 +951,7 @@ def test_gateway_cannot_hide_elevated_privileges_in_an_inherited_role(
 
             async def scenario() -> None:
                 with pytest.raises(ControlDenied):
-                    async with ControlStore.connect(control["gateway"]):
+                    async with HarnessStore.connect(control["gateway"]):
                         pass
 
             asyncio.run(scenario())
@@ -994,7 +994,7 @@ def test_upgrade_populated_control_preserves_sessions_and_held_work(
                 "VALUES(%s,%s,'personal',1,ARRAY['operator','administrator'])",
                 (control["principals"]["both"], OWN),
             )
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             conv = await prepare(store, ctx)
             value = request(conv)

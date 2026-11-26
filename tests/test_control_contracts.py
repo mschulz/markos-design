@@ -172,21 +172,11 @@ def test_planned_chat_bindings_do_not_enable_m0_transport() -> None:
         parse(ChatEvent, value)
 
 
-@pytest.mark.parametrize(
-    "role,allowed",
-    [
-        ("viewer", {"inspect"}),
-        ("operator", {"inspect", "chat"}),
-        ("approver", {"inspect", "decide-approval"}),
-        ("administrator", {"inspect", "configure"}),
-    ],
-)
-def test_explicit_nonhierarchical_role_matrix(role: str, allowed: set[str]) -> None:
+@pytest.mark.parametrize("role", ["viewer", "operator", "approver", "administrator"])
+def test_membership_roles_parse_and_reject_duplicates(role: str) -> None:
     value = document("membership")
     value["roles"] = [role]
-    membership = Membership.from_wire(json.dumps(value).encode())
-    for capability in ("inspect", "chat", "configure", "decide-approval"):
-        assert membership.supports(capability) == (capability in allowed)
+    assert Membership.from_wire(json.dumps(value).encode()).roles == (role,)
     value["roles"] = [role, role]
     with pytest.raises(ContractError):
         parse(Membership, value)

@@ -11,8 +11,9 @@ from uuid import UUID
 import psycopg
 import pytest
 
-from markos_runtime.control.store import ControlDenied, ControlLimited, ControlStore
+from markos_runtime.control.store import ControlDenied, ControlLimited
 from tests.control_api.test_web_cli import cli_client
+from tests.control_store_support import HarnessStore
 from tests.integration.conftest import OTHER, OWNER
 from tests.integration.test_control_persistence import request, session
 from tests.web_support import web_server
@@ -23,8 +24,8 @@ def test_stream_limits_are_database_shared_and_release_only_with_possession(
 ) -> None:
     async def scenario() -> None:
         async with (
-            ControlStore.connect(control["gateway"]) as first,
-            ControlStore.connect(control["gateway"]) as second,
+            HarnessStore.connect(control["gateway"]) as first,
+            HarnessStore.connect(control["gateway"]) as second,
         ):
             opened = []
             for name in ("viewer", "operator", "approver", "administrator", "both"):
@@ -69,7 +70,7 @@ def test_stream_limits_are_database_shared_and_release_only_with_possession(
 @pytest.mark.parametrize("bound", ["session", "principal"])
 def test_each_stream_session_and_principal_bound(control: dict[str, Any], bound: str) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             contexts = [await session(store) for _ in range(5)]
             maximum = 1 if bound == "session" else 4
             for index in range(maximum):
@@ -91,7 +92,7 @@ def test_stream_renewal_cannot_resurrect_expired_or_revoked_authority(
     control: dict[str, Any], cause: str
 ) -> None:
     async def scenario() -> None:
-        async with ControlStore.connect(control["gateway"]) as store:
+        async with HarnessStore.connect(control["gateway"]) as store:
             ctx = await session(store)
             ident = await store._call(
                 "open_activity_stream", ctx.session_id, ctx.lookup_hash, UUID(OWNER), "personal"

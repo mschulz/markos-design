@@ -17,14 +17,10 @@ from markos_runtime.contracts.governance import (
     ReviewedFixtureGrant,
 )
 from markos_runtime.control.conversation import ConversationWorker
-from markos_runtime.control.store import (
-    ControlConflict,
-    ControlDenied,
-    ControlStore,
-    SessionContext,
-)
+from markos_runtime.control.store import ControlConflict, ControlDenied, SessionContext
 from markos_runtime.store.database import DurableStore, StorageError
 from tests.control_api.test_conversation import conversation, handoff, request_value, rows
+from tests.control_store_support import HarnessStore
 from tests.integration.conftest import OWNER
 from tests.integration.test_control_persistence import prepare, session
 
@@ -33,7 +29,7 @@ OWN = UUID(OWNER)
 
 
 async def install_grant(
-    store: ControlStore,
+    store: HarnessStore,
     ctx: SessionContext,
     *,
     endpoint: str = "https://127.0.0.1:18443/mcp",
@@ -59,7 +55,7 @@ async def install_grant(
 
 
 async def admit_tool(
-    data: dict[str, Any], store: ControlStore, ctx: SessionContext, *, key: str = "message:governed"
+    data: dict[str, Any], store: HarnessStore, ctx: SessionContext, *, key: str = "message:governed"
 ) -> dict[str, Any]:
     conv = (await store.read_conversations(ctx, OWN, "personal"))[0].conversation.conversation_id
     value = GovernedChatRequest.from_wire(
@@ -90,7 +86,7 @@ async def claim(worker: ConversationWorker) -> tuple[dict[str, Any], tuple[objec
     return value, (UUID(value["task_id"]), value["fence"], worker.executor_id, UUID(value["epoch"]))
 
 
-async def approval(store: ControlStore, ctx: SessionContext) -> dict[str, Any]:
+async def approval(store: HarnessStore, ctx: SessionContext) -> dict[str, Any]:
     items = await store._call(
         "read_tool_records", ctx.session_id, ctx.lookup_hash, OWN, "personal", "approvals", 0, 100
     )
@@ -101,7 +97,7 @@ async def approval(store: ControlStore, ctx: SessionContext) -> dict[str, Any]:
     return value
 
 
-async def approve(store: ControlStore, ctx: SessionContext, value: dict[str, Any]) -> Any:
+async def approve(store: HarnessStore, ctx: SessionContext, value: dict[str, Any]) -> Any:
     return await store._call(
         "decide_tool",
         ctx.session_id,
@@ -124,7 +120,7 @@ async def approve(store: ControlStore, ctx: SessionContext, value: dict[str, Any
 def test_durable_approval_wait_exact_dispatch_and_completion(conversation: dict[str, Any]) -> None:
     async def scenario() -> None:
         async with (
-            ControlStore.connect(conversation["gateway"]) as store,
+            HarnessStore.connect(conversation["gateway"]) as store,
             DurableStore.connect(conversation["chatworker"]) as runtime,
         ):
             ctx = await session(store)
@@ -212,7 +208,7 @@ async def ready_flow(data: dict[str, Any], *, standing: bool = False, decide: bo
     from markos_runtime.api.identity import FixtureIssuer
 
     async with (
-        ControlStore.connect(data["gateway"]) as store,
+        HarnessStore.connect(data["gateway"]) as store,
         DurableStore.connect(data["chatworker"]) as runtime,
     ):
         ctx = await session(store)

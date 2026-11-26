@@ -5,7 +5,7 @@ from contextlib import suppress
 
 from aio_pika.abc import AbstractIncomingMessage, AbstractRobustChannel
 
-from markos_runtime.config import ProposedLimits
+from markos_runtime.config import TransportLimits
 from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
 from markos_runtime.contracts.wire import parse_event
 from markos_runtime.store.database import DurableStore, StorageRejected, StoreIdentity
@@ -21,10 +21,10 @@ class Consumer:
         *,
         active_seconds: float | None = None,
         total_seconds: float | None = None,
-        limits: ProposedLimits | None = None,
+        limits: TransportLimits | None = None,
     ) -> None:
         profile = limits if limits is not None else getattr(session, "limits", None)
-        self.limits = profile if isinstance(profile, ProposedLimits) else ProposedLimits()
+        self.limits = profile if isinstance(profile, TransportLimits) else TransportLimits()
         active_seconds = (
             self.limits.active_handoff_seconds if active_seconds is None else active_seconds
         )

@@ -1,4 +1,4 @@
-"""Connection-free preflight and separately confirmed synthetic service commands."""
+"""Connection-free control preflight and separately confirmed synthetic service commands."""
 
 import argparse
 import sys
@@ -8,13 +8,8 @@ from pathlib import Path
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="markos-runtime")
     subcommands = parser.add_subparsers(dest="command", required=True)
-    preflight = subcommands.add_parser(
-        "preflight", help="Validate synthetic runtime documents only"
-    )
-    preflight.add_argument("--config", type=Path)
-    preflight.add_argument("--event", type=Path)
     control = subcommands.add_parser(
-        "preflight-control", help="Validate inert M1-A contracts/config"
+        "preflight-control", help="Validate control config and chat events only"
     )
     control.add_argument("--config", type=Path, required=True)
     control.add_argument("--event", type=Path)
@@ -43,9 +38,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 0 if response.status == 200 else 1
         except OSError:
             return 1
-    from markos_runtime.config import load_config, read_bounded
+    from markos_runtime.config import read_bounded
     from markos_runtime.contracts.base import MAX_EVENT_BYTES, ContractError
-    from markos_runtime.contracts.events import EventEnvelope
 
     if args.command == "preflight-control":
         from markos_runtime.contracts.control import ChatEvent
@@ -90,24 +84,7 @@ def main(argv: list[str] | None = None) -> int:
             print("Invalid explicit synthetic service configuration.", file=sys.stderr)
             return 2
         return run_service(service_config, service_manifest, dict(os.environ))
-    try:
-        config, manifest = load_config(args.config)
-        if args.event:
-            event = EventEnvelope.from_wire(read_bounded(args.event, MAX_EVENT_BYTES))
-            if len(event.to_wire()) > config.limits.max_message_bytes:
-                raise ContractError("event exceeds configured bound")
-            if config.role != "publisher":
-                raise ContractError("event preflight requires publisher role")
-            manifest.authorize_publish(event, config.service_id)
-    except ContractError:
-        # Do not print chained parser exceptions, filenames, event bodies or settings.
-        print(
-            "Runtime preflight failed: invalid or missing explicit configuration/event.",
-            file=sys.stderr,
-        )
-        return 2
-    print("Runtime preflight passed (validation only; no connections or work executed).")
-    return 0
+    return 2
 
 
 if __name__ == "__main__":
