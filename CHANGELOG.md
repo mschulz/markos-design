@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-26 — K1-B Amber Electric extractor
+
+- Added `knowledge/amber.py`: reads Amber Electric bill page text into 15 cited facts with page and line.
+- Every charge and credit total is checked. A mismatch or unknown summary line marks money facts unreconciled.
+- Evidence gains an optional `page`. Answers cite it, and cover the due date and the new charges.
+- No PDF parsing, route or storage yet; that is the next PR.
+
 ## 2026-11-26 — K1-B plan
 
 - Added the K1-B plan for Amber Electric PDF bills to `docs/k1-bill-knowledge.md`.

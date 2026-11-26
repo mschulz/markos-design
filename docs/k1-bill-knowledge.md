@@ -75,7 +75,7 @@ These tests create/drop their own databases; never target the running local prev
 
 ## K1-B plan: PDF bills from one supplier
 
-Status: planned, not implemented. The owner chose these on 2026-11-26.
+Status: the Amber extractor (`knowledge/amber.py`) is implemented. The PDF path, upload route, storage and web page are not. The owner chose these on 2026-11-26.
 
 ### Decisions
 
@@ -85,7 +85,7 @@ Status: planned, not implemented. The owner chose these on 2026-11-26.
 
 ### What a real Amber bill looks like
 
-One owner-supplied bill was read locally. It is a 7-page PDF made by Chromium, not a scan, and pypdf extracts its text. Page 2, "Understand your bill", holds every summary figure:
+Four owner-supplied bills (July to October 2026) were read locally. They share one layout. It is a 7-page PDF made by Chromium, not a scan, and pypdf extracts its text. Page 2, "Understand your bill", holds every summary figure:
 
 - Billing period as two day-first dates, for example `01/10/2026  31/10/2026`.
 - Usage in kWh with its rate and cost, network daily supply, network demand, the Amber monthly subscription and GST, then a charges total.
@@ -97,7 +97,8 @@ Page 1 shows "Total Owed" and a due date. Total Owed can include unpaid earlier 
 Extraction quirks to handle:
 
 - Some amounts come out letter-spaced, for example `$ 5 7 . 1 5`.
-- pypdf drops some characters, such as `(` before `excl GST` and the dash between the two period dates.
+- Amber's font maps `(`, `)` and the date dash to private-use code points (U+E081, U+E082, U+E089). They look missing in a terminal. The extractor turns them into spaces before matching, and citations keep the original line.
+- The subscription line is `Amber Membership` on older bills and `Amber Monthly Subscription` on newer ones.
 - The same charges/credits/bill amount header repeats on pages 2 to 5. Citations must point to the page 2 summary.
 
 The bill also holds personal data: name, address, account number, NMI, meter numbers, invoice number and payment reference. K1-B stores none of these as facts, and fixtures use invented values.
@@ -120,7 +121,7 @@ The bill also holds personal data: name, address, account number, NMI, meter num
 
 ### Open before implementation
 
-- One bill shows one layout. Two more Amber bills from other months would show what varies, such as estimated reads, an unpaid earlier balance or a credit bill.
+- The four sample bills have no unpaid earlier balance, credit bill or estimated read. The extractor flags these for review, and tests use invented examples.
 - The upload size and page limits are first guesses. Check them against real bills.
 
 ## Next slices and unresolved decisions

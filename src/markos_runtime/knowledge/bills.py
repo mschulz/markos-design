@@ -13,8 +13,24 @@ from markos_runtime.contracts.control import ControlValue
 
 MAX_TEXT_BYTES = 16384
 BillKey = Literal[
-    "period", "usage_kwh", "usage_charge", "supply_charge", "export_credit", "total_due"
+    "period",
+    "usage_kwh",
+    "usage_charge",
+    "supply_charge",
+    "export_credit",
+    "total_due",
+    # Supplier profiles (knowledge/amber.py) add these.
+    "demand_charge",
+    "subscription",
+    "charges_gst",
+    "charges_total",
+    "concessions",
+    "credits_gst",
+    "credits_total",
+    "total_owed",
+    "due_date",
 ]
+FactState = Literal["found", "missing", "conflicting", "invalid", "unreconciled"]
 KEYS: dict[BillKey, str] = {
     "period": "Billing period",
     "usage_kwh": "Electricity used",
@@ -75,6 +91,7 @@ class BillQuestion(ControlValue):
 class Evidence(ControlValue):
     line: int = Field(ge=1)
     quote: str
+    page: int | None = Field(default=None, ge=1)
 
 
 class Fact(ControlValue):
@@ -82,12 +99,12 @@ class Fact(ControlValue):
     label: str
     value: str | None
     unit: str
-    state: Literal["found", "missing", "conflicting", "invalid"]
+    state: FactState
     evidence: list[Evidence]
 
 
 class BillFacts(ControlValue):
-    extractor: Literal["bill-text-v1"] = "bill-text-v1"
+    extractor: Literal["bill-text-v1", "amber-pdf-v1"] = "bill-text-v1"
     source_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     facts: list[Fact]
     notices: list[str]
@@ -141,7 +158,7 @@ def extract(text: str) -> BillFacts:
                 invalid = True
                 found.append(("", Evidence(schema_version=1, line=number, quote=line)))
         distinct = {v for v, _ in found}
-        state: Literal["found", "missing", "conflicting", "invalid"] = (
+        state: FactState = (
             "invalid"
             if invalid
             else "conflicting"
@@ -194,11 +211,24 @@ def extract(text: str) -> BillFacts:
 def answer(report: BillFacts, question: str) -> dict[str, object]:
     q = " ".join(question.lower().strip().rstrip("?.!").split())
     questions = {
-        "how much do i owe": ["total_due"],
-        "what is the amount due": ["total_due"],
+        "how much do i owe": ["total_due", "total_owed"],
+        "what is the amount due": ["total_due", "total_owed"],
         "how much electricity did i use": ["usage_kwh"],
         "what dates does this bill cover": ["period"],
-        "what are the charges": ["usage_charge", "supply_charge", "export_credit", "total_due"],
+        "when is this bill due": ["due_date"],
+        "what are the charges": [
+            "usage_charge",
+            "supply_charge",
+            "demand_charge",
+            "subscription",
+            "charges_gst",
+            "charges_total",
+            "export_credit",
+            "concessions",
+            "credits_gst",
+            "credits_total",
+            "total_due",
+        ],
     }
     selected = questions.get(q)
     if selected is None:
@@ -219,7 +249,10 @@ def answer(report: BillFacts, question: str) -> dict[str, object]:
             parts.append(f"{fact.label}: not established ({fact.state}). Check the original text.")
         else:
             parts.append(f"{fact.label}: {fact.value} {fact.unit}.".replace(" .", "."))
-            citations.extend({"line": e.line, "quote": e.quote} for e in fact.evidence)
+            citations.extend(
+                {"line": e.line, "quote": e.quote, **({"page": e.page} if e.page else {})}
+                for e in fact.evidence
+            )
     return {
         "answer": " ".join(parts),
         "citations": citations,
