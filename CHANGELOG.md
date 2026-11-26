@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-26 — Tool outages no longer disable the grant
+
+- Fixed an intermittent failure of "Synthetic control preview and restore". After a restart, the tool worker's first check of the tool server could run past its 5-second limit. The worker treated that as a protocol mismatch, disabled the tool grant, and the approved call was revoked.
+- The transport now raises `ToolUnavailable` when the server gives no response: connection refused or reset, a timeout, or an expired deadline. The worker then defers the approved call and keeps the grant. TLS failures, non-200 answers and schema mismatches still disable the grant.
+- The worker loads the MCP SDK at startup, not inside the first check's time limit. The control image now precompiles bytecode.
+- Added tests for both outcomes. No migration.
+
 ## 2026-11-26 — K1-C3 bill arithmetic rules and acceptance examples
 
 - Added "Bill arithmetic rules" to `docs/k1-bill-knowledge.md`: GST, totals, earlier balances, export credits and credit bills, estimated reads, and tariff structures. Each rule names the tests that enforce it.

@@ -4,7 +4,7 @@ WORKDIR /opt/runtime
 RUN python -m pip install --no-cache-dir uv==0.13.6
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
-RUN uv sync --locked --extra control --extra tools --no-dev --no-editable --python /usr/local/bin/python
+RUN uv sync --locked --compile-bytecode --extra control --extra tools --no-dev --no-editable --python /usr/local/bin/python
 
 FROM python:3.13.14-slim-bookworm@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TZ=UTC

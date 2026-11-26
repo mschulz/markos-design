@@ -13,7 +13,7 @@ from markos_runtime.contracts.control import CallIntent, digest_document
 from markos_runtime.contracts.governance import ReviewedFixtureGrant
 from markos_runtime.control.conversation import ChatClaim, ConversationWorker
 from markos_runtime.store.database import StorageError
-from markos_runtime.tools.transport import FixtureTransport, ToolProtocolError
+from markos_runtime.tools.transport import FixtureTransport, ToolProtocolError, ToolUnavailable
 
 
 class GovernedConversationWorker(ConversationWorker):
@@ -65,6 +65,10 @@ class GovernedConversationWorker(ConversationWorker):
                     raise StorageError("control request capacity unavailable")
                 try:
                     await self.transport.inspect(min(deadline, time.monotonic() + 5))
+                except ToolUnavailable:
+                    # An outage keeps the grant. The approved, undispatched call retries later.
+                    await self._call("defer_tool", *self._identity(claim))
+                    return False
                 except ToolProtocolError:
                     await self._call("invalidate_tool_grant", *self._identity(claim))
                     return False
