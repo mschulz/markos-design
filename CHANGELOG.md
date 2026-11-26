@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-26 — K1-B Amber Electric PDF upload
+
+- Added `POST /api/v1/bills/pdf`: raw `application/pdf` bodies up to 2 MiB and 20 pages. Other routes keep the 64 KiB limit.
+- Added `knowledge/pdf.py`: pypdf runs in a child process with time, CPU and memory limits, and returns page text or a bounded error.
+- Non-Amber, scanned, encrypted and malformed PDFs are rejected and not stored.
+- PDF originals are stored as `.pdf` objects. Every read parses the original again and checks the stored facts.
+- Migration 0015 lets `bill_records` hold `amber-pdf-v1` reports. Migrations 0001–0014 are unchanged.
+- The bills page has a PDF upload control and shows citations by page and line.
+- Added pypdf 7.1.1 to the `control` extra.
+
 ## 2026-11-26 — K1-B Amber Electric extractor
 
 - Added `knowledge/amber.py`: reads Amber Electric bill page text into 15 cited facts with page and line.

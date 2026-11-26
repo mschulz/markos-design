@@ -63,16 +63,20 @@ All amounts include GST. No previous balance on this sample.
 """
 
 
+def plain_text(value: str) -> str:
+    if not value.strip() or any(ord(c) < 32 and c not in "\n\r\t" for c in value):
+        raise ValueError("plain bill text required")
+    return value
+
+
 class BillImport(ControlValue):
     name: str = Field(min_length=1, max_length=120)
     text: str = Field(min_length=1, max_length=MAX_TEXT_BYTES)
 
     @field_validator("name", "text")
     @classmethod
-    def plain_text(cls, value: str) -> str:
-        if not value.strip() or any(ord(c) < 32 and c not in "\n\r\t" for c in value):
-            raise ValueError("plain bill text required")
-        return value
+    def plain(cls, value: str) -> str:
+        return plain_text(value)
 
     @field_validator("text")
     @classmethod

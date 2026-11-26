@@ -123,3 +123,64 @@ def test_bill_routes_disabled_by_default_and_require_csrf(
                 )[0] == 403
 
     asyncio.run(scenario())
+
+
+def test_pdf_bill_upload_limits_page_citations_and_tamper_check(
+    control: dict[str, Any], tmp_path: Path
+) -> None:
+    from tests.pdf_support import amber_pdf, make_pdf
+
+    pdf = {"content-type": "application/pdf"}
+    upload = "/api/v1/bills/pdf" + SCOPE + "&name=November%20Amber"
+
+    async def scenario() -> None:
+        async with web_server(control, tmp_path, bills=True, prepare_agent=False) as server:
+            sender = WebBrowserClient(server["port"], server["cert"])
+            await sender.login(server["issuer"], server["credentials"]["both"])
+            status, saved = await sender.call("POST", upload, headers=pdf, raw=amber_pdf())
+            assert status == 201, saved
+            assert saved["name"] == "November Amber"
+            assert saved["report"]["extractor"] == "amber-pdf-v1"
+            assert {f["state"] for f in saved["report"]["facts"]} == {"found"}
+            path = "/api/v1/bills/" + saved["bill_id"]
+            viewer = WebBrowserClient(server["port"], server["cert"])
+            await viewer.login(server["issuer"], server["credentials"]["viewer"])
+            status, reread = await viewer.call("GET", path + SCOPE)
+            assert status == 200 and reread == saved
+            status, source = await viewer.call("GET", path + "/source" + SCOPE)
+            assert status == 200 and [p["page"] for p in source["pages"]] == [1, 2]
+            assert source["pages"][1]["lines"][26] == "BILL TOTAL $47.99"
+            status, result = await viewer.call(
+                "POST",
+                path + "/questions" + SCOPE,
+                {"schema_version": 1, "question": "How much do I owe?"},
+            )
+            assert status == 200, result
+            assert result["citations"][0] == {"page": 2, "line": 27, "quote": "BILL TOTAL $47.99"}
+            # Viewers cannot upload, and only this route accepts a PDF body over 64 KiB.
+            assert (await viewer.call("POST", upload, headers=pdf, raw=amber_pdf()))[0] == 403
+            for body, headers, expected in [
+                (amber_pdf(), None, (400, "invalid")),
+                (b"not a pdf", pdf, (422, "bill-pdf-not-pdf")),
+                (
+                    make_pdf(["Another Energy retailer"]),
+                    pdf,
+                    (422, "bill-pdf-unsupported-supplier"),
+                ),
+                (make_pdf([""]), pdf, (422, "bill-pdf-no-text")),
+            ]:
+                status, value = await sender.call("POST", upload, headers=headers, raw=body)
+                assert (status, value["code"]) == expected
+            # Declared sizes are rejected before the body is read.
+            for route, size in [(upload, 2 * 1024 * 1024 + 1), ("/api/v1/bills" + SCOPE, 65537)]:
+                status, value = await sender.call(
+                    "POST", route, headers={**pdf, "content-length": str(size)}, raw=b"%PDF-"
+                )
+                assert (status, value["code"]) == (413, "too-large")
+            # A changed PDF original blocks every answer.
+            original = next((tmp_path / "bill-objects").rglob("*.pdf"))
+            original.write_bytes(make_pdf(["tampered"]))
+            status, _ = await viewer.call("GET", path + SCOPE)
+            assert status == 503
+
+    asyncio.run(scenario())

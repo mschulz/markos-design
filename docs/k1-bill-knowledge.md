@@ -75,7 +75,7 @@ These tests create/drop their own databases; never target the running local prev
 
 ## K1-B plan: PDF bills from one supplier
 
-Status: the Amber extractor (`knowledge/amber.py`) is implemented. The PDF path, upload route, storage and web page are not. The owner chose these on 2026-11-26.
+Status: implemented. The Amber extractor is in `knowledge/amber.py`, and the PDF path, upload route, storage and web upload control are in place. The owner chose these on 2026-11-26.
 
 ### Decisions
 
@@ -105,12 +105,12 @@ The bill also holds personal data: name, address, account number, NMI, meter num
 
 ### Design
 
-1. **Read the PDF in isolation.** A child process runs pypdf with time, memory and page limits and no network access. It returns the text of each page or a bounded error. A parser crash cannot stop the gateway.
-2. **Supplier profiles.** The Amber profile matches only when the text names Amber Electric. It reads the page 2 summary and cites each figure by page and line. An unknown supplier gets **Needs review**, as K1-A does for an unknown layout.
+1. **Read the PDF in isolation.** `knowledge/pdf.py` runs pypdf in a child process with a 15-second deadline, a 10-second CPU limit and a 512 MiB memory limit (Linux only), and at most two run at once. It returns the text of each page or a bounded error code. A parser crash cannot stop the gateway. A socket guard stops accidental network use, but it is not an OS sandbox.
+2. **Supplier profiles.** The Amber profile matches only when the text names Amber Electric. It reads the page 2 summary and cites each figure by page and line. A PDF from any other supplier is rejected with `bill-pdf-unsupported-supplier` and is not stored.
 3. **More facts.** Add demand charges, subscription, GST, charges total, credits total, total owed and due date to the six K1-A facts. Replace the partial arithmetic notice with a full check: charges total minus credits total must equal the bill total, and each total must equal the sum of its lines.
-4. **Upload route.** `POST /api/v1/bills/pdf` takes the raw PDF bytes, with a limit of 2 MiB and 20 pages. Only this route gets a larger body limit. All other routes keep 64 KiB. The same operator role, CSRF and scope checks apply.
-5. **Storage.** `BillObjects` stores the original PDF as an immutable object, as it does for K1-A text. PostgreSQL stores the extracted page text, facts and citations in an additive migration. Migrations 0001 to 0014 stay unchanged.
-6. **Web page.** Add a PDF upload control next to the paste box. The original view shows page text by page and line.
+4. **Upload route.** `POST /api/v1/bills/pdf?owner_id=…&domain=…&name=…` takes the raw PDF bytes as `application/pdf`, with a limit of 2 MiB and 20 pages. Only this route gets a larger body limit, and only when bills are enabled. All other routes keep 64 KiB. The same operator role, CSRF and scope checks apply.
+5. **Storage.** `BillObjects` stores the original PDF as an immutable `.pdf` object. Migration 0015 lets `bill_records` hold Amber reports. PostgreSQL stores the facts and citations, not the page text. Every read parses the original again and checks that the facts still match, as K1-A does for text. This costs about 0.4 seconds per read for a 7-page bill.
+6. **Web page.** A PDF upload control sits below the paste box. Citations show page and line, and the original view shows page text by page and line.
 
 ### Tests
 
@@ -119,14 +119,13 @@ The bill also holds personal data: name, address, account number, NMI, meter num
 - Limits: oversized, too many pages, encrypted, malformed and non-PDF input are each rejected with a clear error.
 - An Amber bill whose totals do not add up shows **Needs review** and no confident answer.
 
-### Open before implementation
+### Still open
 
 - The four sample bills have no unpaid earlier balance, credit bill or estimated read. The extractor flags these for review, and tests use invented examples.
-- The upload size and page limits are first guesses. Check them against real bills.
+- The four sample bills are about 300 KiB and 7 pages each, well inside the 2 MiB and 20-page limits.
 
 ## Next slices and unresolved decisions
 
-- **K1-B document input:** text-based PDF upload for one supplier. See [K1-B plan](#k1-b-plan-pdf-bills-from-one-supplier).
 - **K1-C review and history:** user-corrected facts kept distinct from extraction, sample bill comparisons, and rules for tax, previous balances, export credits and tariff structures. Approve acceptance examples before claiming bill arithmetic validation.
 - **Then M2 Gmail:** opt-in native ingestion using the existing permission/recovery contract; broad M3 classification and the remaining M4/M5 capabilities follow demonstrated value.
 - Keep real bill/account enablement, hosted object-store provider, privacy/retention/deletion policy, backup/restore of source objects and extraction accuracy on representative documents explicitly unresolved. No real provider, personal bill, model or spend is needed for K1-A review.
