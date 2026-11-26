@@ -73,9 +73,59 @@ These tests create/drop their own databases; never target the running local prev
 6. A narrow-screen browser can load the sample, save, read a cited answer, show original text and reopen after reload.
 7. Existing profiles remain bill-disabled; archived code and migration hashes remain unchanged.
 
+## K1-B plan: PDF bills from one supplier
+
+Status: planned, not implemented. The owner chose these on 2026-11-26.
+
+### Decisions
+
+- **One supplier first: Amber Electric.** Other suppliers come later, each with its own profile.
+- **PDF library: pypdf**, pinned in the optional `control` extra only. It is pure Python with a BSD licence. Text extraction cannot read scanned images ([pypdf documentation](https://pypdf.readthedocs.io/en/stable/user/extract-text.html)), so scans and OCR stay out of scope.
+- **Real bills never enter Git or any external service.** The owner keeps them in a local folder that Git ignores. Tests use invented fixtures that copy the layout.
+
+### What a real Amber bill looks like
+
+One owner-supplied bill was read locally. It is a 7-page PDF made by Chromium, not a scan, and pypdf extracts its text. Page 2, "Understand your bill", holds every summary figure:
+
+- Billing period as two day-first dates, for example `01/10/2026  31/10/2026`.
+- Usage in kWh with its rate and cost, network daily supply, network demand, the Amber monthly subscription and GST, then a charges total.
+- Solar exports in kWh with their credit, vouchers and concessions and GST, then a credits total.
+- A bill total. Charges total minus credits total equals the bill total exactly.
+
+Page 1 shows "Total Owed" and a due date. Total Owed can include unpaid earlier bills, so it is a separate fact from the bill total. Pages 3 to 5 give line-item detail. Pages 6 and 7 are help text.
+
+Extraction quirks to handle:
+
+- Some amounts come out letter-spaced, for example `$ 5 7 . 1 5`.
+- pypdf drops some characters, such as `(` before `excl GST` and the dash between the two period dates.
+- The same charges/credits/bill amount header repeats on pages 2 to 5. Citations must point to the page 2 summary.
+
+The bill also holds personal data: name, address, account number, NMI, meter numbers, invoice number and payment reference. K1-B stores none of these as facts, and fixtures use invented values.
+
+### Design
+
+1. **Read the PDF in isolation.** A child process runs pypdf with time, memory and page limits and no network access. It returns the text of each page or a bounded error. A parser crash cannot stop the gateway.
+2. **Supplier profiles.** The Amber profile matches only when the text names Amber Electric. It reads the page 2 summary and cites each figure by page and line. An unknown supplier gets **Needs review**, as K1-A does for an unknown layout.
+3. **More facts.** Add demand charges, subscription, GST, charges total, credits total, total owed and due date to the six K1-A facts. Replace the partial arithmetic notice with a full check: charges total minus credits total must equal the bill total, and each total must equal the sum of its lines.
+4. **Upload route.** `POST /api/v1/bills/pdf` takes the raw PDF bytes, with a limit of 2 MiB and 20 pages. Only this route gets a larger body limit. All other routes keep 64 KiB. The same operator role, CSRF and scope checks apply.
+5. **Storage.** `BillObjects` stores the original PDF as an immutable object, as it does for K1-A text. PostgreSQL stores the extracted page text, facts and citations in an additive migration. Migrations 0001 to 0014 stay unchanged.
+6. **Web page.** Add a PDF upload control next to the paste box. The original view shows page text by page and line.
+
+### Tests
+
+- Invented Amber page text that reproduces the quirks above, including letter-spaced amounts and missing characters.
+- One small generated PDF that runs the full path: upload, isolated parse, store, extract, answer and reopen.
+- Limits: oversized, too many pages, encrypted, malformed and non-PDF input are each rejected with a clear error.
+- An Amber bill whose totals do not add up shows **Needs review** and no confident answer.
+
+### Open before implementation
+
+- One bill shows one layout. Two more Amber bills from other months would show what varies, such as estimated reads, an unpaid earlier balance or a credit bill.
+- The upload size and page limits are first guesses. Check them against real bills.
+
 ## Next slices and unresolved decisions
 
-- **K1-B document input:** text-based PDF upload, page citations, parser limits/isolation and a small supported supplier set. Scans/OCR need a separate measured decision. PDF parsing is not represented as implemented here; text extraction also cannot reliably read scanned images ([pypdf documentation](https://pypdf.readthedocs.io/en/stable/user/extract-text.html)).
+- **K1-B document input:** text-based PDF upload for one supplier. See [K1-B plan](#k1-b-plan-pdf-bills-from-one-supplier).
 - **K1-C review and history:** user-corrected facts kept distinct from extraction, sample bill comparisons, and rules for tax, previous balances, export credits and tariff structures. Approve acceptance examples before claiming bill arithmetic validation.
 - **Then M2 Gmail:** opt-in native ingestion using the existing permission/recovery contract; broad M3 classification and the remaining M4/M5 capabilities follow demonstrated value.
 - Keep real bill/account enablement, hosted object-store provider, privacy/retention/deletion policy, backup/restore of source objects and extraction accuracy on representative documents explicitly unresolved. No real provider, personal bill, model or spend is needed for K1-A review.
