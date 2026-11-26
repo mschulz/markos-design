@@ -10,7 +10,8 @@ from markos_runtime.mail.ingest import SyncResult
 from markos_runtime.mail.store import MailStore
 from markos_runtime.mail.worker import PassResult, alert_history, run_once
 from tests.gmail_support import FakeGmail
-from tests.integration.test_mail_store import ADDRESS, BILLS, grant_mail, rows
+from tests.integration.test_mail_store import grant_mail, rows
+from tests.mail_optin_support import BILLS, connect_mailbox
 
 
 def admin(database: dict[str, str], statement: str) -> None:
@@ -21,10 +22,10 @@ def admin(database: dict[str, str], statement: str) -> None:
 
 def opened(database: dict[str, str], scenario: Callable[[MailStore], Awaitable[Any]]) -> Any:
     grant_mail(database, "m0b_pub")
+    connect_mailbox(database)
 
     async def run() -> Any:
         async with MailStore.connect(database["publisher"]) as store:
-            await store.open_mailbox(ADDRESS, [BILLS])
             return await scenario(store)
 
     return asyncio.run(run())

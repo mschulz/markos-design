@@ -13,9 +13,7 @@ from markos_runtime.mail.ingest import SyncResult, sync
 from markos_runtime.mail.store import MailStore
 from markos_runtime.store import StorageError
 from tests.gmail_support import PDF, FakeGmail
-
-BILLS = "Label_bills"
-ADDRESS = "a" * 64
+from tests.mail_optin_support import BILLS, ELSE, connect_mailbox
 
 
 def grant_mail(database: dict[str, str], *roles: str) -> None:
@@ -53,9 +51,9 @@ def test_sync_stores_each_message_once_with_cursor_and_resync_notices(
     gmail = FakeGmail()
     first = [gmail.deliver([BILLS, "INBOX"], attachments=[PDF]) for _ in range(3)]
     private = gmail.deliver(["INBOX"])
+    connect_mailbox(database)
 
     async def scenario(store: MailStore) -> list[SyncResult]:
-        await store.open_mailbox(ADDRESS, [BILLS])
         results = [await sync(gmail, store)]
         message = gmail.deliver([BILLS])
         gmail.relabel(message, [BILLS, "STARRED"])
@@ -94,9 +92,9 @@ def test_sync_stores_each_message_once_with_cursor_and_resync_notices(
 
 def test_database_refuses_messages_outside_the_allowlist(database: dict[str, str]) -> None:
     grant_mail(database, "m0b_pub")
+    connect_mailbox(database)
 
     async def scenario(store: MailStore) -> None:
-        await store.open_mailbox(ADDRESS, [BILLS])
         with pytest.raises(StorageError):
             await store.store([meta("a1", (BILLS,)), meta("a2", ("INBOX",))])
         with pytest.raises(StorageError):
@@ -109,9 +107,9 @@ def test_database_refuses_messages_outside_the_allowlist(database: dict[str, str
 
 def test_cursor_is_compare_and_set_and_never_moves_backward(database: dict[str, str]) -> None:
     grant_mail(database, "m0b_pub")
+    connect_mailbox(database)
 
     async def scenario(store: MailStore) -> None:
-        await store.open_mailbox(ADDRESS, [BILLS])
         with pytest.raises(StorageError):
             await store.advance(None, 1001, [], None)
         assert await store.advance(None, 1001, [meta("b1", (BILLS,))], "first-import") == 1
@@ -132,16 +130,15 @@ def test_cursor_is_compare_and_set_and_never_moves_backward(database: dict[str, 
 
 def test_mail_functions_need_the_mail_grant_and_stay_in_scope(database: dict[str, str]) -> None:
     grant_mail(database, "m0b_pub", "m0b_otherpub")
+    connect_mailbox(database)
 
     async def own(store: MailStore) -> None:
-        await store.open_mailbox(ADDRESS, [BILLS])
         await store.advance(None, 1001, [meta("c1", (BILLS,))], "first-import")
-        with pytest.raises(StorageError):
-            await store.open_mailbox("b" * 64, [BILLS])
+
+    async def unopened(store: MailStore) -> None:
+        assert await store.mailbox() is None
 
     async def other(store: MailStore) -> None:
-        assert await store.mailbox() is None
-        await store.open_mailbox("c" * 64, ["INBOX"])
         assert await store.advance(None, 2001, [meta("c1", ("INBOX",))], "first-import") == 1
 
     async def refused(store: MailStore) -> None:
@@ -149,6 +146,8 @@ def test_mail_functions_need_the_mail_grant_and_stay_in_scope(database: dict[str
             await store.mailbox()
 
     with_store(database["publisher"], own)
+    with_store(database["otherpub"], unopened)
+    connect_mailbox(database, ["INBOX"], "other@example.invalid", ELSE)
     with_store(database["otherpub"], other)
     with_store(database["consumer"], refused)
     assert rows(

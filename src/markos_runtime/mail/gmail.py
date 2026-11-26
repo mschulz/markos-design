@@ -1,9 +1,13 @@
-"""Read-only Gmail access as a narrow interface. M2-A has no network client: tests use a fake."""
+"""Gmail access as a narrow interface: read mail, keep a watch, and stop at disconnect.
+
+There is no network client yet: tests use a fake.
+"""
 
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Protocol
+from uuid import UUID
 
 
 class HistoryGone(Exception):
@@ -73,3 +77,25 @@ class GmailReader(Protocol):
     async def message(self, message_id: str) -> MessageMeta: ...
 
     async def watch(self, label_ids: Sequence[str]) -> Watch: ...
+
+
+class GmailClient(GmailReader, Protocol):
+    """Adds the two calls a disconnect needs. Both succeed when already done."""
+
+    async def stop(self) -> None: ...
+
+    async def revoke(self) -> None: ...
+
+
+@dataclass(frozen=True)
+class SealedToken:
+    """A Gmail refresh token sealed for this owner and domain. Only the mail worker can open it."""
+
+    owner_id: UUID
+    domain: str
+    key_id: str
+    sealed: bytes
+
+
+class GmailAccess(Protocol):
+    def client(self, token: SealedToken | None) -> GmailClient: ...

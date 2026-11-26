@@ -54,3 +54,21 @@ def test_failed_sync_keeps_the_renewal_and_leaves_the_sync_due() -> None:
         asyncio.run(run_once(gmail, work))
     assert len(work.finished) == 1 and work.finished[0][0] is False
     assert work.finished[0][1] is not None
+
+
+def test_disconnect_stops_the_watch_then_revokes_before_it_finishes() -> None:
+    gmail = FakeGmail()
+    work = MemoryWork(None, due=WorkClaim(4, False, False, 0, (BILLS,), disconnect=True))
+
+    assert asyncio.run(run_once(gmail, work)) == PassResult(disconnected=True)
+    assert (gmail.stopped, gmail.revoked, gmail.watched) == (1, 1, [])
+    assert work.finished == [(False, None)]
+
+
+def test_unreachable_google_leaves_the_disconnect_for_the_next_lease() -> None:
+    gmail = FakeGmail(unreachable=True)
+    work = MemoryWork(None, due=WorkClaim(4, False, False, 0, (BILLS,), disconnect=True))
+
+    with pytest.raises(OSError, match="unreachable"):
+        asyncio.run(run_once(gmail, work))
+    assert (gmail.revoked, work.finished) == (0, [])

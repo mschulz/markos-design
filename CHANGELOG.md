@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-27 — M2-C1 mailbox opt-in storage and rules
+
+- Migration 0021. Only an `administrator` of the owner and domain can connect the mailbox, set its label allowlist or disconnect it. Each change writes the audit table and `markos_control.mail_history`, with its labels.
+- The Gmail refresh token is stored sealed in `markos_runtime.mail_tokens`. `mail/sealing.py` seals it with the mail worker's X25519 public key, bound to the owner and domain. The gateway cannot open a stored token.
+- The worker's claim now carries the sealed token. A new label allowlist makes the watch renewal due at once.
+- Disconnect stops new work at once. The worker's next pass stops the watch, revokes the token and deletes it. If Google is out of reach, the pass is retried after the lease. After 1 day the token is deleted anyway.
+- The synthetic `open_mailbox` function is removed. A mailbox it opened has no token, so the migration marks it disconnected.
+- One address per owner and domain, as before. Reconnect is refused while a disconnect is still running.
+- The OAuth browser flow follows in M2-C2.
+
 ## 2026-11-26 — M2-B2 Gmail push alert endpoint
 
 - Added `POST /api/v1/mail/alerts` for Pub/Sub push. It is off unless the gateway is built with a `MailAlerts` adapter.

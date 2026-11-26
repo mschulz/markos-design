@@ -1,12 +1,17 @@
-"""Mailbox state and message records in PostgreSQL, through the M2-A functions only."""
+"""Mailbox state and message records in PostgreSQL, through the mail functions only.
 
+The worker login cannot connect a mailbox. Only an administrator can, through the control API.
+"""
+
+import base64
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
-from markos_runtime.mail.gmail import MessageMeta
+from markos_runtime.mail.gmail import MessageMeta, SealedToken
 from markos_runtime.mail.ingest import Mailbox, MailError, Reason
 from markos_runtime.mail.worker import WorkClaim
 from markos_runtime.store.database import DurableStore, StorageError
@@ -50,14 +55,6 @@ class MailStore(DurableStore):
                 raise StorageError("storage operation failed")
             return row["result"]
 
-    async def open_mailbox(self, address_hash: str, labels: Sequence[str]) -> Mailbox:
-        state = await self._one(
-            "SELECT markos_runtime.open_mailbox(%s,%s) AS result", (address_hash, list(labels))
-        )
-        box = _mailbox(state)
-        assert box is not None
-        return box
-
     async def mailbox(self) -> Mailbox | None:
         return _mailbox(await self._one("SELECT markos_runtime.mailbox_state() AS result"))
 
@@ -84,12 +81,20 @@ class MailStore(DurableStore):
         claim = await self._one(query, (lease_seconds,))
         if claim is None:
             return None
+        token = SealedToken(
+            UUID(claim["owner_id"]),
+            claim["domain"],
+            claim["key_id"],
+            base64.b64decode(claim["sealed"]),
+        )
         return WorkClaim(
             claim["fence"],
             claim["renew"],
             claim["sync"],
             claim["alert_seq"],
             tuple(claim["labels"]),
+            claim["disconnect"],
+            token,
         )
 
     async def finish_work(
@@ -100,3 +105,7 @@ class MailStore(DurableStore):
         query = "SELECT markos_runtime.finish_mail_work(%s,%s,%s,%s) AS result"
         params = (claim.fence, claim.alert_seq, synced, watch_expires)
         return bool(await self._one(query, params))
+
+    async def finish_disconnect(self, claim: WorkClaim) -> bool:
+        query = "SELECT markos_runtime.finish_mail_disconnect(%s) AS result"
+        return bool(await self._one(query, (claim.fence,)))
