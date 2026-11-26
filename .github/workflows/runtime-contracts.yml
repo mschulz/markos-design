@@ -293,6 +293,8 @@ jobs:
             SELECT 'task' AS kind, state, count(*) FROM markos_runtime.tasks GROUP BY state
             UNION ALL SELECT 'chat_run', state, count(*) FROM markos_control.chat_runs GROUP BY state
             UNION ALL SELECT 'tool_intent', status, count(*) FROM markos_control.tool_intents GROUP BY status
+            UNION ALL SELECT 'chat_run_reason', coalesce(reason, '-'), count(*) FROM markos_control.chat_runs GROUP BY reason
+            UNION ALL SELECT 'tool_audit', outcome || '/' || coalesce(reason, '-'), count(*) FROM markos_control.tool_audit GROUP BY outcome, reason
             ORDER BY 1, 2"
       - name: Remove only this disposable project and volumes
         if: always()
