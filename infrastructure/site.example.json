@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "domain": "markos.example.com",
+  "owner_id": "00000000-0000-4000-8000-000000000000",
+  "owner_domain": "personal",
+  "database_host": "db.your-project-ref.supabase.co",
+  "database_name": "postgres",
+  "google_client_id": "000000000000-replace.apps.googleusercontent.com",
+  "google_subject": "replace-with-your-google-sub",
+  "markos_subject": "owner",
+  "spaces": {
+    "endpoint": "https://syd1.digitaloceanspaces.com",
+    "region": "syd1",
+    "bucket": "replace-bucket-name",
+    "access_key_ref": "MARKOS_CONTROL_SPACES_ACCESS_KEY",
+    "secret_key_ref": "MARKOS_CONTROL_SPACES_SECRET_KEY"
+  }
+}

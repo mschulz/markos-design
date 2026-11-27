@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-27 — M7-E provisioning runbook and setup script
+
+- `docs/m7-runbook.md`: the owner's steps to provision the Sydney VM (2 vCPU, 4 GiB), firewall, domain, Supabase Pro project and Spaces bucket, then set up and start MarkOS. Nothing is provisioned.
+- `markos_runtime.provision`, run by `infrastructure/provision.sh` inside the runtime image, writes the private CA, server certificate, secret files, service configs and broker definitions. It also creates database roles, runs migrations and adds the owner principal. It never overwrites a file, never prints a secret, and reads passwords from hidden prompts.
+- The CI production boot test now sets up its stand-ins with the same module, so CI exercises the owner's setup code.
+- `infrastructure/site.example.json`: the site file that the script reads.
+
 ## 2026-11-27 — M7-D2b production Compose file and boot test
 
 - `infrastructure/compose.production.yml` runs Caddy, RabbitMQ and the 7 MarkOS services, with mail behind `--profile mail`. Images are pinned. Each service has a health check, resource limits, a restart policy, a read-only root and no capabilities. Each secret is a file mounted only into the services that read it.
