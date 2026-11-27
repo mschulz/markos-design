@@ -8,6 +8,26 @@
 - Spaces has no object-count limit, unlike the 100-file preview folder.
 - Tests: the AWS SigV4 example, in-process refusals, and a disposable SeaweedFS S3 in the `control-api` CI job. MinIO's container images could not be pulled, so SeaweedFS replaced it.
 
+## 2026-11-27 — M7-B2 Google sign-in in the issuer
+
+- The issuer can sign a person in with Google: the authorization code flow with PKCE, scopes `openid` and `email`. It alone holds the OAuth client secret.
+- The issuer checks Google's ID token: RS256 against Google's published keys, Google's issuer, the client ID as audience, expiry, `azp` and the nonce.
+- A configured map from Google subject ID to MarkOS subject decides who may sign in. An email address never grants access.
+- After Google answers, the issuer mints its usual one-use MarkOS code, bound to the gateway's PKCE challenge and nonce. Tokens, sessions and the per-request session check do not change.
+- Migration 0024 stores each pending Google sign-in for 10 minutes, used once. The state and nonce are HMAC lookups, and the PKCE verifier is sealed.
+- The gateway's `/app/authorize` redirects to Google instead of showing the fixture code form. `/auth/google/callback` checks Google's state against a sealed cookie. A browser then finishes sign-in as before. The CLI shows a one-use code to paste.
+- Off by default. The gateway's `google_signin` switch and the issuer's `google_signin_subjects` map turn it on. Only the fixture Google is wired. Production settings follow in M7-D.
+
+## 2026-11-27 — M7-B1 issuer state in PostgreSQL
+
+- Migration 0023 adds the `markos_issuer` schema. The issuer keeps its signing key, one-use codes, sessions and refresh tokens there instead of a private JSON file. A restart, backup or restore now covers them.
+- Only the new NOLOGIN group `markos_issuer_client` can call the issuer functions. The issuer connects with its own login. The runtime and gateway logins cannot reach issuer state.
+- The issuer seals its signing key with a new secret, `MARKOS_CONTROL_ISSUER_STATE_KEY`, before storing it. Codes and refresh tokens are stored as HMAC lookups only.
+- Database time sets every expiry: codes last 60 s, sessions 8 h.
+- Fixture accounts still come from the private seed file on each start and are never stored.
+- `DurableFixtureIssuer` and the issuer `state.json` are removed. The test bootstraps and the preview bootstrap create the new group and login.
+- An existing preview needs the new login and state key before it runs this version. Nothing upgrades it automatically.
+
 ## 2026-11-27 — M7-A production profile plan
 
 - Added `docs/m7-production.md`: the plan for the production profile on one DigitalOcean VM with Supabase PostgreSQL.

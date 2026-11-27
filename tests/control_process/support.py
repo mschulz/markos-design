@@ -200,6 +200,8 @@ def prepare_files(*, bills: bool = False) -> None:
         "credentials": credentials,
         "tokens": tokens,
         "session_key": base64.urlsafe_b64encode(os.urandom(32)).decode(),
+        # Seals the issuer signing key in PostgreSQL. Only the issuer gets it.
+        "issuer_state_key": base64.urlsafe_b64encode(os.urandom(32)).decode(),
         # The mail worker's private key. Only the mail process gets it.
         "mail_key": base64.urlsafe_b64encode(os.urandom(32)).decode(),
     }
@@ -240,7 +242,9 @@ async def bootstrap() -> None:
             "markos_migrator",
             "markos_runtime_client",
             "markos_control_gateway",
+            "markos_issuer_client",
             "m1g_gateway",
+            "m1g_issuer",
             "m1g_pub",
             "m1g_worker",
             "m1g_activity",
@@ -254,12 +258,18 @@ async def bootstrap() -> None:
                     sql.Identifier(role),
                     sql.SQL(
                         "NOLOGIN"
-                        if role in {"markos_runtime_client", "markos_control_gateway"}
+                        if role
+                        in {
+                            "markos_runtime_client",
+                            "markos_control_gateway",
+                            "markos_issuer_client",
+                        }
                         else "LOGIN"
                     ),
                 )
             )
         conn.execute("GRANT markos_control_gateway TO m1g_gateway")
+        conn.execute("GRANT markos_issuer_client TO m1g_issuer")
         conn.execute("GRANT markos_runtime_client TO m1g_pub,m1g_worker,m1g_activity,m1g_mail")
         conn.execute("CREATE DATABASE markos_m1g OWNER markos_migrator")
     migration = make_conninfo(admin(), user="markos_migrator")
@@ -394,10 +404,12 @@ async def bootstrap() -> None:
         )
         (FOLDER / "config" / (role + ".json")).write_bytes(config.to_wire())
         env = {"SSL_CERT_FILE": "/etc/test-ca/ca.pem"}
-        if component not in {"issuer", "mcp", "google"}:
+        if component not in {"mcp", "google"}:
             login = (
                 "m1g_gateway"
                 if component == "gateway"
+                else "m1g_issuer"
+                if component == "issuer"
                 else "m1g_mail"
                 if component == "mail"
                 else "m1g_pub"
@@ -429,6 +441,7 @@ async def bootstrap() -> None:
             env["MARKOS_CONTROL_ISSUER_WORKER_TOKEN"] = state["tokens"]["worker"]
         if component == "issuer":
             env["MARKOS_CONTROL_ISSUER_ADMIN_TOKEN"] = state["tokens"]["issuer_admin"]
+            env["MARKOS_CONTROL_ISSUER_STATE_KEY"] = state["issuer_state_key"]
         if component in {"mcp", "worker"}:
             env["MARKOS_CONTROL_TOOL_TOKEN"] = state["tokens"]["tool"]
         if component == "mcp":
