@@ -35,6 +35,8 @@ class BillStore(Protocol):
         """Erase one original. An original that is already gone counts as erased."""
         ...
 
+    def log_tombstone(self, owner: UUID, domain: str, name: str, body: bytes) -> None: ...
+
 
 class BillObjects:
     def __init__(self, root: Path) -> None:
@@ -102,6 +104,16 @@ class BillObjects:
                 os.fsync(handle)
             finally:
                 os.close(handle)
+
+    def log_tombstone(self, owner: UUID, domain: str, name: str, body: bytes) -> None:
+        """Write one deletion record outside the database, so a restore can reapply it."""
+        folder = self.root / "tombstones" / str(owner) / domain
+        folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+        (folder / (name + ".json")).write_bytes(body)
+
+    def tombstones(self) -> list[bytes]:
+        """Every logged deletion record."""
+        return [p.read_bytes() for p in sorted((self.root / "tombstones").glob("*/*/*.json"))]
 
     def read(self, owner: UUID, domain: str, digest: str, suffix: str = ".txt") -> bytes:
         if not re.fullmatch(r"[a-f0-9]{64}", digest):

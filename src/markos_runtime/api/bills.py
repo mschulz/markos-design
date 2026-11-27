@@ -196,7 +196,15 @@ class BillRoutes:
             "delete_bill", ctx.session_id, ctx.lookup_hash, owner, domain, bill_id
         )
         for item in pending:
+            entry = {"kind": "bill", "owner_id": str(owner), "domain": domain, **item}
             try:
+                await asyncio.to_thread(
+                    self.objects.log_tombstone,
+                    owner,
+                    domain,
+                    "bill-" + item["source_sha256"],
+                    json.dumps(entry, sort_keys=True).encode(),
+                )
                 await asyncio.to_thread(
                     self.objects.delete, owner, domain, item["source_sha256"], item["suffix"]
                 )

@@ -156,6 +156,7 @@ class SyntheticApi:
         self.codec = SecretCodec(key)
         self.identity = IdentityVerifier(store, issuer)
         self.mail_available = False
+        self.tombstone_log: Any = None
         self.google_signin = False
 
     def context(self, raw: str) -> SessionContext:
@@ -399,6 +400,8 @@ def create_app(
         bills = BillRoutes(api, bill_objects)
     elif bill_objects is not None:
         raise ValueError("bill objects require the explicit bill profile")
+    # The tombstone log lives beside the bill originals, outside the database.
+    api.tombstone_log = bill_objects
     from markos_runtime.api.mail_alerts import ALERT_PATH, MailAlerts
 
     # The Gmail alert route is off unless an explicit adapter is given.
