@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlsplit
 from uuid import uuid4
 
-import httpx2
+import httpx2  # type: ignore[import-not-found,unused-ignore]
 import pytest
 
 from markos_runtime.knowledge.objects import LIMITS, BillObjectError
