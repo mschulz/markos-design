@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-27 — M7-A production profile plan
+
+- Added `docs/m7-production.md`: the plan for the production profile on one DigitalOcean VM with Supabase PostgreSQL.
+- Owner decisions: Google sign-in, DigitalOcean Spaces for bill originals, root-only secret files on the VM, and Caddy for HTTPS.
+- Owner-approved rule changes for Google sign-in: the algorithm comes from the profile config (RS256 for Google), and the ID token is checked once at sign-in instead of an upstream session check on every request. `docs/decisions.md` records them.
+- Docs only. No code or migration changes.
+
 ## 2026-11-27 — M2-C1 mailbox opt-in storage and rules
 
 - Migration 0021. Only an `administrator` of the owner and domain can connect the mailbox, set its label allowlist or disconnect it. Each change writes the audit table and `markos_control.mail_history`, with its labels.

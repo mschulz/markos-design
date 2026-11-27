@@ -270,15 +270,20 @@ JWTs here.
 
 ## Human identity is checked against current authority on every request
 
-Tokens use issuer, audience, ES256 and token kind from configuration. Never take
-a key URL, issuer or algorithm from the token. Unknown keys fail closed after one
-bounded refresh. Each protected request and dispatch rechecks the upstream
-session plus local session, principal and membership. A signed JWT or cached role
-never bypasses this. Logout and revocation block the next operation. Streams
-recheck at least every 15 s. Unavailable authority fails closed.
+Tokens use issuer, audience, algorithm and token kind from the profile config:
+ES256 for the fixture issuer, RS256 for Google. Never take a key URL, issuer or
+algorithm from the token. Unknown keys fail closed after one bounded refresh.
+Each protected request and dispatch rechecks the local session, principal and
+membership. The fixture issuer's upstream session is also rechecked. A signed JWT
+or cached role never bypasses this. Logout and revocation block the next
+operation. Streams recheck at least every 15 s. Unavailable authority fails
+closed.
 
-The issuer today is a synthetic fixture. Supabase Auth is recommended, not
-adopted (see Open questions).
+Production sign-in is Google (owner decision, 2026-11-27, `docs/m7-production.md`).
+Google has no session-check endpoint, so its ID token is checked once at sign-in.
+A configured Google subject ID maps to a principal; an email alone never grants
+access. Accepted risk: a compromised Google account can sign in until the owner
+removes its mapping or membership. The account uses 2-Step Verification.
 
 ## Roles are additive and nonhierarchical
 
@@ -551,8 +556,6 @@ tests rather than asking the owner to run them.
 
 Proposed in the sources and never accepted or measured. Treat as starting values.
 
-- **Supabase Auth for production identity.** Needs provider revocation (≤15 s
-  cache), MFA, recovery and key custody.
 - **Production broker profile.** RabbitMQ 4.4.0 (digest-pinned) and aio-pika
   10.2.3 are tested. Unmeasured: 4 vCPU / 8 GiB VM, 4 GiB broker cap, 2 GiB
   memory and 10 GiB disk alarms, 10,000 msg / 32 MiB queues, 64 queues, 32
