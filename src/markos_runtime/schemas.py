@@ -48,6 +48,7 @@ from markos_runtime.control.api_config import (
 )
 from markos_runtime.control.config import ControlConfig, ControlLimits
 from markos_runtime.control_lifecycle.config import ControlServiceConfig
+from markos_runtime.control_lifecycle.production import ProductionServiceConfig
 from markos_runtime.knowledge.bills import BillImport, BillQuestion, BillRecord
 from markos_runtime.lifecycle.config import ServiceConfig
 
@@ -58,6 +59,7 @@ def models() -> dict[str, type[ValueModel]]:
         "control-bill-record": BillRecord,
         "control-bill-question": BillQuestion,
         "control-process": ControlServiceConfig,
+        "control-process-production": ProductionServiceConfig,
         "control-api": SyntheticApiConfig,
         "control-governed-approval": GovernedApproval,
         "control-governed-dispatch": GovernedDispatch,

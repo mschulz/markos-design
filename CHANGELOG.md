@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-27 — M7-D1 production profile
+
+- `control_lifecycle/production.py` adds `ProductionServiceConfig`, profile `control-process-production-v1`, with its own schema. It has no fixture settings: no seed or state file, no fixture Google, no tool server and no loopback-only endpoints.
+- The public origin must be an HTTPS DNS name on the default port. The issuer must be private on the Compose network. Sign-in is always Google: the issuer requires the Google client ID and subject map.
+- Mail stays off unless the gateway and the mail process both turn it on. Tools and migrations at start stay off. Spaces settings are for the gateway and the mail process only.
+- `FileSecrets` reads each secret from a file in `/run/secrets`, as `secret()` reads the environment. A missing, linked, oversized, multi-line or non-regular file counts as missing.
+- `production_dsn` refuses a database DSN unless it names the configured Supabase host, uses `sslmode=verify-full` and pins the configured CA file.
+- No service accepts the profile yet. M7-D2 wires it into the services, Caddy and the Compose file.
+
 ## 2026-11-27 — CI runs the tests that need the control extra
 
 - Five test files skip without the control extra: PDF reading, the Google fixture, mail sealing, the Gmail clients and the mail bill import. The `contracts` job has no extra, and the `control-api` job ran only `tests/control_api`, so no CI job ran them.
