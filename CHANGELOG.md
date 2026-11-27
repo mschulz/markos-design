@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-28 — M7-I tombstone listing pages
+
+- `reapply-tombstones` follows S3 listing pages, so it reads every tombstone file, not only the first 1000.
+
 ## 2026-11-28 — M7-H CLI production sign-in
 
 - `markos-control --production` signs in to the public origin through Google. It trusts the system certificate store, so it needs no `--ca-file`. It refuses a loopback origin, `--ca-file` and `--confirm-synthetic`.
