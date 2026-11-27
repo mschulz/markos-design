@@ -203,16 +203,26 @@ class SpacesObjects:
     def tombstones(self) -> list[bytes]:
         """Every logged deletion record. Fails rather than return a partial list."""
         prefix = quote(self.prefix + "-tombstones/", safe="-_.~")
-        response = self.request("GET", f"/{self.bucket}", query=f"list-type=2&prefix={prefix}")
-        listing = response.read()
-        response.close()
-        if response.status_code != 200:
-            raise BillObjectError("tombstone log refused the listing")
-        root = ElementTree.fromstring(listing)
-        ns = {"s3": root.tag.split("}")[0].strip("{")}
-        if root.findtext("s3:IsTruncated", namespaces=ns) == "true":
-            raise BillObjectError("tombstone log has more than one page")
-        keys = [k.text or "" for k in root.findall("s3:Contents/s3:Key", ns)]
+        keys: list[str] = []
+        token = ""
+        while True:
+            # SigV4 signs the query as given, so the parameters stay in sorted order.
+            query = f"list-type=2&prefix={prefix}"
+            if token:
+                query = f"continuation-token={quote(token, safe='-_.~')}&" + query
+            response = self.request("GET", f"/{self.bucket}", query=query)
+            listing = response.read()
+            response.close()
+            if response.status_code != 200:
+                raise BillObjectError("tombstone log refused the listing")
+            root = ElementTree.fromstring(listing)
+            ns = {"s3": root.tag.split("}")[0].strip("{")}
+            keys += [k.text or "" for k in root.findall("s3:Contents/s3:Key", ns)]
+            if root.findtext("s3:IsTruncated", namespaces=ns) != "true":
+                break
+            token = root.findtext("s3:NextContinuationToken", namespaces=ns) or ""
+            if not token:
+                raise BillObjectError("tombstone log listing has no continuation token")
         return [self.fetch(f"/{self.bucket}/{key}", 4096) or b"" for key in keys]
 
     def read(self, owner: UUID, domain: str, digest: str, suffix: str = ".txt") -> bytes:
