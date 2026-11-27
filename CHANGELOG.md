@@ -8,6 +8,21 @@
 - Spaces has no object-count limit, unlike the 100-file preview folder.
 - Tests: the AWS SigV4 example, in-process refusals, and a disposable SeaweedFS S3 in the `control-api` CI job. MinIO's container images could not be pulled, so SeaweedFS replaced it.
 
+## 2026-11-27 — M7-A production profile plan
+
+- Added `docs/m7-production.md`: the plan for the production profile on one DigitalOcean VM with Supabase PostgreSQL.
+- Owner decisions: Google sign-in, DigitalOcean Spaces for bill originals, root-only secret files on the VM, and Caddy for HTTPS.
+- Owner decision: the Google step happens in the MarkOS issuer, which then mints its own ES256 tokens. The gateway's token and per-request session checks stay unchanged. `docs/decisions.md` records the Google subject mapping and the accepted risk.
+- Owner decision: the production issuer keeps its sessions and signing key in PostgreSQL under its own login.
+
+## 2026-11-27 — Real-data retention: Gmail pointers and bill originals
+
+- Owner decision: email stays in Gmail. MarkOS keeps only the mail record as a pointer, never the body or other attachments.
+- Owner decision: bill PDFs from the bill label are kept unchanged in object storage, with the SHA-256 and the Gmail pointer.
+- Owner decision: deleting a bill or mail record removes its data at once and keeps a tombstone that blocks reimport. Backups: 7 daily and 4 weekly. Logs: 14 days. Audit metadata: 365 days. Deletion and erasure are not built yet.
+- Owner decision: a Gmail filter files electricity bill emails under `Financial/Riverhills/Electricity` and skips the Inbox. MarkOS keeps read-only Gmail access and reads that label. Recorded in the M2-E gate checklist.
+- Docs only. No code or migration changes.
+
 ## 2026-11-27 — M2-C1 mailbox opt-in storage and rules
 
 - Migration 0021. Only an `administrator` of the owner and domain can connect the mailbox, set its label allowlist or disconnect it. Each change writes the audit table and `markos_control.mail_history`, with its labels.

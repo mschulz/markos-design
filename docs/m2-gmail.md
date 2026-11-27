@@ -67,7 +67,7 @@ The owner approved these on 2026-11-26.
 3. **Scope:** `gmail.readonly`. MarkOS code enforces the label allowlist.
 4. **Bills from a label:** M2-D is in M2. One owner-chosen label feeds the K1 PDF import. M3 classification replaces it later.
 5. **Backfill depth:** the first import and every resync read back to 1 January 2020.
-6. **Retention:** message records and bill originals stay until the owner deletes them. Disconnecting deletes the token only. `docs/decisions.md` still lists real-data retention as open: deletion, privacy and backup erasure need their own review before M2-E.
+6. **Retention:** owner decision, 2026-11-27. Email stays in Gmail: MarkOS keeps only the mail record as a pointer, never the body or other attachments. Bill PDFs are kept as originals in object storage. Records stay until the owner deletes them. Disconnecting deletes the token only. Deletion with tombstones, backup expiry, and log and audit periods are in `docs/decisions.md`, "Real data: email stays in Gmail, bill originals stay in MarkOS".
 7. **M2-C decisions,** owner, 2026-11-27:
    - Only the `administrator` role connects or disconnects the mailbox and sets its labels. Any member can read its status.
    - The token is sealed for the mail worker: X25519, HKDF-SHA256 and AES-256-GCM, bound to the owner and domain. The gateway holds only the public key, so it cannot open a stored token.
@@ -100,7 +100,7 @@ Checked on 2026-11-27 through search summaries of Google's pages, not by reading
 The owner approves every item before MarkOS connects to the real mailbox. `<host>` is the public HTTPS origin of the gateway.
 
 1. **Host.** The cloud host is chosen (an M7 decision). The gateway and the mail worker run on the same host. `<host>` has a valid certificate.
-2. **Retention.** The real-data retention review in `docs/decisions.md` is closed: deletion, privacy and backup erasure.
+2. **Retention.** Decided on 2026-11-27: `docs/decisions.md`, "Real data: email stays in Gmail, bill originals stay in MarkOS".
 3. **Project.** A new Google Cloud project is created while signed in as the mailbox's own Google account. The Google Auth Platform is in Personal mode. Only the Gmail API and Pub/Sub are enabled.
 4. **OAuth client.** A web application client with one redirect URI, `<host>/api/v1/mail/callback`. The only Gmail scope is `gmail.readonly`.
 5. **Topic.** One Pub/Sub topic. `gmail-api-push@system.gserviceaccount.com` has the Pub/Sub Publisher role on that topic only.
@@ -110,9 +110,9 @@ The owner approves every item before MarkOS connects to the real mailbox. `<host
    - Acknowledgement deadline: the default 10 seconds. The endpoint only records the alert.
    - Message retention: the default 7 days. Expiry: never.
 7. **Dead-letter topic.** A dead-letter topic with 5 delivery attempts. The grants the Pub/Sub service agent needs for it are checked on Google's dead-letter page at setup.
-8. **Secrets.** The OAuth client secret and the mail worker's private key are stored as the M7 production profile sets out. M2-E3 reads them from secret references, as the fixture process does. Neither is in the repository, the logs or the browser.
+8. **Secrets.** The OAuth client secret and the mail worker's private key are stored as the M7 production profile sets out ([M7 production profile plan](m7-production.md)). M2-E3 reads them from secret references, as the fixture process does. Neither is in the repository, the logs or the browser.
 9. **Code.** M2-E2, M2-E3 and the M7 production profile are merged. Mail is still off until the owner turns it on.
-10. **First connect.** The owner connects from the Mail page, picks the label allowlist and checks the first sync and the status counts. Two details of `mail/google.py` are checked against real Gmail only at this point:
+10. **First connect.** Before connecting, the owner creates a Gmail filter for each electricity supplier. It matches the supplier's sender, applies the label `Financial/Riverhills/Electricity` and skips the Inbox. Owner decision, 2026-11-27: Gmail files bill emails, not MarkOS, because MarkOS keeps `gmail.readonly` and never changes mail. The owner then connects from the Mail page, picks `Financial/Riverhills/Electricity` as the allowlisted label and the bill label, and checks the first sync and the status counts. Two details of `mail/google.py` are checked against real Gmail only at this point:
     - The partial-response selector for message parts. It reads five levels of MIME parts and asks for no body data or file names. A wrong selector makes Gmail answer HTTP 400.
     - The watch filter value `INCLUDE`. Google's guide writes it in capitals and the reference page in lower case.
 
