@@ -189,6 +189,34 @@ deleted bytes from a backup. A restore of an older snapshot must reapply current
 deletion records before real access. Known gap: an in-flight broker copy may hold
 old bytes until consumed. Broker, object and backup erasure are not built.
 
+## Real data: email stays in Gmail, bill originals stay in MarkOS
+
+Owner decisions, 2026-11-27:
+
+- **Email is kept as a pointer only.** After processing, the email stays in
+  Gmail. MarkOS keeps the mail record: Gmail message ID, thread ID, history ID,
+  received time, labels and status. It never stores mail bodies, attachment
+  names or other attachments. If the email is later deleted in Gmail, the
+  pointer stops working, and MarkOS keeps the record.
+- **Bill PDFs are kept as originals.** A bill PDF imported from the bill label
+  is stored unchanged in object storage, with its SHA-256 and the Gmail
+  pointer. Cited answers and later re-extraction depend on the original, and
+  Gmail access can be revoked or the email deleted.
+- **Records stay until the owner deletes them.** Disconnecting the mailbox
+  deletes the token only.
+- **Deleting a bill** removes its PDF object, extracted facts and corrections
+  at once. A tombstone keeps only the SHA-256 and the Gmail pointer, so a later
+  label import or resync does not import the bill again.
+- **Deleting a mail record** removes its labels and attachment references. A
+  tombstone keeps the Gmail message ID, so a resync does not store it again.
+- **Backups:** 7 daily and 4 weekly encrypted snapshots. Deleted bytes leave
+  backups when the last snapshot that holds them expires, at most about 5
+  weeks. A restore reapplies tombstones before real access, as above.
+- **Logs:** 14 days. Logs never hold mail content or bill values.
+- **Audit:** minimal audit metadata kept 365 days, with no mail content.
+
+Not built: bill and mail-record deletion, object erasure and backup expiry.
+
 ## Migrations are append-only and checksummed
 
 `infrastructure/migrations/NNNN_name.sql`: 0001–0022 exist; next is 0023.
@@ -560,9 +588,9 @@ Proposed in the sources and never accepted or measured. Treat as starting values
 - **General MCP profile.** 512 MiB / 0.5 CPU, 10 attempts/min per scope, 60 s
   budget, one retry for safe reads. The live profile is stricter.
 - **API process ceiling.** 256 MiB / 0.5 CPU, not enforced outside test Compose.
-- **Real-data retention.** Source, privacy, audit and backup erasure undecided.
-  Proposed: 14-day logs, 24 h unresolved alert, daily cleanup, 7 daily + 4 weekly
-  encrypted backups, 24 h RPO.
+- **Real-data retention.** Decided (see "Real data: email stays in Gmail, bill
+  originals stay in MarkOS"). Still proposed: 24 h unresolved alert, daily
+  cleanup, 24 h RPO.
 - **Object storage provider** and coordinated object/database backup and deletion.
 - **Production operations.** Region, sizing, cost, monitoring, alert route, VM
   boot and MacBook-off evidence.
