@@ -60,7 +60,9 @@ class OtherKeys:
     """A key Google never published: every ID token fails its signature check."""
 
     async def key(self, kid: str) -> Any:
-        from cryptography.hazmat.primitives.asymmetric.rsa import generate_private_key
+        from cryptography.hazmat.primitives.asymmetric.rsa import (  # type: ignore[import-not-found,unused-ignore]
+            generate_private_key,
+        )
 
         return generate_private_key(public_exponent=65537, key_size=2048).public_key()
 
