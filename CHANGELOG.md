@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-27 — M7-A production profile plan
+
+- Added `docs/m7-production.md`: the plan for the production profile on one DigitalOcean VM with Supabase PostgreSQL.
+- Owner decisions: Google sign-in, DigitalOcean Spaces for bill originals, root-only secret files on the VM, and Caddy for HTTPS.
+- Owner decision: the Google step happens in the MarkOS issuer, which then mints its own ES256 tokens. The gateway's token and per-request session checks stay unchanged. `docs/decisions.md` records the Google subject mapping and the accepted risk.
+- Owner decision: the production issuer keeps its sessions and signing key in PostgreSQL under its own login.
+
 ## 2026-11-27 — Real-data retention: Gmail pointers and bill originals
 
 - Owner decision: email stays in Gmail. MarkOS keeps only the mail record as a pointer, never the body or other attachments.

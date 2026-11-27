@@ -305,8 +305,13 @@ session plus local session, principal and membership. A signed JWT or cached rol
 never bypasses this. Logout and revocation block the next operation. Streams
 recheck at least every 15 s. Unavailable authority fails closed.
 
-The issuer today is a synthetic fixture. Supabase Auth is recommended, not
-adopted (see Open questions).
+The issuer today is a synthetic fixture. In production the MarkOS issuer signs
+the person in with Google, then mints its own ES256 tokens (owner decision,
+2026-11-27, `docs/m7-production.md`). Only the issuer checks Google's RS256 ID
+token. A configured Google subject ID maps to a MarkOS subject; an email alone
+never grants access. Accepted risk: a compromised Google account can sign in
+until the owner removes its mapping or membership. The account uses 2-Step
+Verification.
 
 ## Roles are additive and nonhierarchical
 
@@ -579,8 +584,6 @@ tests rather than asking the owner to run them.
 
 Proposed in the sources and never accepted or measured. Treat as starting values.
 
-- **Supabase Auth for production identity.** Needs provider revocation (≤15 s
-  cache), MFA, recovery and key custody.
 - **Production broker profile.** RabbitMQ 4.4.0 (digest-pinned) and aio-pika
   10.2.3 are tested. Unmeasured: 4 vCPU / 8 GiB VM, 4 GiB broker cap, 2 GiB
   memory and 10 GiB disk alarms, 10,000 msg / 32 MiB queues, 64 queues, 32
