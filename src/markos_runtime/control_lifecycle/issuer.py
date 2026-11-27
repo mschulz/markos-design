@@ -164,20 +164,25 @@ class StoredIssuer:
     """Synthetic issuer whose keys, codes, sessions and refresh tokens live in PostgreSQL.
 
     Fixture accounts come from the private seed file on every start and are never stored.
+    Production has no seed file: Google sign-in is then the only way in.
     """
 
     def __init__(
-        self, store: IssuerStore, codec: SecretCodec, seed_file: Path, google: Any = None
+        self, store: IssuerStore, codec: SecretCodec, seed_file: Path | None, google: Any = None
     ) -> None:
         # Google sign-in is off unless an explicit GoogleSignIn adapter is given.
         self.store, self.codec, self.google = store, codec, google
+        self._accounts: dict[str, str] = {}
+        if seed_file is None:
+            if google is None:
+                raise IdentityUnavailable("Google sign-in required without a fixture seed")
+            return
         value = private_json(seed_file, 65536)
         if set(value) != {"schema_version", "accounts"} or value["schema_version"] != 1:
             raise IdentityUnavailable("explicit fixture seed required")
         accounts = value["accounts"]
         if not isinstance(accounts, list) or len(accounts) > 100:
             raise IdentityUnavailable("bounded fixture accounts required")
-        self._accounts: dict[str, str] = {}
         for account in accounts:
             if (
                 not isinstance(account, dict)
@@ -356,14 +361,23 @@ def slow(operation: str) -> float:
 
 
 class RemoteFixtureIssuer(FixtureIssuer):
-    def __init__(self, endpoint: str, ca_file: Path, credential: str) -> None:
+    def __init__(
+        self, endpoint: str, ca_file: Path, credential: str, *, production: bool = False
+    ) -> None:
+        # The fixture issuer is on loopback. In production it is `issuer` on the private
+        # Compose network, and TLS checks that name.
+        host = "issuer" if production else "127.0.0.1"
         try:
-            port = loopback_https(endpoint, paths=frozenset({"/fixture"}))
+            port = loopback_https(
+                endpoint, paths=frozenset({"/fixture"}), hosts=frozenset({host}), exact=False
+            )
+            if urlsplit(endpoint).netloc != f"{host}:{port}":
+                raise ValueError
         except ValueError:
             raise IdentityUnavailable("explicit synthetic issuer endpoint required") from None
         if not TOKEN_PATTERN.fullmatch(credential):
             raise IdentityUnavailable("explicit synthetic issuer endpoint required")
-        self.endpoint, self.port, self.credential = endpoint, port, credential
+        self.endpoint, self.host, self.port, self.credential = endpoint, host, port, credential
         self.tls = ssl.create_default_context(cafile=str(ca_file))
 
     def request(self, operation: str, body: dict[str, Any]) -> Any:
@@ -385,7 +399,7 @@ class RemoteFixtureIssuer(FixtureIssuer):
             raise IdentityDenied("bounded fixture request required")
         limit = slow(operation)
         conn = http.client.HTTPSConnection(
-            "127.0.0.1", self.port, context=self.tls, timeout=limit - 0.5
+            self.host, self.port, context=self.tls, timeout=limit - 0.5
         )
         try:
             with bounded_connection(conn, time.monotonic() + limit):

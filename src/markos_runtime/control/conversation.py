@@ -36,12 +36,14 @@ class ConversationWorker:
         issuer: "FixtureIssuer",
         *,
         confirm_synthetic: bool = False,
+        confirm_production: bool = False,
         timeout_seconds: float = 10,
     ) -> None:
         from markos_runtime.api.identity import FixtureIssuer
 
+        # Exactly one confirmation. Only the production service passes confirm_production.
         if (
-            confirm_synthetic is not True
+            (confirm_synthetic is True) == (confirm_production is True)
             or not isinstance(issuer, FixtureIssuer)
             or not 0 < timeout_seconds <= 10
         ):

@@ -38,6 +38,7 @@ def config(**changes: Any) -> dict[str, Any]:
         "database_host": "db.abcdef.supabase.co",
         "database_ca_file": "/etc/markos/supabase-ca.pem",
         "broker_publisher_user": "markos-publisher",
+        "spaces": SPACES,
         **changes,
     }
 
@@ -50,7 +51,7 @@ def test_a_gateway_loads_with_every_switch_off() -> None:
     profile = load(config())
     assert profile.environment == "production" and profile.listen_host == "0.0.0.0"
     assert profile.secrets_dir == "/run/secrets"
-    assert profile.mail_enabled is False and profile.spaces is None
+    assert profile.mail_enabled is False and profile.gateway_port == 18443
     assert profile.real_tools_enabled is False and profile.migrate_on_start is False
 
 
@@ -78,6 +79,8 @@ def test_a_gateway_loads_with_every_switch_off() -> None:
         ("audit_url", "https://example.com:15671"),
         ("health_port", True),
         ("work_seconds", 10.0),
+        ("gateway_port", 80),
+        ("spaces", None),
         # The public origin is a DNS name on the default port.
         ("api_origin", "http://markos.example.com"),
         ("api_origin", "https://127.0.0.1"),
@@ -111,6 +114,7 @@ def test_the_fixture_model_refuses_the_production_profile() -> None:
 
 ISSUER = {
     "component": "issuer",
+    "spaces": None,
     "google_client_id": CLIENT,
     "google_signin_subjects": {"1234567890": "owner"},
 }
@@ -135,10 +139,8 @@ MAIL = {
         ISSUER,
         MAIL_GATEWAY,
         MAIL,
-        {"spaces": SPACES},
-        {**MAIL, "spaces": SPACES},
-        {"component": "worker", "service_id": "control-test-agent"},
-        {"component": "activity", "service_id": "control-activity"},
+        {"component": "worker", "service_id": "control-test-agent", "spaces": None},
+        {"component": "activity", "service_id": "control-activity", "spaces": None},
     ],
 )
 def test_each_component_loads_with_its_own_settings(changes: dict[str, Any]) -> None:
@@ -148,7 +150,9 @@ def test_each_component_loads_with_its_own_settings(changes: dict[str, Any]) -> 
 @pytest.mark.parametrize(
     "changes",
     [
-        {"component": "issuer"},
+        {"component": "issuer", "spaces": None},
+        {**ISSUER, "spaces": SPACES},
+        {**MAIL, "spaces": None},
         {**ISSUER, "google_client_id": None},
         {**ISSUER, "google_client_id": "markos-fixture.apps.googleusercontent.test"},
         {"google_signin_subjects": {"1": "owner"}},
@@ -159,9 +163,14 @@ def test_each_component_loads_with_its_own_settings(changes: dict[str, Any]) -> 
         {**MAIL_GATEWAY, "pubsub_topic": "projects/markos/topics/gmail"},
         {**MAIL, "mail_enabled": False},
         {**MAIL, "pubsub_topic": None},
-        {"component": "worker", "service_id": "control-test-agent", "mail_enabled": True},
-        {"component": "worker", "service_id": "control-test-agent", "spaces": SPACES},
-        {"component": "worker", "service_id": "control-gateway"},
+        {
+            "component": "worker",
+            "service_id": "control-test-agent",
+            "spaces": None,
+            "mail_enabled": True,
+        },
+        {"component": "worker", "service_id": "control-test-agent"},
+        {"component": "worker", "service_id": "control-gateway", "spaces": None},
         {"spaces": {**SPACES, "endpoint": "http://syd1.digitaloceanspaces.com"}},
         {"spaces": {**SPACES, "endpoint": "https://127.0.0.1:9000"}},
         {"spaces": {**SPACES, "bucket": "Bad_Bucket"}},

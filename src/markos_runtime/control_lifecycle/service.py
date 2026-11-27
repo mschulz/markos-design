@@ -1,4 +1,4 @@
-"""Explicit role-per-process synthetic lifecycle with independent issuer/tool fixtures."""
+"""Explicit role-per-process lifecycle: the synthetic fixtures or the production profile."""
 
 import asyncio
 import base64
@@ -22,6 +22,11 @@ from markos_runtime.control.conversation import ConversationWorker
 from markos_runtime.control.store import ControlStore
 from markos_runtime.control_lifecycle.config import ControlServiceConfig
 from markos_runtime.control_lifecycle.issuer import RemoteFixtureIssuer
+from markos_runtime.control_lifecycle.production import (
+    ProductionBillApiConfig,
+    ProductionServiceConfig,
+    production_dsn,
+)
 from markos_runtime.lifecycle.health import HealthServer, HealthState
 from markos_runtime.lifecycle.service import FatalServiceError, isolated_dsn, secret
 from markos_runtime.store.database import DurableStore, StorageError
@@ -32,10 +37,13 @@ from markos_runtime.transport.consumer import Consumer
 from markos_runtime.transport.management import TopologyAudit
 from markos_runtime.transport.publisher import Publisher
 
+Config = ControlServiceConfig | ProductionServiceConfig
+
 
 class ControlService:
-    def __init__(self, config: ControlServiceConfig, environ: Mapping[str, str]) -> None:
+    def __init__(self, config: Config, environ: Mapping[str, str]) -> None:
         self.config, self.environ = config, environ
+        self.production = isinstance(config, ProductionServiceConfig)
         self.stop = asyncio.Event()
         self.health = HealthState()
         self.epoch: UUID | None = None
@@ -59,6 +67,55 @@ class ControlService:
         with suppress(TimeoutError):
             async with asyncio.timeout(seconds):
                 await self.stop.wait()
+
+    def database(self, ref: str) -> str:
+        """The DSN behind a secret ref, refused unless it is the profile's own database."""
+        cfg = self.config
+        dsn = secret(self.environ, ref)
+        if isinstance(cfg, ProductionServiceConfig):
+            production_dsn(dsn, cfg.database_host, cfg.database_ca_file)
+        else:
+            isolated_dsn(dsn, ("markos_test_", "markos_m1g"))
+        return dsn
+
+    def google(self) -> tuple[Any, Any, str]:
+        """TLS trust, endpoints and signing-key URL: real Google, or the fixture Google."""
+        import ssl
+
+        from markos_runtime.api.mail_alerts import GOOGLE_KEYS_URL
+        from markos_runtime.mail.google import GOOGLE, GoogleEndpoints
+
+        cfg = self.config
+        if isinstance(cfg, ProductionServiceConfig):
+            return ssl.create_default_context(), GOOGLE, GOOGLE_KEYS_URL
+        trust = ssl.create_default_context(cafile=cfg.ca_file)
+        return (
+            trust,
+            GoogleEndpoints.at(cfg.google_endpoint),
+            cfg.google_endpoint + "/oauth2/v3/certs",
+        )
+
+    def bill_store(self, stack: AsyncExitStack) -> Any:
+        """Where bill originals go: Spaces in production, else the fixture folder or none."""
+        cfg = self.config
+        if isinstance(cfg, ProductionServiceConfig):
+            from markos_runtime.knowledge.spaces import SpacesObjects
+
+            assert cfg.spaces is not None
+            spaces = SpacesObjects(
+                cfg.spaces.endpoint,
+                cfg.spaces.region,
+                cfg.spaces.bucket,
+                secret(self.environ, cfg.spaces.access_key_ref),
+                secret(self.environ, cfg.spaces.secret_key_ref),
+            )
+            stack.callback(spaces.http.close)
+            return spaces
+        if cfg.bill_objects_path is None:
+            return None
+        from markos_runtime.knowledge.objects import BillObjects
+
+        return BillObjects(Path(cfg.bill_objects_path))
 
     async def probe(self, store: Any) -> UUID:
         if isinstance(store, DurableStore):
@@ -129,8 +186,7 @@ class ControlService:
                 issuer_app,
             )
 
-            dsn = secret(env, cfg.database_secret_ref)
-            isolated_dsn(dsn, ("markos_test_", "markos_m1g"))
+            dsn = self.database(cfg.database_secret_ref)
             try:
                 codec = SecretCodec(
                     base64.urlsafe_b64decode(secret(env, cfg.issuer_state_key_secret_ref))
@@ -140,29 +196,29 @@ class ControlService:
             issuer_store = await stack.enter_async_context(IssuerStore.connect(dsn))
             google_signin = None
             if cfg.google_signin_subjects is not None:
-                import ssl
-
                 from markos_runtime.api.mail_alerts import GoogleKeys
                 from markos_runtime.control_lifecycle.google_signin import (
                     CALLBACK_PATH,
                     GoogleSignIn,
                 )
-                from markos_runtime.mail.google import GoogleEndpoints, OAuthClient, google_http
+                from markos_runtime.mail.google import OAuthClient, google_http
 
-                trust = ssl.create_default_context(cafile=cfg.ca_file)
+                trust, endpoints, keys_url = self.google()
                 http = google_http(trust)
                 stack.push_async_callback(http.aclose)
                 google_signin = GoogleSignIn(
-                    OAuthClient(cfg.google_client_id, secret(env, cfg.google_client_secret_ref)),
+                    OAuthClient(
+                        str(cfg.google_client_id), secret(env, cfg.google_client_secret_ref)
+                    ),
                     http,
-                    GoogleEndpoints.at(cfg.google_endpoint),
-                    GoogleKeys(cfg.google_endpoint + "/oauth2/v3/certs", trust),
+                    endpoints,
+                    GoogleKeys(keys_url, trust),
                     cfg.api_origin + CALLBACK_PATH,
                     cfg.google_signin_subjects,
                 )
-            issuer = StoredIssuer(
-                issuer_store, codec, Path(cfg.fixture_seed_file), google=google_signin
-            )
+            # Production has no fixture accounts: Google sign-in is the only way in.
+            seed = None if isinstance(cfg, ProductionServiceConfig) else Path(cfg.fixture_seed_file)
+            issuer = StoredIssuer(issuer_store, codec, seed, google=google_signin)
             await issuer.start()
             tokens = [
                 secret(env, x)
@@ -177,6 +233,7 @@ class ControlService:
             app = issuer_app(issuer, cfg.issuer_endpoint, *tokens)
             port = urlsplit(cfg.issuer_endpoint).port
         elif cfg.component == "google":
+            assert isinstance(cfg, ControlServiceConfig)
             from markos_runtime.api.mail_alerts import ALERT_PATH
             from markos_runtime.api.mail_connect import CALLBACK_PATH
             from markos_runtime.control_lifecycle.google_fixture import google_app
@@ -196,6 +253,7 @@ class ControlService:
             )
             port = urlsplit(cfg.google_endpoint).port
         else:
+            assert isinstance(cfg, ControlServiceConfig)
             from markos_runtime.control_lifecycle.mcp_fixture import mcp_app
 
             app = mcp_app(
@@ -225,8 +283,7 @@ class ControlService:
 
     async def session(self) -> None:
         cfg, env = self.config, self.environ
-        dsn = secret(env, cfg.database_secret_ref)
-        isolated_dsn(dsn, ("markos_test_", "markos_m1g"))
+        dsn = self.database(cfg.database_secret_ref)
         async with AsyncExitStack() as stack:
             store: Any
             if cfg.component == "gateway":
@@ -251,15 +308,15 @@ class ControlService:
             server_task = None
             google = None
             if cfg.mail_enabled:
-                import ssl
+                from markos_runtime.mail.google import OAuthClient, google_http
 
-                from markos_runtime.mail.google import GoogleEndpoints, OAuthClient, google_http
-
-                trust = ssl.create_default_context(cafile=cfg.ca_file)
+                trust, endpoints, keys_url = self.google()
                 http = google_http(trust)
                 stack.push_async_callback(http.aclose)
-                oauth = OAuthClient(cfg.google_client_id, secret(env, cfg.google_client_secret_ref))
-                google = (oauth, http, GoogleEndpoints.at(cfg.google_endpoint))
+                oauth = OAuthClient(
+                    str(cfg.google_client_id), secret(env, cfg.google_client_secret_ref)
+                )
+                google = (oauth, http, endpoints)
             if cfg.component in {"gateway", "worker"}:
                 issuer = RemoteFixtureIssuer(
                     cfg.issuer_endpoint,
@@ -270,26 +327,35 @@ class ControlService:
                         if cfg.component == "gateway"
                         else cfg.issuer_worker_secret_ref,
                     ),
+                    production=self.production,
                 )
             if cfg.component == "gateway":
                 from markos_runtime.api.application import create_app
 
                 key = base64.urlsafe_b64decode(secret(env, cfg.session_key_secret_ref))
-                from markos_runtime.knowledge.objects import BillObjects
-
-                profile = SyntheticGovernanceApiConfig(
-                    schema_version=1,
-                    api_origin=cfg.api_origin,
-                    conversation_profile="deterministic-conversation-v1",
-                    web_profile="synthetic-web-cli-v1",
-                    governance_profile="synthetic-governance-v1",
-                )
-                objects = None
-                if cfg.bill_objects_path is not None:
-                    objects = BillObjects(Path(cfg.bill_objects_path))
-                    profile = SyntheticBillApiConfig(
-                        **profile.model_dump(), bill_profile="bill-text-v1"
+                routes = {
+                    "schema_version": 1,
+                    "api_origin": cfg.api_origin,
+                    "conversation_profile": "deterministic-conversation-v1",
+                    "web_profile": "synthetic-web-cli-v1",
+                    "governance_profile": "synthetic-governance-v1",
+                }
+                objects = self.bill_store(stack)
+                profile: SyntheticGovernanceApiConfig
+                if self.production:
+                    profile = ProductionBillApiConfig.model_validate(
+                        {
+                            **routes,
+                            "bill_profile": "bill-text-v1",
+                            "production_profile": "control-process-production-v1",
+                        }
                     )
+                elif objects is not None:
+                    profile = SyntheticBillApiConfig.model_validate(
+                        {**routes, "bill_profile": "bill-text-v1"}
+                    )
+                else:
+                    profile = SyntheticGovernanceApiConfig.model_validate(routes)
                 mail_connect = mail_alerts = None
                 if google is not None:
                     from markos_runtime.api.mail_alerts import (
@@ -302,16 +368,15 @@ class ControlService:
                     from markos_runtime.mail.google import GoogleConsent
                     from markos_runtime.mail.store import MailStore
 
-                    mail_dsn = secret(env, cfg.mail_database_secret_ref)
-                    isolated_dsn(mail_dsn, ("markos_test_", "markos_m1g"))
+                    mail_dsn = self.database(cfg.mail_database_secret_ref)
                     mail_store = await stack.enter_async_context(
                         MailStore.connect(mail_dsn, max_connections=2)
                     )
                     public = base64.urlsafe_b64decode(str(cfg.mail_worker_public_key))
                     mail_connect = MailConnect(GoogleConsent(*google), public)
                     mail_alerts = MailAlerts(
-                        PushIdentity(cfg.api_origin + ALERT_PATH, cfg.push_account),
-                        GoogleKeys(cfg.google_endpoint + "/oauth2/v3/certs", trust),
+                        PushIdentity(cfg.api_origin + ALERT_PATH, str(cfg.push_account)),
+                        GoogleKeys(keys_url, trust),
                         mail_store,
                     )
                 app = create_app(
@@ -319,16 +384,32 @@ class ControlService:
                     store,
                     issuer,  # type: ignore[arg-type]
                     session_key=key,
-                    confirm_synthetic=True,
+                    confirm_synthetic=not self.production,
+                    confirm_production=self.production,
                     bill_objects=objects,
                     mail_alerts=mail_alerts,
                     mail_connect=mail_connect,
-                    google_signin=cfg.google_signin,
+                    # Production signs in only with Google.
+                    google_signin=cfg.google_signin
+                    if isinstance(cfg, ControlServiceConfig)
+                    else True,
                 )
-                server_task = asyncio.create_task(
-                    self.http_server(app, int(urlsplit(cfg.api_origin).port or 0))
+                port = (
+                    cfg.gateway_port
+                    if isinstance(cfg, ProductionServiceConfig)
+                    else urlsplit(cfg.api_origin).port
+                )
+                server_task = asyncio.create_task(self.http_server(app, int(port or 0)))
+            elif cfg.component == "worker" and self.production:
+                # Tools stay off in production: conversations only, no tool transport.
+                plain_worker = ConversationWorker(
+                    store,
+                    issuer,  # type: ignore[arg-type]
+                    confirm_production=True,
+                    timeout_seconds=cfg.work_seconds,
                 )
             elif cfg.component == "worker":
+                assert isinstance(cfg, ControlServiceConfig)
                 transport = FixtureTransport(
                     FixtureConnection(
                         cfg.tool_endpoint,
@@ -353,24 +434,24 @@ class ControlService:
                     timeout_seconds=cfg.work_seconds,
                 )
             elif cfg.component == "mail" and google is not None:
-                from markos_runtime.knowledge.objects import BillObjects
                 from markos_runtime.mail.google import GoogleGmailAccess
                 from markos_runtime.mail.sealing import TokenKey
 
                 key = base64.urlsafe_b64decode(secret(env, cfg.mail_token_key_secret_ref))
                 oauth, http, endpoints = google
                 mail_access = GoogleGmailAccess(
-                    oauth, TokenKey(key), cfg.pubsub_topic, http, endpoints
+                    oauth, TokenKey(key), str(cfg.pubsub_topic), http, endpoints
                 )
-                if cfg.bill_objects_path is not None:
-                    mail_objects = BillObjects(Path(cfg.bill_objects_path))
+                mail_objects = self.bill_store(stack)
             elif cfg.component in {"publisher", "completion-publisher", "consumer", "activity"}:
                 raw = secret(env, cfg.broker_secret_ref)
                 target = endpoint(raw)
-                if (
-                    target.host not in {"127.0.0.1", "localhost", "rabbitmq"}
+                if target.scheme != "amqps" or (
+                    # Production uses the private broker on the Compose network.
+                    target.host != "rabbitmq"
+                    if self.production
+                    else target.host not in {"127.0.0.1", "localhost", "rabbitmq"}
                     or not target.path[1:].startswith("markos-test")
-                    or target.scheme != "amqps"
                 ):
                     raise FatalServiceError("owned TLS broker required")
                 broker = await stack.enter_async_context(BrokerSession.connect(raw))
@@ -471,7 +552,7 @@ class ControlService:
                     loop.remove_signal_handler(name)
 
 
-def run_control(config: ControlServiceConfig, environ: Mapping[str, str]) -> int:
+def run_control(config: Config, environ: Mapping[str, str]) -> int:
     logging.disable(logging.CRITICAL)
     try:
         return asyncio.run(ControlService(config, environ).run())

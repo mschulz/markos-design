@@ -540,7 +540,16 @@ personal or production host. The fault controller stays out of every image.
 ## Everything runs synthetic; real accounts, providers and effects are off
 
 Profiles use synthetic data, fixture issuers and fixture tools. Service commands
-require `--confirm-synthetic`. Off until separately reviewed: real identity,
+require `--confirm-synthetic`.
+
+Owner decision, 2026-11-27 (M7-D2): one exception. `serve-control-production
+--confirm-production` runs a service under `control-process-production-v1`. That
+profile signs in only with Google, keeps tools and fixture paths off, and leaves
+mail off until the owner turns it on. It never accepts `--confirm-synthetic`, and
+the synthetic commands never accept it. Running it does not authorize real data:
+the gates below still apply.
+
+Off until separately reviewed: real identity,
 accounts, Gmail, models, real MCP connectors, paid or consequential tools,
 personal data and deployment. MarkOS is not production ready. These gates must
 pass before production:

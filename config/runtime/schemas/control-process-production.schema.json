@@ -128,6 +128,13 @@
       "title": "Environment",
       "type": "string"
     },
+    "gateway_port": {
+      "default": 18443,
+      "maximum": 65535,
+      "minimum": 1024,
+      "title": "Gateway Port",
+      "type": "integer"
+    },
     "google_client_id": {
       "anyOf": [
         {
