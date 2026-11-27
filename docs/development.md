@@ -43,6 +43,10 @@ They skip locally unless you point them at disposable services:
   a shared, live or preview database.
 - `MARKOS_TEST_RABBIT_HTTP`, `MARKOS_TEST_AMQP_BASE`, `MARKOS_TEST_RABBIT_USER`,
   `MARKOS_TEST_RABBIT_PASSWORD`: a disposable local RabbitMQ.
+- `MARKOS_TEST_S3_ENDPOINT`, `MARKOS_TEST_S3_ACCESS_KEY`,
+  `MARKOS_TEST_S3_SECRET_KEY`: a disposable local S3 store on a loopback address,
+  for the Spaces adapter tests. Start SeaweedFS with the test key in
+  `infrastructure/seaweedfs/s3-test.json`, as the `control-api` CI job does.
 
 CI sets `MARKOS_REQUIRE_*` flags so that a missing service fails instead of
 skipping. The API, browser, process, volume-loss and lifecycle suites run in

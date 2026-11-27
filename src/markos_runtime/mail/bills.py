@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Any, Protocol
 from uuid import UUID
 
-from markos_runtime.knowledge.objects import BillObjects, BillStorageFull
+from markos_runtime.knowledge.objects import BillStorageFull, BillStore
 from markos_runtime.knowledge.pdf import MAX_PDF_BYTES, PdfError, read_pages
 from markos_runtime.knowledge.profiles import PDF_PROFILES
 from markos_runtime.mail.gmail import Attachment, GmailReader, MessageGone
@@ -44,7 +44,7 @@ def bill_name(received_at: datetime) -> str:
 
 async def _result(
     gmail: GmailReader,
-    objects: BillObjects,
+    objects: BillStore,
     owner: UUID,
     domain: str,
     message: BillMessage,
@@ -80,7 +80,7 @@ async def _result(
 
 
 async def import_bills(
-    gmail: GmailReader, work: BillWork, objects: BillObjects, fence: int, owner: UUID, domain: str
+    gmail: GmailReader, work: BillWork, objects: BillStore, fence: int, owner: UUID, domain: str
 ) -> list[str] | None:
     """One batch of queued bill messages. Returns each outcome, or None if the lease is gone."""
     due = await work.bills_due(fence, BATCH)

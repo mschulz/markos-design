@@ -362,7 +362,9 @@ def create_app(
 
     bills = None
     if isinstance(config, SyntheticBillApiConfig):
-        if not isinstance(bill_objects, BillObjects):
+        from markos_runtime.knowledge.spaces import SpacesObjects
+
+        if not isinstance(bill_objects, (BillObjects, SpacesObjects)):
             raise ValueError("explicit private bill object adapter required")
         bills = BillRoutes(api, bill_objects)
     elif bill_objects is not None:

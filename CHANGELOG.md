@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-27 — M7-C Spaces bill object adapter
+
+- `knowledge/spaces.py` adds `SpacesObjects`, an S3-compatible store for bill originals (DigitalOcean Spaces). It has the same `put` and `read` as `BillObjects`: keys are scoped by owner and domain and named by SHA-256, and every read checks the hash.
+- Requests are signed with SigV4 on httpx2; no new dependency. Uploads ask for a private ACL. Redirects are never followed. Reads stop at the size limit.
+- A new `BillStore` interface lets the bill routes and the mail worker take either store. Nothing wires Spaces in yet; the production profile (M7-D) does that.
+- Spaces has no object-count limit, unlike the 100-file preview folder.
+- Tests: the AWS SigV4 example, in-process refusals, and a disposable SeaweedFS S3 in the `control-api` CI job. MinIO's container images could not be pulled, so SeaweedFS replaced it.
+
 ## 2026-11-27 — M2-C1 mailbox opt-in storage and rules
 
 - Migration 0021. Only an `administrator` of the owner and domain can connect the mailbox, set its label allowlist or disconnect it. Each change writes the audit table and `markos_control.mail_history`, with its labels.

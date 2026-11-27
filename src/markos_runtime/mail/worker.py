@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
-from markos_runtime.knowledge.objects import BillObjects
+from markos_runtime.knowledge.objects import BillStore
 from markos_runtime.mail.bills import BillWork, import_bills
 from markos_runtime.mail.gmail import GmailAccess, SealedToken
 from markos_runtime.mail.ingest import MailRecords, SyncResult, sync
@@ -70,7 +70,7 @@ def alert_history(data: bytes) -> int | None:
 
 
 async def run_once(
-    access: GmailAccess, work: MailWork, objects: BillObjects | None = None
+    access: GmailAccess, work: MailWork, objects: BillStore | None = None
 ) -> PassResult:
     claim = await work.claim_work(LEASE_SECONDS, objects is not None)
     if claim is None:
