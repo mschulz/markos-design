@@ -270,20 +270,20 @@ JWTs here.
 
 ## Human identity is checked against current authority on every request
 
-Tokens use issuer, audience, algorithm and token kind from the profile config:
-ES256 for the fixture issuer, RS256 for Google. Never take a key URL, issuer or
-algorithm from the token. Unknown keys fail closed after one bounded refresh.
-Each protected request and dispatch rechecks the local session, principal and
-membership. The fixture issuer's upstream session is also rechecked. A signed JWT
-or cached role never bypasses this. Logout and revocation block the next
-operation. Streams recheck at least every 15 s. Unavailable authority fails
-closed.
+Tokens use issuer, audience, ES256 and token kind from configuration. Never take
+a key URL, issuer or algorithm from the token. Unknown keys fail closed after one
+bounded refresh. Each protected request and dispatch rechecks the upstream
+session plus local session, principal and membership. A signed JWT or cached role
+never bypasses this. Logout and revocation block the next operation. Streams
+recheck at least every 15 s. Unavailable authority fails closed.
 
-Production sign-in is Google (owner decision, 2026-11-27, `docs/m7-production.md`).
-Google has no session-check endpoint, so its ID token is checked once at sign-in.
-A configured Google subject ID maps to a principal; an email alone never grants
-access. Accepted risk: a compromised Google account can sign in until the owner
-removes its mapping or membership. The account uses 2-Step Verification.
+The issuer today is a synthetic fixture. In production the MarkOS issuer signs
+the person in with Google, then mints its own ES256 tokens (owner decision,
+2026-11-27, `docs/m7-production.md`). Only the issuer checks Google's RS256 ID
+token. A configured Google subject ID maps to a MarkOS subject; an email alone
+never grants access. Accepted risk: a compromised Google account can sign in
+until the owner removes its mapping or membership. The account uses 2-Step
+Verification.
 
 ## Roles are additive and nonhierarchical
 

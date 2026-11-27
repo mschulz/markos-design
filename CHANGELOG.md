@@ -4,7 +4,7 @@
 
 - Added `docs/m7-production.md`: the plan for the production profile on one DigitalOcean VM with Supabase PostgreSQL.
 - Owner decisions: Google sign-in, DigitalOcean Spaces for bill originals, root-only secret files on the VM, and Caddy for HTTPS.
-- Owner-approved rule changes for Google sign-in: the algorithm comes from the profile config (RS256 for Google), and the ID token is checked once at sign-in instead of an upstream session check on every request. `docs/decisions.md` records them.
+- Owner decision: the Google step happens in the MarkOS issuer, which then mints its own ES256 tokens. The gateway's token and per-request session checks stay unchanged. `docs/decisions.md` records the Google subject mapping and the accepted risk.
 - Docs only. No code or migration changes.
 
 ## 2026-11-27 — M2-C1 mailbox opt-in storage and rules
