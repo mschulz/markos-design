@@ -1,4 +1,4 @@
-"""Connection-free control preflight and separately confirmed synthetic service commands."""
+"""Connection-free control preflight and separately confirmed service commands."""
 
 import argparse
 import sys
@@ -23,6 +23,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     process.add_argument("--config", type=Path, required=True)
     process.add_argument("--confirm-synthetic", action="store_true")
+    production = subcommands.add_parser(
+        "serve-control-production", help="Run one service under the production profile"
+    )
+    production.add_argument("--config", type=Path, required=True)
+    production.add_argument("--confirm-production", action="store_true")
     health = subcommands.add_parser(
         "health", help="Check private local synthetic service readiness"
     )
@@ -69,6 +74,20 @@ def main(argv: list[str] | None = None) -> int:
             print("Invalid isolated control profile or optional installation.", file=sys.stderr)
             return 2
         return run_control(process_config, dict(os.environ))
+    if args.command == "serve-control-production":
+        if not args.confirm_production:
+            print("Explicit production confirmation required.", file=sys.stderr)
+            return 2
+        from markos_runtime.control_lifecycle.production import FileSecrets, load_production
+
+        try:
+            production_config = load_production(args.config)
+            from markos_runtime.control_lifecycle.service import run_control
+        except (ContractError, ImportError):
+            print("Invalid production profile or optional installation.", file=sys.stderr)
+            return 2
+        # Secrets come only from the mounted files, never from the environment.
+        return run_control(production_config, FileSecrets(production_config.secrets_dir))
     if args.command == "serve-synthetic":
         if not args.confirm_synthetic:
             print("Explicit synthetic confirmation required.", file=sys.stderr)

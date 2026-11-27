@@ -1,6 +1,6 @@
 """Closed production process configuration, file secrets and the Supabase DSN check.
 
-No service accepts this profile yet: M7-D2 wires it into the services and Compose.
+Only `serve-control-production --confirm-production` loads this profile.
 """
 
 import os
@@ -14,8 +14,10 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
-from markos_runtime.contracts.base import Domain, ValueModel, exact_int
+from markos_runtime.config import read_bounded
+from markos_runtime.contracts.base import ContractError, Domain, ValueModel, exact_int
 from markos_runtime.contracts.control import ControlValue
+from markos_runtime.control.api_config import SyntheticBillApiConfig
 from markos_runtime.control_lifecycle.config import (
     SERVICE_IDS,
     ControlSecretRef,
@@ -104,6 +106,8 @@ class ProductionServiceConfig(ControlValue):
     api_origin: str
     issuer_endpoint: str
     listen_host: Literal["0.0.0.0"] = "0.0.0.0"
+    # The gateway's private HTTPS port, behind Caddy.
+    gateway_port: int = Field(default=18443, ge=1024, le=65535)
     health_port: int = Field(ge=1024, le=65535)
     # Private TLS between services on the Compose network.
     ca_file: str
@@ -152,7 +156,7 @@ class ProductionServiceConfig(ControlValue):
     migrate_on_start: Literal[False] = False
 
     _exact_number = field_validator(
-        "health_port", "shutdown_seconds", "work_seconds", mode="before"
+        "health_port", "gateway_port", "shutdown_seconds", "work_seconds", mode="before"
     )(exact_int)
 
     @field_validator("api_origin")
@@ -186,8 +190,8 @@ class ProductionServiceConfig(ControlValue):
     def role(self) -> Self:
         if self.service_id != SERVICE_IDS[self.component]:
             raise ValueError("fixed component/service binding required")
-        if self.spaces is not None and self.component not in {"gateway", "mail"}:
-            raise ValueError("bill originals are for the gateway and the mail process only")
+        if (self.spaces is not None) != (self.component in {"gateway", "mail"}):
+            raise ValueError("the gateway and the mail process require the Spaces bucket")
         if self.mail_enabled != (self.component == "mail") and self.component != "gateway":
             raise ValueError("mail settings are for the gateway and the mail process only")
         if (self.mail_worker_public_key is not None) != (
@@ -267,3 +271,25 @@ def production_dsn(dsn: str, host: str, ca_file: str) -> None:
         or not info.get("user")
     ):
         raise FatalServiceError("verified production database required")
+
+
+def load_production(path: Path) -> ProductionServiceConfig:
+    try:
+        return ProductionServiceConfig.from_wire(read_bounded(path, 65536))
+    except (OSError, ValueError):
+        raise ContractError("invalid explicit production process configuration") from None
+
+
+class ProductionBillApiConfig(SyntheticBillApiConfig):
+    """The gateway's routes in production: the bill workflow on the public origin.
+
+    Only the production profile builds it. Tools and real accounts stay fixed off.
+    """
+
+    environment: Literal["production"] = "production"  # type: ignore[assignment]
+    production_profile: Literal["control-process-production-v1"]
+
+    @field_validator("api_origin")
+    @classmethod
+    def private_origin(cls, value: str) -> str:
+        return _https(value)

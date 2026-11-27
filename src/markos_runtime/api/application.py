@@ -140,8 +140,17 @@ class SyntheticApi:
         key: bytes,
         *,
         confirm_synthetic: bool = False,
+        confirm_production: bool = False,
     ) -> None:
-        if confirm_synthetic is not True or not isinstance(issuer, FixtureIssuer):
+        from markos_runtime.control_lifecycle.production import ProductionBillApiConfig
+
+        # Exactly one confirmation, and the production one only with the production profile.
+        production = isinstance(config, ProductionBillApiConfig)
+        if (
+            (confirm_synthetic is True) == (confirm_production is True)
+            or (confirm_production is True) != production
+            or not isinstance(issuer, FixtureIssuer)
+        ):
             raise ValueError("explicit fixture-only API confirmation required")
         self.config, self.store, self.issuer = config, store, issuer
         self.codec = SecretCodec(key)
@@ -339,13 +348,21 @@ def create_app(
     *,
     session_key: bytes,
     confirm_synthetic: bool = False,
+    confirm_production: bool = False,
     bill_objects: Any = None,
     mail_alerts: Any = None,
     mail_connect: Any = None,
     google_signin: bool = False,
 ) -> Any:
     # Imports are optional and occur only after an explicit factory invocation.
-    api = SyntheticApi(config, store, issuer, session_key, confirm_synthetic=confirm_synthetic)
+    api = SyntheticApi(
+        config,
+        store,
+        issuer,
+        session_key,
+        confirm_synthetic=confirm_synthetic,
+        confirm_production=confirm_production,
+    )
     # Google sign-in replaces the fixture code form. It needs the web pages and an issuer
     # that offers the Google operations.
     if google_signin and (

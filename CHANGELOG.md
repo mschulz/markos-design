@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-27 — M7-D2a services run the production profile
+
+- New command `serve-control-production --confirm-production`. It loads only `control-process-production-v1` and reads secrets only from `/run/secrets`. The synthetic commands still refuse the production profile.
+- `docs/decisions.md` records the owner's exception to "Everything runs synthetic" for this command. The listed gates still block real data.
+- Under the profile, every database DSN must pass the Supabase check. Google uses its real endpoints with system TLS trust. Bill originals go to Spaces, which the gateway and the mail process now require.
+- The issuer client reaches the issuer at `https://issuer:<port>/fixture` on the Compose network. The issuer has no seed file, so Google sign-in is the only way in, and the gateway always uses it.
+- The worker runs conversations without the fixture tool transport.
+- The gateway uses the new `ProductionBillApiConfig` route profile on the public origin, and listens on `gateway_port` (default 18443) behind Caddy.
+- The API and the conversation worker take exactly one confirmation: `confirm_synthetic` or `confirm_production`. The production one works only with the production route profile.
+
 ## 2026-11-27 — M7-D1 production profile
 
 - `control_lifecycle/production.py` adds `ProductionServiceConfig`, profile `control-process-production-v1`, with its own schema. It has no fixture settings: no seed or state file, no fixture Google, no tool server and no loopback-only endpoints.
