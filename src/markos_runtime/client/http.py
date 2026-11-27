@@ -1,4 +1,4 @@
-"""Bounded loopback HTTPS client and explicit private session-file boundary."""
+"""Bounded HTTPS client (loopback, or a public production origin) and private session file."""
 
 import http.client
 import json
@@ -19,6 +19,7 @@ from uuid import UUID
 from markos_runtime.contracts.base import ContractError
 from markos_runtime.contracts.control import ControlValue
 from markos_runtime.control.api_config import SyntheticApiConfig
+from markos_runtime.control_lifecycle.production import _https
 from markos_runtime.http_bounds import bounded_connection
 
 
@@ -151,11 +152,25 @@ class HttpClient:
     def __init__(
         self,
         origin: str,
-        ca_file: Path,
+        ca_file: Path | None,
         *,
         session_file: Path | None = None,
         confirm_synthetic: bool = False,
+        production: bool = False,
     ) -> None:
+        if production:
+            # Production: a public HTTPS origin, trusted through the system store.
+            if confirm_synthetic or ca_file is not None:
+                raise ClientError("production-takes-no-synthetic-options", 400)
+            try:
+                _https(origin)
+            except ValueError:
+                raise ClientError("invalid-explicit-https-configuration", 400) from None
+            self.tls = ssl.create_default_context()
+            self.origin = origin
+            self.url = urlsplit(origin)
+            self.session = SessionFile(session_file) if session_file else None
+            return
         if confirm_synthetic is not True:
             raise ClientError("explicit-synthetic-confirmation-required", 400)
         try:
