@@ -1,4 +1,4 @@
-"""Separate persisted synthetic issuer and bounded resource-bound client; no real IdP."""
+"""Separate synthetic issuer: PostgreSQL state, bounded resource-bound client, no real IdP."""
 
 import asyncio
 import hmac
@@ -9,23 +9,39 @@ import ssl
 import stat
 import tempfile
 import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Self, cast
 from urllib.parse import urlsplit
-from uuid import UUID
+from uuid import UUID, uuid4
 
+import jwt  # type: ignore[import-not-found]
+import psycopg
+import psycopg.sql
 from cryptography.hazmat.primitives import serialization  # type: ignore[import-not-found]
 from cryptography.hazmat.primitives.asymmetric import ec  # type: ignore[import-not-found]
+from psycopg.conninfo import conninfo_to_dict
+from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
+from psycopg_pool import AsyncConnectionPool, PoolTimeout
 
 from markos_runtime.api.identity import (
+    AUDIENCE,
+    ISSUER,
     TOKEN_PATTERN,
     FixtureIssuer,
     IdentityDenied,
     IdentityUnavailable,
+    SecretCodec,
+    challenge,
+    opaque,
     strict_json,
 )
+from markos_runtime.api.schema import EXPECTED_MIGRATIONS
 from markos_runtime.contracts.base import loopback_https
 from markos_runtime.http_bounds import bounded_connection
+from markos_runtime.store.database import _SafeConnection
 
 
 def private_json(path: Path, limit: int = 1048576) -> dict[str, Any]:
@@ -83,67 +99,208 @@ def save_private(path: Path, value: dict[str, Any]) -> None:
             Path(temporary).unlink(missing_ok=True)
 
 
-class DurableFixtureIssuer(FixtureIssuer):
-    def __init__(self, state_file: Path, seed_file: Path) -> None:
-        super().__init__()
-        self.state_file = state_file
-        if state_file.exists():
-            value = private_json(state_file)
-            if (
-                set(value)
-                != {"schema_version", "key", "kid", "accounts", "codes", "sessions", "refresh"}
-                or value["schema_version"] != 1
-            ):
-                raise IdentityUnavailable("invalid fixture snapshot")
-            key = serialization.load_pem_private_key(value["key"].encode(), password=None)
-            if not isinstance(key, ec.EllipticCurvePrivateKey) or not isinstance(
-                key.curve, ec.SECP256R1
-            ):
-                raise IdentityUnavailable("fixed fixture key required")
-            self._key = key
-            self.kid = value["kid"]
-            self._accounts = dict(value["accounts"])
-            self._codes = {
-                k: (v[0], v[1], v[2], UUID(v[3]), time.monotonic() + max(0, v[4] - time.time()))
-                for k, v in value["codes"].items()
-            }
-            self._sessions = {UUID(k): (v[0], v[1]) for k, v in value["sessions"].items()}
-            self._refresh = {k: (v[0], UUID(v[1]), v[2]) for k, v in value["refresh"].items()}
-            if any(
-                len(x) > 100 for x in (self._accounts, self._codes, self._sessions, self._refresh)
-            ):
-                raise IdentityUnavailable("fixture capacity exceeded")
-        else:
-            value = private_json(seed_file, 65536)
-            if set(value) != {"schema_version", "accounts"} or value["schema_version"] != 1:
-                raise IdentityUnavailable("explicit fixture seed required")
-            for account in value["accounts"]:
-                if set(account) != {"subject", "credential"}:
-                    raise IdentityUnavailable("fixed fixture seed required")
-                self.add_account(account["subject"], account["credential"])
-            self.commit()
+class IssuerStore:
+    """The issuer's private PostgreSQL state, reached only through `markos_issuer` functions."""
 
-    def commit(self) -> None:
-        pem = self._key.private_bytes(
+    def __init__(self, pool: AsyncConnectionPool[_SafeConnection]) -> None:
+        self._pool = pool
+
+    @classmethod
+    @asynccontextmanager
+    async def connect(cls, dsn: str) -> AsyncIterator[Self]:
+        try:
+            info = conninfo_to_dict(dsn)
+            if not all(info.get(k) for k in ("host", "dbname", "user")):
+                raise IdentityUnavailable("explicit issuer database target required")
+        except psycopg.Error:
+            raise IdentityUnavailable("invalid issuer database target") from None
+        pool: AsyncConnectionPool[_SafeConnection] = AsyncConnectionPool(
+            dsn,
+            connection_class=_SafeConnection,
+            min_size=0,
+            max_size=2,
+            timeout=5,
+            open=False,
+            reconnect_timeout=0,
+            kwargs={"autocommit": True, "row_factory": dict_row, "connect_timeout": 5},
+        )
+        try:
+            await pool.open()
+            async with pool.connection() as connection:
+                row = await (
+                    await connection.execute(
+                        "SELECT r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR "
+                        "pg_has_role(current_user,n.nspowner,'MEMBER') AS unsafe "
+                        "FROM pg_roles r CROSS JOIN pg_namespace n "
+                        "WHERE r.rolname=session_user AND n.nspname='markos_issuer'"
+                    )
+                ).fetchone()
+                if row is None or row["unsafe"]:
+                    raise IdentityUnavailable("non-admin issuer identity required")
+            yield cls(pool)
+        except (psycopg.Error, PoolTimeout):
+            raise IdentityUnavailable("issuer database unavailable") from None
+        finally:
+            await pool.close()
+
+    async def call(self, function: str, *args: object) -> Any:
+        # Function names are fixed call sites in this module, never request input.
+        try:
+            async with self._pool.connection() as conn, conn.transaction():
+                await conn.execute("SET LOCAL statement_timeout='5s'")
+                await conn.execute("SET LOCAL lock_timeout='1s'")
+                query = psycopg.sql.SQL("SELECT markos_issuer.{}({}) AS value").format(
+                    psycopg.sql.Identifier(function),
+                    psycopg.sql.SQL(",").join(psycopg.sql.Placeholder() for _ in args),
+                )
+                row = await (await conn.execute(query, args)).fetchone()
+                assert row is not None
+                return row["value"]
+        except (psycopg.Error, PoolTimeout):
+            raise IdentityUnavailable("issuer state unavailable") from None
+
+
+class StoredIssuer:
+    """Synthetic issuer whose keys, codes, sessions and refresh tokens live in PostgreSQL.
+
+    Fixture accounts come from the private seed file on every start and are never stored.
+    """
+
+    def __init__(self, store: IssuerStore, codec: SecretCodec, seed_file: Path) -> None:
+        self.store, self.codec = store, codec
+        value = private_json(seed_file, 65536)
+        if set(value) != {"schema_version", "accounts"} or value["schema_version"] != 1:
+            raise IdentityUnavailable("explicit fixture seed required")
+        accounts = value["accounts"]
+        if not isinstance(accounts, list) or len(accounts) > 100:
+            raise IdentityUnavailable("bounded fixture accounts required")
+        self._accounts: dict[str, str] = {}
+        for account in accounts:
+            if (
+                not isinstance(account, dict)
+                or set(account) != {"subject", "credential"}
+                or not isinstance(account["subject"], str)
+                or not 1 <= len(account["subject"]) <= 256
+                or not isinstance(account["credential"], str)
+                or not TOKEN_PATTERN.fullmatch(account["credential"])
+            ):
+                raise IdentityUnavailable("fixed fixture seed required")
+            self._accounts[account["credential"]] = account["subject"]
+
+    @staticmethod
+    def _new_key() -> tuple[str, ec.EllipticCurvePrivateKey]:
+        return uuid4().hex, ec.generate_private_key(ec.SECP256R1())
+
+    def _seal(self, key: ec.EllipticCurvePrivateKey) -> str:
+        pem = key.private_bytes(
             serialization.Encoding.PEM,
             serialization.PrivateFormat.PKCS8,
             serialization.NoEncryption(),
         ).decode()
-        save_private(
-            self.state_file,
-            {
-                "schema_version": 1,
-                "key": pem,
-                "kid": self.kid,
-                "accounts": self._accounts,
-                "codes": {
-                    k: [v[0], v[1], v[2], str(v[3]), time.time() + max(0, v[4] - time.monotonic())]
-                    for k, v in self._codes.items()
-                },
-                "sessions": {str(k): list(v) for k, v in self._sessions.items()},
-                "refresh": {k: [v[0], str(v[1]), v[2]] for k, v in self._refresh.items()},
-            },
+        return self.codec.seal(pem)
+
+    async def start(self) -> None:
+        if not await self.store.call("issuer_ready", Jsonb(EXPECTED_MIGRATIONS)):
+            raise IdentityUnavailable("issuer schema not ready")
+        if await self.store.call("issuer_key") is None:
+            kid, key = self._new_key()
+            await self.store.call("issuer_install_key", kid, self._seal(key), False)
+
+    async def _key(self) -> tuple[str, ec.EllipticCurvePrivateKey]:
+        row = await self.store.call("issuer_key")
+        if row is None:
+            raise IdentityUnavailable("issuer key unavailable")
+        try:
+            pem = self.codec.open(row["key_cipher"])
+        except IdentityDenied:
+            raise IdentityUnavailable("issuer key unreadable") from None
+        key = serialization.load_pem_private_key(pem.encode(), password=None)
+        if not isinstance(key, ec.EllipticCurvePrivateKey) or not isinstance(
+            key.curve, ec.SECP256R1
+        ):
+            raise IdentityUnavailable("fixed issuer key required")
+        return str(row["kid"]), key
+
+    async def _tokens(self, row: dict[str, Any], refresh: str) -> tuple[str, str]:
+        kid, key = await self._key()
+        now = int(row["now"])
+        claims = {
+            "iss": ISSUER,
+            "aud": AUDIENCE,
+            "sub": row["subject"],
+            "sid": str(UUID(str(row["session_id"]))),
+            "nonce": row["nonce"],
+            "token_kind": "human-access",
+            "iat": now,
+            "nbf": now,
+            "exp": now + 300,
+        }
+        token = jwt.encode(claims, key, algorithm="ES256", headers={"kid": kid, "typ": "JWT"})
+        return token, refresh
+
+    async def keys(self) -> bytes:
+        kid, key = await self._key()
+        jwk = cast(dict[str, Any], json.loads(jwt.algorithms.ECAlgorithm.to_jwk(key.public_key())))
+        jwk.update(kid=kid, alg="ES256", use="sig")
+        return json.dumps({"keys": [jwk]}).encode()
+
+    async def authorize(self, credential: str, pkce_challenge: str, nonce: str) -> str:
+        subject = self._accounts.get(credential)
+        if (
+            subject is None
+            or not TOKEN_PATTERN.fullmatch(pkce_challenge)
+            or not TOKEN_PATTERN.fullmatch(nonce)
+        ):
+            raise IdentityDenied("fixture authorization denied")
+        code = opaque()
+        try:
+            await self.store.call(
+                "issuer_authorize",
+                self.codec.lookup("issuer-code", code),
+                subject,
+                pkce_challenge,
+                nonce,
+            )
+        except IdentityUnavailable:
+            raise IdentityUnavailable("issuer authorization unavailable") from None
+        return code
+
+    async def exchange(self, code: str, verifier: str) -> tuple[str, str]:
+        if not TOKEN_PATTERN.fullmatch(code) or not TOKEN_PATTERN.fullmatch(verifier):
+            raise IdentityDenied("fixture exchange denied")
+        refresh = opaque()
+        row = await self.store.call(
+            "issuer_exchange",
+            self.codec.lookup("issuer-code", code),
+            challenge(verifier),
+            self.codec.lookup("issuer-refresh", refresh),
         )
+        if row is None:
+            raise IdentityDenied("fixture exchange denied")
+        return await self._tokens(row, refresh)
+
+    async def refresh(self, token: str) -> tuple[str, str]:
+        if not TOKEN_PATTERN.fullmatch(token):
+            raise IdentityDenied("fixture refresh denied")
+        refresh = opaque()
+        row = await self.store.call(
+            "issuer_refresh",
+            self.codec.lookup("issuer-refresh", token),
+            self.codec.lookup("issuer-refresh", refresh),
+        )
+        if row is None:
+            raise IdentityDenied("fixture refresh denied")
+        return await self._tokens(row, refresh)
+
+    async def session_active(self, subject: str, session_id: UUID) -> bool:
+        return bool(await self.store.call("issuer_session_active", subject, session_id))
+
+    async def revoke(self, session_id: UUID) -> None:
+        await self.store.call("issuer_revoke", session_id)
+
+    async def rotate_key(self) -> None:
+        kid, key = self._new_key()
+        await self.store.call("issuer_install_key", kid, self._seal(key), True)
 
 
 class RemoteFixtureIssuer(FixtureIssuer):
@@ -235,17 +392,14 @@ class RemoteFixtureIssuer(FixtureIssuer):
 
 
 def issuer_app(
-    issuer: DurableFixtureIssuer, endpoint: str, api_token: str, worker_token: str, admin_token: str
+    issuer: StoredIssuer, endpoint: str, api_token: str, worker_token: str, admin_token: str
 ) -> Any:
     from fastapi import FastAPI, Request  # type: ignore[import-not-found]
     from fastapi.responses import JSONResponse  # type: ignore[import-not-found]
 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-    lock = asyncio.Lock()
-    failed = False
 
     async def dispatch(request: Request) -> Any:
-        nonlocal failed
         try:
             async with asyncio.timeout(3):
                 if (
@@ -279,7 +433,7 @@ def issuer_app(
                     "worker": {"health", "session-active"},
                     "admin": {"revoke", "rotate", "health"},
                 }
-                if scope is None or op not in allowed[scope] or failed:
+                if scope is None or op not in allowed[scope]:
                     raise IdentityDenied("fixture authorization denied")
                 fields = {
                     "health": set(),
@@ -293,38 +447,27 @@ def issuer_app(
                 }
                 if set(body) != fields[op]:
                     raise IdentityDenied("closed fixture request")
-                async with lock:
-                    try:
-                        value: Any
-                        if op == "health":
-                            value = {"ready": True, "profile": "persisted-synthetic-issuer-v1"}
-                        elif op == "keys":
-                            value = json.loads(await issuer.keys())
-                        elif op == "authorize":
-                            value = issuer.authorize(
-                                body["credential"], body["challenge"], body["nonce"]
-                            )
-                        elif op == "exchange":
-                            value = await issuer.exchange(body["code"], body["verifier"])
-                        elif op == "refresh":
-                            value = await issuer.refresh(body["token"])
-                        elif op == "session-active":
-                            value = await issuer.session_active(
-                                body["subject"], UUID(body["session_id"])
-                            )
-                        elif op == "revoke":
-                            issuer.revoke(UUID(body["session_id"]))
-                            value = True
-                        else:
-                            issuer.rotate_key()
-                            value = True
-                    finally:
-                        if op not in {"health", "keys", "session-active"}:
-                            try:
-                                issuer.commit()
-                            except Exception:
-                                failed = True
-                                raise
+                value: Any
+                if op == "health":
+                    value = {"ready": True, "profile": "persisted-synthetic-issuer-v1"}
+                elif op == "keys":
+                    value = json.loads(await issuer.keys())
+                elif op == "authorize":
+                    value = await issuer.authorize(
+                        body["credential"], body["challenge"], body["nonce"]
+                    )
+                elif op == "exchange":
+                    value = await issuer.exchange(body["code"], body["verifier"])
+                elif op == "refresh":
+                    value = await issuer.refresh(body["token"])
+                elif op == "session-active":
+                    value = await issuer.session_active(body["subject"], UUID(body["session_id"]))
+                elif op == "revoke":
+                    await issuer.revoke(UUID(body["session_id"]))
+                    value = True
+                else:
+                    await issuer.rotate_key()
+                    value = True
                 return JSONResponse({"value": value}, headers={"Cache-Control": "no-store"})
         except IdentityDenied:
             return JSONResponse({"error": "denied"}, status_code=401)

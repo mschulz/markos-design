@@ -153,6 +153,12 @@
       "title": "Issuer Endpoint",
       "type": "string"
     },
+    "issuer_state_key_secret_ref": {
+      "default": "MARKOS_CONTROL_ISSUER_STATE_KEY",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Issuer State Key Secret Ref",
+      "type": "string"
+    },
     "issuer_worker_secret_ref": {
       "default": "MARKOS_CONTROL_ISSUER_WORKER_TOKEN",
       "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",

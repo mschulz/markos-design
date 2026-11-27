@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-27 — M7-B1 issuer state in PostgreSQL
+
+- Migration 0023 adds the `markos_issuer` schema. The issuer keeps its signing key, one-use codes, sessions and refresh tokens there instead of a private JSON file. A restart, backup or restore now covers them.
+- Only the new NOLOGIN group `markos_issuer_client` can call the issuer functions. The issuer connects with its own login. The runtime and gateway logins cannot reach issuer state.
+- The issuer seals its signing key with a new secret, `MARKOS_CONTROL_ISSUER_STATE_KEY`, before storing it. Codes and refresh tokens are stored as HMAC lookups only.
+- Database time sets every expiry: codes last 60 s, sessions 8 h.
+- Fixture accounts still come from the private seed file on each start and are never stored.
+- `DurableFixtureIssuer` and the issuer `state.json` are removed. The test bootstraps and the preview bootstrap create the new group and login.
+- An existing preview needs the new login and state key before it runs this version. Nothing upgrades it automatically.
+
 ## 2026-11-27 — M2-C1 mailbox opt-in storage and rules
 
 - Migration 0021. Only an `administrator` of the owner and domain can connect the mailbox, set its label allowlist or disconnect it. Each change writes the audit table and `markos_control.mail_history`, with its labels.
