@@ -1,0 +1,363 @@
+{
+  "$defs": {
+    "SpacesSettings": {
+      "additionalProperties": false,
+      "description": "The DigitalOcean Spaces bucket for bill originals. Keys come from secret files.",
+      "properties": {
+        "access_key_ref": {
+          "default": "MARKOS_CONTROL_SPACES_ACCESS_KEY",
+          "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+          "title": "Access Key Ref",
+          "type": "string"
+        },
+        "bucket": {
+          "pattern": "^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$",
+          "title": "Bucket",
+          "type": "string"
+        },
+        "endpoint": {
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "region": {
+          "pattern": "^[a-z0-9-]{1,32}$",
+          "title": "Region",
+          "type": "string"
+        },
+        "secret_key_ref": {
+          "default": "MARKOS_CONTROL_SPACES_SECRET_KEY",
+          "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+          "title": "Secret Key Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "endpoint",
+        "region",
+        "bucket"
+      ],
+      "title": "SpacesSettings",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "api_origin": {
+      "title": "Api Origin",
+      "type": "string"
+    },
+    "audit_password_secret_ref": {
+      "default": "MARKOS_CONTROL_AUDIT_PASSWORD",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Audit Password Secret Ref",
+      "type": "string"
+    },
+    "audit_url": {
+      "const": "https://rabbitmq:15671",
+      "default": "https://rabbitmq:15671",
+      "title": "Audit Url",
+      "type": "string"
+    },
+    "audit_user_secret_ref": {
+      "default": "MARKOS_CONTROL_AUDIT_USER",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Audit User Secret Ref",
+      "type": "string"
+    },
+    "broker_publisher_user": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Broker Publisher User",
+      "type": "string"
+    },
+    "broker_secret_ref": {
+      "default": "MARKOS_CONTROL_BROKER_DSN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Broker Secret Ref",
+      "type": "string"
+    },
+    "ca_file": {
+      "title": "Ca File",
+      "type": "string"
+    },
+    "certificate_file": {
+      "title": "Certificate File",
+      "type": "string"
+    },
+    "component": {
+      "enum": [
+        "gateway",
+        "issuer",
+        "publisher",
+        "completion-publisher",
+        "consumer",
+        "activity",
+        "worker",
+        "mail"
+      ],
+      "title": "Component",
+      "type": "string"
+    },
+    "database_ca_file": {
+      "title": "Database Ca File",
+      "type": "string"
+    },
+    "database_host": {
+      "title": "Database Host",
+      "type": "string"
+    },
+    "database_secret_ref": {
+      "default": "MARKOS_CONTROL_DATABASE_DSN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Database Secret Ref",
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "personal",
+        "research",
+        "work"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "environment": {
+      "const": "production",
+      "default": "production",
+      "title": "Environment",
+      "type": "string"
+    },
+    "google_client_id": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9]{1,32}-[a-z0-9]{1,64}\\.apps\\.googleusercontent\\.com$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Google Client Id"
+    },
+    "google_client_secret_ref": {
+      "default": "MARKOS_CONTROL_GOOGLE_CLIENT_SECRET",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Google Client Secret Ref",
+      "type": "string"
+    },
+    "google_signin_subjects": {
+      "anyOf": [
+        {
+          "maxProperties": 100,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[A-Za-z0-9_-]{1,255}$": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Google Signin Subjects"
+    },
+    "health_port": {
+      "maximum": 65535,
+      "minimum": 1024,
+      "title": "Health Port",
+      "type": "integer"
+    },
+    "issuer_admin_secret_ref": {
+      "default": "MARKOS_CONTROL_ISSUER_ADMIN_TOKEN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Issuer Admin Secret Ref",
+      "type": "string"
+    },
+    "issuer_api_secret_ref": {
+      "default": "MARKOS_CONTROL_ISSUER_API_TOKEN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Issuer Api Secret Ref",
+      "type": "string"
+    },
+    "issuer_endpoint": {
+      "title": "Issuer Endpoint",
+      "type": "string"
+    },
+    "issuer_state_key_secret_ref": {
+      "default": "MARKOS_CONTROL_ISSUER_STATE_KEY",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Issuer State Key Secret Ref",
+      "type": "string"
+    },
+    "issuer_worker_secret_ref": {
+      "default": "MARKOS_CONTROL_ISSUER_WORKER_TOKEN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Issuer Worker Secret Ref",
+      "type": "string"
+    },
+    "listen_host": {
+      "const": "0.0.0.0",
+      "default": "0.0.0.0",
+      "title": "Listen Host",
+      "type": "string"
+    },
+    "mail_database_secret_ref": {
+      "default": "MARKOS_CONTROL_MAIL_DATABASE_DSN",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Mail Database Secret Ref",
+      "type": "string"
+    },
+    "mail_enabled": {
+      "default": false,
+      "title": "Mail Enabled",
+      "type": "boolean"
+    },
+    "mail_token_key_secret_ref": {
+      "default": "MARKOS_CONTROL_MAIL_TOKEN_KEY",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Mail Token Key Secret Ref",
+      "type": "string"
+    },
+    "mail_worker_public_key": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9_-]{43}=$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Mail Worker Public Key"
+    },
+    "migrate_on_start": {
+      "const": false,
+      "default": false,
+      "title": "Migrate On Start",
+      "type": "boolean"
+    },
+    "owner_id": {
+      "format": "uuid",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "private_key_file": {
+      "title": "Private Key File",
+      "type": "string"
+    },
+    "profile": {
+      "const": "control-process-production-v1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "pubsub_topic": {
+      "anyOf": [
+        {
+          "pattern": "^projects/[a-z][a-z0-9-]{1,62}/topics/[A-Za-z][A-Za-z0-9._-]{1,254}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pubsub Topic"
+    },
+    "push_account": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z0-9-]{1,64}@[a-z0-9-]{1,64}\\.iam\\.gserviceaccount\\.com$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Push Account"
+    },
+    "real_tools_enabled": {
+      "const": false,
+      "default": false,
+      "title": "Real Tools Enabled",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "secrets_dir": {
+      "const": "/run/secrets",
+      "default": "/run/secrets",
+      "title": "Secrets Dir",
+      "type": "string"
+    },
+    "service_id": {
+      "enum": [
+        "control-gateway",
+        "control-test-agent",
+        "control-activity",
+        "control-mail"
+      ],
+      "title": "Service Id",
+      "type": "string"
+    },
+    "session_key_secret_ref": {
+      "default": "MARKOS_CONTROL_SESSION_KEY",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Session Key Secret Ref",
+      "type": "string"
+    },
+    "shutdown_seconds": {
+      "const": 15,
+      "default": 15,
+      "title": "Shutdown Seconds",
+      "type": "integer"
+    },
+    "spaces": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SpacesSettings"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "work_seconds": {
+      "const": 10,
+      "default": 10,
+      "title": "Work Seconds",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile",
+    "component",
+    "owner_id",
+    "domain",
+    "service_id",
+    "api_origin",
+    "issuer_endpoint",
+    "health_port",
+    "ca_file",
+    "certificate_file",
+    "private_key_file",
+    "database_host",
+    "database_ca_file",
+    "broker_publisher_user"
+  ],
+  "title": "ProductionServiceConfig",
+  "type": "object"
+}

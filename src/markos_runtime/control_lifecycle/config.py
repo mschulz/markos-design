@@ -13,6 +13,19 @@ from markos_runtime.contracts.control import ControlValue
 ControlSecretRef = Annotated[str, Field(pattern=r"^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$")]
 GoogleSubject = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,255}$")]
 MarkosSubject = Annotated[str, Field(min_length=1, max_length=256)]
+# Each component runs as one fixed database service identity.
+SERVICE_IDS = {
+    "gateway": "control-gateway",
+    "issuer": "control-gateway",
+    "mcp": "control-test-agent",
+    "publisher": "control-gateway",
+    "completion-publisher": "control-test-agent",
+    "consumer": "control-test-agent",
+    "activity": "control-activity",
+    "worker": "control-test-agent",
+    "google": "control-gateway",
+    "mail": "control-mail",
+}
 
 
 class ControlServiceConfig(ControlValue):
@@ -148,19 +161,7 @@ class ControlServiceConfig(ControlValue):
             raise ValueError("the Google sign-in switch is for the gateway only")
         if self.google_signin_subjects is not None and self.component != "issuer":
             raise ValueError("the Google subject map is for the issuer only")
-        expected = {
-            "gateway": "control-gateway",
-            "issuer": "control-gateway",
-            "mcp": "control-test-agent",
-            "publisher": "control-gateway",
-            "completion-publisher": "control-test-agent",
-            "consumer": "control-test-agent",
-            "activity": "control-activity",
-            "worker": "control-test-agent",
-            "google": "control-gateway",
-            "mail": "control-mail",
-        }
-        if self.service_id != expected[self.component]:
+        if self.service_id != SERVICE_IDS[self.component]:
             raise ValueError("fixed component/service binding required")
         if (
             len(
