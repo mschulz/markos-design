@@ -61,8 +61,13 @@ Bill deletion and original erasure are done in K1-D (see [k1-bill-knowledge.md](
 ## Open questions
 
 1. **Domain name** for `<host>`. Caddy and the Google redirect URIs need it.
-2. **Region.** Proposed: DigitalOcean `syd1` and Supabase `ap-southeast-2` (Sydney), so the VM, database and bucket are close together.
-3. **Sizes and plans.** The VM size, the Supabase plan and the Spaces plan. The Supabase plan must not pause on inactivity and must include backups. The 4 vCPU / 8 GiB VM in `docs/deployment.md` is an unmeasured proposal.
-4. **S3 client library.** Decided: a small SigV4 client on `httpx2`, so MarkOS keeps one HTTP library (M7-C).
+2. **Spaces plan.** The standard Spaces subscription is proposed. Its current price is not checked yet.
+
+Decided (see [m7-runbook.md](m7-runbook.md#choices)):
+
+- **Region:** DigitalOcean `syd1` and Supabase `ap-southeast-2` (Sydney), 2026-11-27.
+- **VM:** 2 vCPU / 4 GiB, Ubuntu 24.04, 2026-11-27. The 4 vCPU / 8 GiB VM in `docs/deployment.md` was an unmeasured proposal.
+- **Database:** Supabase Pro, 2026-11-27. It does not pause when idle and keeps 7 daily backups (M7-G).
+- **S3 client library:** a small SigV4 client on `httpx2`, so MarkOS keeps one HTTP library (M7-C).
 
 Checked at setup, not yet verified: that the Supabase `postgres` role can create the NOLOGIN groups and service logins, and whether Spaces supports object versioning or locks.
