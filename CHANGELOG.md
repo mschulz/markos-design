@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-28 — M7-J production issuer path
+
+- In production, the gateway and worker reach the issuer at `https://issuer:19080/issuer`, not `/fixture`. The issuer serves its operations under its configured endpoint path. The synthetic profile keeps `/fixture`, so the existing preview configs stay valid.
+- Owner decision: the issuer name `synthetic-issuer` stays. It is stored in every account row, and renaming it would need a migration.
+
 ## 2026-11-28 — M7 plan open questions
 
 - `docs/m7-production.md`: region, VM size and Supabase plan move from open questions to decided, matching the runbook. Domain and Spaces plan stay open.

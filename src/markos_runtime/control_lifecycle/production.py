@@ -167,7 +167,7 @@ class ProductionServiceConfig(ControlValue):
     @field_validator("issuer_endpoint")
     @classmethod
     def private_issuer(cls, value: str) -> str:
-        return _https(value, host="issuer", path="/fixture")
+        return _https(value, host="issuer", path="/issuer")
 
     @field_validator("database_host")
     @classmethod

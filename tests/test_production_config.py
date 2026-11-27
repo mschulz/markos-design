@@ -30,7 +30,7 @@ def config(**changes: Any) -> dict[str, Any]:
         "owner_id": "11111111-1111-4111-8111-111111111111",
         "domain": "personal",
         "api_origin": "https://markos.example.com",
-        "issuer_endpoint": "https://issuer:19444/fixture",
+        "issuer_endpoint": "https://issuer:19444/issuer",
         "health_port": 8780,
         "ca_file": "/etc/markos/ca.pem",
         "certificate_file": "/etc/markos/server.pem",
@@ -89,10 +89,10 @@ def test_a_gateway_loads_with_every_switch_off() -> None:
         ("api_origin", "https://markos.example.com/app"),
         ("api_origin", "https://user@markos.example.com"),
         # The issuer is private on the Compose network.
-        ("issuer_endpoint", "https://issuer.example.com/fixture"),
-        ("issuer_endpoint", "https://issuer/fixture"),
-        ("issuer_endpoint", "http://issuer:19444/fixture"),
-        ("issuer_endpoint", "https://issuer:80/fixture"),
+        ("issuer_endpoint", "https://issuer.example.com/issuer"),
+        ("issuer_endpoint", "https://issuer/issuer"),
+        ("issuer_endpoint", "http://issuer:19444/issuer"),
+        ("issuer_endpoint", "https://issuer:80/issuer"),
         # The database is a named host with an explicit CA.
         ("database_host", "127.0.0.1"),
         ("database_host", "postgres"),

@@ -55,7 +55,7 @@ def document(**changes: Any) -> dict[str, Any]:
         "owner_id": "11111111-1111-4111-8111-111111111111",
         "domain": "personal",
         "api_origin": ORIGIN,
-        "issuer_endpoint": "https://issuer:19444/fixture",
+        "issuer_endpoint": "https://issuer:19444/issuer",
         "health_port": 8780,
         "ca_file": "/etc/markos/ca.pem",
         "certificate_file": "/etc/markos/server.pem",
@@ -195,13 +195,13 @@ def test_the_issuer_client_uses_the_compose_name_only_in_production(tmp_path: Pa
     )
     ca = tmp_path / "ca.pem"
     ca.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
-    client = RemoteFixtureIssuer("https://issuer:19444/fixture", ca, TOKEN, production=True)
+    client = RemoteFixtureIssuer("https://issuer:19444/issuer", ca, TOKEN, production=True)
     assert (client.host, client.port) == ("issuer", 19444)
     with pytest.raises(IdentityUnavailable):
         RemoteFixtureIssuer("https://issuer:19444/fixture", ca, TOKEN)
     for endpoint in [
-        "https://127.0.0.1:19444/fixture",
-        "https://issuer.example.com:19444/fixture",
+        "https://127.0.0.1:19444/issuer",
+        "https://issuer.example.com:19444/issuer",
         "https://issuer:19444/other",
     ]:
         with pytest.raises(IdentityUnavailable):

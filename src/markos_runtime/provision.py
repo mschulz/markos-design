@@ -34,7 +34,7 @@ from markos_runtime.control_lifecycle.production import (
 
 ETC = Path("/etc/markos")
 VHOST = "markos"
-ISSUER_ENDPOINT = "https://issuer:19080/fixture"
+ISSUER_ENDPOINT = "https://issuer:19080/issuer"
 # Uids of the container users that read each secret.
 MARKOS_UID, RABBITMQ_UID = 10001, 999
 RABBITMQ_SECRETS = {"rabbitmq-definitions", "rabbitmq-tls-key"}
