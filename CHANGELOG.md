@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-27 — CI runs the tests that need the control extra
+
+- Five test files skip without the control extra: PDF reading, the Google fixture, mail sealing, the Gmail clients and the mail bill import. The `contracts` job has no extra, and the `control-api` job ran only `tests/control_api`, so no CI job ran them.
+- The `control-api` job now runs every test file that calls `pytest.importorskip`, outside the API, browser and process suites.
+- With `MARKOS_REQUIRE_CONTROL_EXTRA=1`, a file skipped for a missing import fails instead.
+
 ## 2026-11-27 — M2-C1 mailbox opt-in storage and rules
 
 - Migration 0021. Only an `administrator` of the owner and domain can connect the mailbox, set its label allowlist or disconnect it. Each change writes the audit table and `markos_control.mail_history`, with its labels.

@@ -45,7 +45,9 @@ They skip locally unless you point them at disposable services:
   `MARKOS_TEST_RABBIT_PASSWORD`: a disposable local RabbitMQ.
 
 CI sets `MARKOS_REQUIRE_*` flags so that a missing service fails instead of
-skipping. The API, browser, process, volume-loss and lifecycle suites run in
+skipping. Test files that call `pytest.importorskip` need the control extra. The
+`control-api` job runs them with `MARKOS_REQUIRE_CONTROL_EXTRA=1`, so a missing
+import fails there. The API, browser, process, volume-loss and lifecycle suites run in
 their own CI jobs; see `.github/workflows/runtime-contracts.yml`.
 
 To check the optional `control` profile on its own:

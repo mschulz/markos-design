@@ -170,6 +170,14 @@ jobs:
       - run: uv sync --locked --extra control --extra tools --group browser
       - run: uv run --no-sync mypy
       - run: uv run --no-sync pytest -q tests/control_api
+      # The contracts job has no control extra, so these files skip there. Run them here.
+      - name: Tests that need the control extra
+        env:
+          MARKOS_REQUIRE_CONTROL_EXTRA: '1'
+        run: |
+          files=$(grep -rl --include='*.py' 'importorskip' tests \
+            | grep -v -E '^tests/(control_api|browser|control_process)/')
+          uv run --no-sync pytest -q $files
       - name: Install pinned disposable Chromium
         run: uv run --no-sync python -m playwright install --with-deps chromium --only-shell
       - name: Browser web and CLI acceptance

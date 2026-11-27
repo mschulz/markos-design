@@ -1,9 +1,21 @@
+import os
 from typing import Any
 
 import pytest
 
 OWNER = "11111111-1111-4111-8111-111111111111"
 EVENT = "foundation.noop.requested"
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collectreport(report: pytest.CollectReport) -> None:
+    """With the control extra installed in CI, a test file skipped for a missing import fails."""
+    if (
+        os.environ.get("MARKOS_REQUIRE_CONTROL_EXTRA") == "1"
+        and report.skipped
+        and "could not import" in str(report.longrepr)
+    ):
+        report.outcome = "failed"
 
 
 @pytest.fixture
