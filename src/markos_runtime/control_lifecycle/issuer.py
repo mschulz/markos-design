@@ -166,8 +166,11 @@ class StoredIssuer:
     Fixture accounts come from the private seed file on every start and are never stored.
     """
 
-    def __init__(self, store: IssuerStore, codec: SecretCodec, seed_file: Path) -> None:
-        self.store, self.codec = store, codec
+    def __init__(
+        self, store: IssuerStore, codec: SecretCodec, seed_file: Path, google: Any = None
+    ) -> None:
+        # Google sign-in is off unless an explicit GoogleSignIn adapter is given.
+        self.store, self.codec, self.google = store, codec, google
         value = private_json(seed_file, 65536)
         if set(value) != {"schema_version", "accounts"} or value["schema_version"] != 1:
             raise IdentityUnavailable("explicit fixture seed required")
@@ -302,6 +305,55 @@ class StoredIssuer:
         kid, key = self._new_key()
         await self.store.call("issuer_install_key", kid, self._seal(key), True)
 
+    async def google_begin(self, pkce_challenge: str, nonce: str) -> dict[str, str]:
+        """Starts a Google sign-in bound to the gateway's PKCE challenge and nonce."""
+        if (
+            self.google is None
+            or not TOKEN_PATTERN.fullmatch(pkce_challenge)
+            or not TOKEN_PATTERN.fullmatch(nonce)
+        ):
+            raise IdentityDenied("Google sign-in denied")
+        state, google_nonce, verifier = opaque(), opaque(), opaque()
+        await self.store.call(
+            "issuer_google_begin",
+            self.codec.lookup("issuer-google-state", state),
+            self.codec.lookup("issuer-google-nonce", google_nonce),
+            self.codec.seal(verifier),
+            pkce_challenge,
+            nonce,
+        )
+        url = self.google.authorization_url(state, challenge(verifier), google_nonce)
+        return {"url": url, "state": state}
+
+    async def google_finish(self, state: str, code: str) -> str:
+        """Finishes a Google sign-in. Returns a one-use MarkOS code for the gateway's flow."""
+        if self.google is None or not TOKEN_PATTERN.fullmatch(state):
+            raise IdentityDenied("Google sign-in denied")
+        row = await self.store.call(
+            "issuer_google_take", self.codec.lookup("issuer-google-state", state)
+        )
+        if row is None:
+            raise IdentityDenied("Google sign-in denied")
+        subject, nonce = await self.google.sign_in(code, self.codec.open(row["verifier_cipher"]))
+        if not hmac.compare_digest(
+            self.codec.lookup("issuer-google-nonce", nonce), row["nonce_hash"]
+        ):
+            raise IdentityDenied("Google sign-in denied")
+        markos_code = opaque()
+        await self.store.call(
+            "issuer_authorize",
+            self.codec.lookup("issuer-code", markos_code),
+            subject,
+            row["challenge"],
+            row["nonce"],
+        )
+        return markos_code
+
+
+def slow(operation: str) -> float:
+    """Seconds an issuer request may take. Finishing a Google sign-in calls Google twice."""
+    return 10.0 if operation == "google-finish" else 2.5
+
 
 class RemoteFixtureIssuer(FixtureIssuer):
     def __init__(self, endpoint: str, ca_file: Path, credential: str) -> None:
@@ -324,14 +376,19 @@ class RemoteFixtureIssuer(FixtureIssuer):
             "health",
             "revoke",
             "rotate",
+            "google-begin",
+            "google-finish",
         }:
             raise IdentityDenied("unsupported fixture operation")
         raw = json.dumps(body, allow_nan=False).encode()
         if len(raw) > 65536:
             raise IdentityDenied("bounded fixture request required")
-        conn = http.client.HTTPSConnection("127.0.0.1", self.port, context=self.tls, timeout=2)
+        limit = slow(operation)
+        conn = http.client.HTTPSConnection(
+            "127.0.0.1", self.port, context=self.tls, timeout=limit - 0.5
+        )
         try:
-            with bounded_connection(conn, time.monotonic() + 2.5):
+            with bounded_connection(conn, time.monotonic() + limit):
                 conn.request(
                     "POST",
                     "/fixture/" + operation,
@@ -357,7 +414,7 @@ class RemoteFixtureIssuer(FixtureIssuer):
             conn.close()
 
     async def remote(self, operation: str, body: dict[str, Any]) -> Any:
-        async with asyncio.timeout(3):
+        async with asyncio.timeout(slow(operation) + 0.5):
             return await asyncio.to_thread(self.request, operation, body)
 
     def authorize(self, credential: str, pkce_challenge: str, nonce: str) -> str:
@@ -390,6 +447,15 @@ class RemoteFixtureIssuer(FixtureIssuer):
             await self.remote("session-active", {"subject": subject, "session_id": str(session_id)})
         ) is True
 
+    async def google_begin(self, pkce_challenge: str, nonce: str) -> dict[str, str]:
+        value = await self.remote("google-begin", {"challenge": pkce_challenge, "nonce": nonce})
+        if not isinstance(value, dict) or set(value) != {"url", "state"}:
+            raise IdentityUnavailable("fixture issuer unavailable")
+        return {"url": str(value["url"]), "state": str(value["state"])}
+
+    async def google_finish(self, state: str, code: str) -> str:
+        return str(await self.remote("google-finish", {"state": state, "code": code}))
+
 
 def issuer_app(
     issuer: StoredIssuer, endpoint: str, api_token: str, worker_token: str, admin_token: str
@@ -401,7 +467,7 @@ def issuer_app(
 
     async def dispatch(request: Request) -> Any:
         try:
-            async with asyncio.timeout(3):
+            async with asyncio.timeout(slow(request.path_params["operation"]) + 0.5):
                 if (
                     request.url.scheme != "https"
                     or request.headers.get("x-markos-resource") != endpoint
@@ -429,7 +495,16 @@ def issuer_app(
                     else None
                 )
                 allowed = {
-                    "api": {"authorize", "exchange", "refresh", "keys", "health", "session-active"},
+                    "api": {
+                        "authorize",
+                        "exchange",
+                        "refresh",
+                        "keys",
+                        "health",
+                        "session-active",
+                        "google-begin",
+                        "google-finish",
+                    },
                     "worker": {"health", "session-active"},
                     "admin": {"revoke", "rotate", "health"},
                 }
@@ -444,8 +519,10 @@ def issuer_app(
                     "session-active": {"subject", "session_id"},
                     "revoke": {"session_id"},
                     "rotate": set(),
+                    "google-begin": {"challenge", "nonce"},
+                    "google-finish": {"state", "code"},
                 }
-                if set(body) != fields[op]:
+                if set(body) != fields[op] or not all(isinstance(v, str) for v in body.values()):
                     raise IdentityDenied("closed fixture request")
                 value: Any
                 if op == "health":
@@ -462,6 +539,10 @@ def issuer_app(
                     value = await issuer.refresh(body["token"])
                 elif op == "session-active":
                     value = await issuer.session_active(body["subject"], UUID(body["session_id"]))
+                elif op == "google-begin":
+                    value = await issuer.google_begin(body["challenge"], body["nonce"])
+                elif op == "google-finish":
+                    value = await issuer.google_finish(body["state"], body["code"])
                 elif op == "revoke":
                     await issuer.revoke(UUID(body["session_id"]))
                     value = True

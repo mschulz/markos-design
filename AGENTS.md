@@ -7,7 +7,7 @@ The rules that matter most:
 
 - All code is in `src/markos_runtime/`. The v0.2 design (PARA, DuckDB, Obsidian,
   Markdown as source of truth) is abandoned.
-- Migrations in `infrastructure/migrations/` are append-only. The next is `0024`.
+- Migrations in `infrastructure/migrations/` are append-only. The next is `0025`.
 - Database tests drop databases. Point `MARKOS_TEST_ADMIN_DSN` only at a
   disposable local cluster, never at port 15432 or 5432.
 - Synthetic data only. Never commit or log secrets or personal data.

@@ -130,6 +130,32 @@
       "title": "Google Endpoint",
       "type": "string"
     },
+    "google_signin": {
+      "default": false,
+      "title": "Google Signin",
+      "type": "boolean"
+    },
+    "google_signin_subjects": {
+      "anyOf": [
+        {
+          "maxProperties": 100,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[A-Za-z0-9_-]{1,255}$": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Google Signin Subjects"
+    },
     "health_port": {
       "maximum": 65535,
       "minimum": 1024,

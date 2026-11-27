@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-27 — M7-B2 Google sign-in in the issuer
+
+- The issuer can sign a person in with Google: the authorization code flow with PKCE, scopes `openid` and `email`. It alone holds the OAuth client secret.
+- The issuer checks Google's ID token: RS256 against Google's published keys, Google's issuer, the client ID as audience, expiry, `azp` and the nonce.
+- A configured map from Google subject ID to MarkOS subject decides who may sign in. An email address never grants access.
+- After Google answers, the issuer mints its usual one-use MarkOS code, bound to the gateway's PKCE challenge and nonce. Tokens, sessions and the per-request session check do not change.
+- Migration 0024 stores each pending Google sign-in for 10 minutes, used once. The state and nonce are HMAC lookups, and the PKCE verifier is sealed.
+- The gateway's `/app/authorize` redirects to Google instead of showing the fixture code form. `/auth/google/callback` checks Google's state against a sealed cookie. A browser then finishes sign-in as before. The CLI shows a one-use code to paste.
+- Off by default. The gateway's `google_signin` switch and the issuer's `google_signin_subjects` map turn it on. Only the fixture Google is wired. Production settings follow in M7-D.
+
 ## 2026-11-27 — M7-B1 issuer state in PostgreSQL
 
 - Migration 0023 adds the `markos_issuer` schema. The issuer keeps its signing key, one-use codes, sessions and refresh tokens there instead of a private JSON file. A restart, backup or restore now covers them.
