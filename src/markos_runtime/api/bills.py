@@ -23,7 +23,7 @@ from markos_runtime.knowledge.bills import (
 from markos_runtime.knowledge.corrections import CorrectionRequest, effective, normalise
 from markos_runtime.knowledge.history import answer as history_answer
 from markos_runtime.knowledge.history import history, row
-from markos_runtime.knowledge.objects import BillObjectError, BillObjects
+from markos_runtime.knowledge.objects import BillObjectError, BillStore
 from markos_runtime.knowledge.pdf import PdfError, read_pages
 from markos_runtime.knowledge.profiles import PDF_PROFILES
 
@@ -39,7 +39,7 @@ def present(record: dict[str, Any]) -> dict[str, Any]:
 
 
 class BillRoutes:
-    def __init__(self, api: Any, objects: BillObjects) -> None:
+    def __init__(self, api: Any, objects: BillStore) -> None:
         self.api, self.objects = api, objects
 
     async def handle(self, request: Any, body: bytes) -> Any:

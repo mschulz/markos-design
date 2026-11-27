@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "markos-test",
+      "credentials": [{"accessKey": "markos-test", "secretKey": "synthetic-test-only"}],
+      "actions": ["Admin", "Read", "Write", "List"]
+    }
+  ]
+}
