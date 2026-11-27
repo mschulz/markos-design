@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-27 — K1-D bill deletion and original erasure
+
+- Migration `0025_bill_deletion.sql`: deleting a bill removes its record and corrections in one transaction and keeps only a tombstone (SHA-256, bill ID, file suffix, Gmail message pointer, erasure time). The deletion is audited.
+- `POST /api/v1/bills/{id}/delete` deletes a bill, then erases its original from local storage or Spaces. A missing object counts as erased. If erasure fails, the response is `503 bill-erasure-pending`, the bill stays deleted, and repeating the request retries the erasure. `GET /api/v1/bills` lists erasures still pending.
+- A pending tombstone refuses a manual re-import of the same original. After erasure, a manual re-import is allowed. A bill imported from Gmail is never imported again after deletion.
+- The mail worker checks the tombstone before it stores a PDF, and erases an original it stored if a deletion happened during the import.
+- Web app: a Delete button with a confirmation dialog, and a list of pending erasures. CLI: `bills`, and `bill-delete --bill-id <id>` (preview unless `--confirm`).
+
 ## 2026-11-27 — M7-E provisioning runbook and setup script
 
 - `docs/m7-runbook.md`: the owner's steps to provision the Sydney VM (2 vCPU, 4 GiB), firewall, domain, Supabase Pro project and Spaces bucket, then set up and start MarkOS. Nothing is provisioned.

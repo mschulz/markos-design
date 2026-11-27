@@ -61,7 +61,11 @@ class BillRoutes:
             owner,
             domain,
             method == "POST"
-            and (path in {"/api/v1/bills", PDF_PATH} or path.endswith("/corrections")),
+            and (
+                path in {"/api/v1/bills", PDF_PATH}
+                or path.endswith("/corrections")
+                or path.endswith("/delete")
+            ),
         )
         if path == PDF_PATH:
             if method != "POST":
@@ -74,7 +78,10 @@ class BillRoutes:
                 items = await api.store._call(
                     "list_bills", ctx.session_id, ctx.lookup_hash, owner, domain
                 )
-                return JSONResponse({"items": items})
+                pending = await api.store._call(
+                    "bill_erasures", ctx.session_id, ctx.lookup_hash, owner, domain
+                )
+                return JSONResponse({"items": items, "erasures_pending": pending})
             if method != "POST":
                 raise ApiFault("not-found", 404)
             value = BillImport.from_wire(body)
@@ -103,7 +110,7 @@ class BillRoutes:
             view = await self.history(ctx, owner, domain)
             return JSONResponse(history_answer(view, question.question))
         match = re.fullmatch(
-            r"/api/v1/bills/([a-f0-9-]{36})(/source|/questions|/corrections)?", path
+            r"/api/v1/bills/([a-f0-9-]{36})(/source|/questions|/corrections|/delete)?", path
         )
         if not match:
             raise ApiFault("not-found", 404)
@@ -111,6 +118,10 @@ class BillRoutes:
             bill_id = UUID(match[1])
         except ValueError:
             raise ApiFault("invalid", 400) from None
+        if match[2] == "/delete":
+            if method != "POST":
+                raise ApiFault("not-found", 404)
+            return JSONResponse(await self.delete(ctx, owner, domain, bill_id))
         record = await api.store._call(
             "read_bill", ctx.session_id, ctx.lookup_hash, owner, domain, bill_id
         )
@@ -177,6 +188,25 @@ class BillRoutes:
         if match[2]:
             raise ApiFault("not-found", 404)
         return JSONResponse(present(record))
+
+    async def delete(self, ctx: Any, owner: UUID, domain: str, bill_id: UUID) -> dict[str, Any]:
+        """Delete the bill, then erase its original and any earlier ones still pending."""
+        store = self.api.store
+        pending = await store._call(
+            "delete_bill", ctx.session_id, ctx.lookup_hash, owner, domain, bill_id
+        )
+        for item in pending:
+            try:
+                await asyncio.to_thread(
+                    self.objects.delete, owner, domain, item["source_sha256"], item["suffix"]
+                )
+            except (BillObjectError, OSError):
+                # The bill is gone. Its original stays listed as pending until a retry erases it.
+                raise ApiFault("bill-erasure-pending", 503) from None
+            await store._call(
+                "bill_erased", ctx.session_id, ctx.lookup_hash, owner, domain, item["source_sha256"]
+            )
+        return {"bill_id": str(bill_id), "deleted": True}
 
     async def history(self, ctx: Any, owner: UUID, domain: str) -> dict[str, Any]:
         """All bills in period order. Each original must pass its integrity check.

@@ -37,6 +37,10 @@ class BillWork(Protocol):
         self, fence: int, message_id: str, results: Sequence[dict[str, Any]]
     ) -> list[str] | None: ...
 
+    async def bill_deleted(self, fence: int, digest: str) -> bool | None: ...
+
+    async def bill_erased(self, fence: int, digest: str) -> bool | None: ...
+
 
 def bill_name(received_at: datetime) -> str:
     return f"Gmail bill {received_at:%Y-%m-%d}"
@@ -44,6 +48,8 @@ def bill_name(received_at: datetime) -> str:
 
 async def _result(
     gmail: GmailReader,
+    work: BillWork,
+    fence: int,
     objects: BillStore,
     owner: UUID,
     domain: str,
@@ -65,6 +71,9 @@ async def _result(
     if profile is None:
         return {"part_id": part.part_id, "kind": "unsupported"}
     digest = hashlib.sha256(body).hexdigest()
+    # A deleted bill is never stored again. A lost lease (None) also stores nothing.
+    if await work.bill_deleted(fence, digest) is not False:
+        return {"part_id": part.part_id, "kind": "deleted"}
     report = profile[1](pages, digest)
     try:
         await asyncio.to_thread(objects.put, owner, domain, body, ".pdf")
@@ -89,12 +98,19 @@ async def import_bills(
     outcomes: list[str] = []
     for message in due:
         results = [
-            await _result(gmail, objects, owner, domain, message, part)
+            await _result(gmail, work, fence, objects, owner, domain, message, part)
             for part in message.attachments
             if part.mime_type == PDF
         ]
         done = await work.finish_bill(fence, message.message_id, results)
         if done is None:
             return None
+        # The bill was deleted after the check above, so the original just stored is erased.
+        for result, outcome in zip(results, done, strict=True):
+            if result["kind"] == "save" and outcome == "deleted":
+                digest = result["source_sha256"]
+                await asyncio.to_thread(objects.delete, owner, domain, digest, ".pdf")
+                if await work.bill_erased(fence, digest) is None:
+                    return None
         outcomes += done
     return outcomes

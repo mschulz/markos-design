@@ -304,3 +304,74 @@ def test_history_orders_bills_answers_and_flags_a_changed_original(
             assert view["items"][1]["figures"] == {}
 
     asyncio.run(scenario())
+
+
+def test_delete_erases_the_original_and_a_failed_erasure_is_retried(
+    control: dict[str, Any], tmp_path: Path
+) -> None:
+    async def scenario() -> None:
+        async with web_server(control, tmp_path, bills=True, prepare_agent=False) as server:
+            operator = WebBrowserClient(server["port"], server["cert"])
+            await operator.login(server["issuer"], server["credentials"]["both"])
+            body = {"schema_version": 1, "name": "to delete", "text": SAMPLE}
+            status, saved = await operator.call("POST", "/api/v1/bills" + SCOPE, body)
+            assert status == 201, saved
+            path = "/api/v1/bills/" + saved["bill_id"]
+            fix = {"schema_version": 1, "key": "total_due", "value": "150", "reason": "Paper"}
+            assert (await operator.call("POST", path + "/corrections" + SCOPE, fix))[0] == 201
+            delete = {"schema_version": 1}
+            viewer = WebBrowserClient(server["port"], server["cert"])
+            await viewer.login(server["issuer"], server["credentials"]["viewer"])
+            assert (await viewer.call("POST", path + "/delete" + SCOPE, delete))[0] == 403
+            other = WebBrowserClient(server["port"], server["cert"])
+            await other.login(server["issuer"], server["credentials"]["other"])
+            assert (await other.call("POST", path + "/delete" + SCOPE, delete))[0] == 403
+            assert (await operator.call("GET", path + "/delete" + SCOPE))[0] == 404
+
+            # The object store fails: the bill is gone, and its original is listed as pending.
+            original = next((tmp_path / "bill-objects").rglob("*.txt"))
+            original.parent.chmod(0o500)
+            try:
+                status, fault = await operator.call("POST", path + "/delete" + SCOPE, delete)
+            finally:
+                original.parent.chmod(0o700)
+            assert (status, fault["code"]) == (503, "bill-erasure-pending")
+            assert original.exists()
+            status, page = await operator.call("GET", "/api/v1/bills" + SCOPE)
+            assert page == {"items": [], "erasures_pending": [{"bill_id": saved["bill_id"]}]}
+            assert (await operator.call("GET", path + SCOPE))[0] == 404
+            # A manual import of the same original waits until the erasure is done.
+            assert (await operator.call("POST", "/api/v1/bills" + SCOPE, body))[0] == 409
+
+            status, done = await operator.call("POST", path + "/delete" + SCOPE, delete)
+            assert (status, done) == (200, {"bill_id": saved["bill_id"], "deleted": True})
+            assert not original.exists()
+            status, page = await operator.call("GET", "/api/v1/bills" + SCOPE)
+            assert page == {"items": [], "erasures_pending": []}
+            with psycopg.connect(control["migration"]) as conn:
+                for table in ("bill_records", "bill_corrections"):
+                    query = "SELECT count(*) FROM markos_control." + table
+                    assert conn.execute(query).fetchone() == (0,)
+                assert conn.execute(
+                    "SELECT source_sha256,suffix,mail_message_id,erased_at IS NOT NULL "
+                    "FROM markos_control.bill_tombstones"
+                ).fetchall() == [(saved["source_sha256"], ".txt", None, True)]
+                assert conn.execute(
+                    "SELECT count(*) FROM markos_control.audit WHERE operation='bill-delete'"
+                ).fetchone() == (1,)
+                # Refill the 5-write burst budget, which this test has used up.
+                conn.execute("DELETE FROM markos_control.api_write_buckets")
+            # A retry after the erasure is still a success. An unknown bill is not found.
+            assert (await operator.call("POST", path + "/delete" + SCOPE, delete))[0] == 200
+            unknown = "/api/v1/bills/" + "0" * 8 + "-0000-4000-8000-" + "0" * 12
+            assert (await operator.call("POST", unknown + "/delete" + SCOPE, delete))[0] == 404
+
+            # The owner may save the same bill again. It is a new bill without corrections.
+            status, again = await operator.call("POST", "/api/v1/bills" + SCOPE, body)
+            assert status == 201 and again["bill_id"] != saved["bill_id"]
+            assert again["corrections"] == [] and original.exists()
+            with psycopg.connect(control["migration"]) as conn:
+                query = "SELECT count(*) FROM markos_control.bill_tombstones"
+                assert conn.execute(query).fetchone() == (0,)
+
+    asyncio.run(scenario())

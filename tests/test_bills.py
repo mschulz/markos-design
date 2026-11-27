@@ -129,3 +129,21 @@ def test_local_source_quota_and_duplicate_retry(tmp_path: Path) -> None:
         objects.put(OWNER, "personal", b"one over quota")
     assert objects.put(OWNER, "personal", b"first") == first
     assert objects.put(OWNER, "work", b"own separate quota")
+
+
+def test_local_delete_erases_one_original_and_frees_quota(tmp_path: Path) -> None:
+    root = tmp_path / "objects"
+    root.mkdir(mode=0o700)
+    objects = BillObjects(root)
+    digest = objects.put(OWNER, "personal", b"first")
+    objects.put(OWNER, "work", b"first")
+    objects.delete(OWNER, "personal", digest, ".txt")
+    with pytest.raises(FileNotFoundError):
+        objects.read(OWNER, "personal", digest)
+    objects.delete(OWNER, "personal", digest, ".txt")  # already erased
+    assert objects.read(OWNER, "work", digest) == b"first"
+    for bad in (("../x", ".txt"), (digest, ".sh")):
+        with pytest.raises(BillObjectError):
+            objects.delete(OWNER, "personal", *bad)
+    for number in range(100):
+        objects.put(OWNER, "personal", str(number).encode())

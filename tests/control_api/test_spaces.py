@@ -213,3 +213,36 @@ def test_store_refuses_unsigned_and_wrongly_signed_requests(s3: SpacesObjects) -
     wrong = SpacesObjects(s3.endpoint, s3.region, s3.bucket, s3.access_key, "wrong-secret")
     with pytest.raises(BillObjectError, match="refused"):
         wrong.read(owner, "personal", DIGEST)
+
+
+@pytest.mark.parametrize(
+    ("status", "erased"), [(204, True), (200, True), (404, True), (403, False)]
+)
+def test_delete_is_signed_and_a_missing_object_counts_as_erased(status: int, erased: bool) -> None:
+    seen: list[httpx2.Request] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        seen.append(request)
+        return httpx2.Response(status)
+
+    objects = adapter(handler)
+    if erased:
+        objects.delete(OWNER, "personal", DIGEST, ".pdf")
+    else:
+        with pytest.raises(BillObjectError, match="refused the delete"):
+            objects.delete(OWNER, "personal", DIGEST, ".pdf")
+    (request,) = seen
+    assert request.method == "DELETE"
+    assert request.url.path == f"/markos-bills/bills/{OWNER}/personal/{DIGEST}.pdf"
+    assert request.headers["authorization"].startswith("AWS4-HMAC-SHA256 ")
+
+
+def test_store_delete_erases_one_original_only(s3: SpacesObjects) -> None:
+    owner = uuid4()
+    s3.put(owner, "personal", BODY)
+    s3.put(owner, "work", BODY)
+    s3.delete(owner, "personal", DIGEST, ".txt")
+    with pytest.raises(BillObjectError, match="missing"):
+        s3.read(owner, "personal", DIGEST)
+    s3.delete(owner, "personal", DIGEST, ".txt")  # already erased
+    assert s3.read(owner, "work", DIGEST) == BODY

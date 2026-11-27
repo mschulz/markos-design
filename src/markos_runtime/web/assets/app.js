@@ -49,9 +49,13 @@
       stopped = true; clearPrivate(); message("Your session has expired. Sign in again to continue.");
       view.append(node("a", "Sign in", {href: "/app/sign-in"})); return;
     }
+    if (error.code === "bill-erasure-pending") {
+      run(async () => { await billsPage(); message("The bill is deleted. Its original is not erased yet. Use Finish deleting to try again."); });
+      return;
+    }
     const text = {403: "Your current permissions do not allow this action. Reload your workspace.",
       404: "This item is unavailable in the selected workspace.",
-      409: error.code === "resync-required" ? "Activity needs to be reloaded before updates can resume." : "The item changed. Reload it and review the change again.",
+      409: error.code === "resync-required" ? "Activity needs to be reloaded before updates can resume." : error.code === "conflict" && page === "bills" ? "This bill was deleted and its original is still being erased. Finish deleting it, then try again." : "The item changed. Reload it and review the change again.",
       413: "The request is too large.", 429: "A usage limit was reached. Wait before trying again.",
       400: "Check the input and try again.", 503: "The service is unavailable. No completion is assumed; retry the same pending request."};
     message(text[error.status] || "The request could not be completed.");
@@ -236,6 +240,11 @@
     if (list.items.length) view.append(button("Show bill history", () => showHistory()));
     for (const bill of list.items) view.append(button(bill.name, () => showBill(bill.bill_id)));
     if (!list.items.length) view.append(node("p", "No saved bills yet. Start with the sample or paste bill text."));
+    if (list.erasures_pending.length) {
+      view.append(node("h2", "Deleted bills"), node("p", "These bills are deleted. Their originals are not erased yet."));
+      for (const item of list.erasures_pending)
+        view.append(button("Finish deleting " + item.bill_id, () => deleteBill(item.bill_id)));
+    }
     view.append(node("section", undefined, {id: "bill-detail", "aria-label": "Bill details"}));
   }
   function where(evidence) {
@@ -293,6 +302,10 @@
       region.append(button(question, () => ask(question)));
     region.append(answers);
   }
+  async function deleteBill(id) {
+    await api(scoped("/api/v1/bills/" + id + "/delete"), {schema_version: 1});
+    await billsPage(); message("Bill deleted. Its original, figures and corrections are erased.");
+  }
   async function showBill(id) {
     const region = document.getElementById("bill-detail");
     const bill = await api(scoped("/api/v1/bills/" + id));
@@ -337,6 +350,10 @@
         page.lines.forEach((line, index) => source.append(node("p", (index + 1) + ": " + line)));
       }
     }), source);
+    if (can("operator")) region.append(button("Delete bill", () => review("Delete bill", [["Bill", bill.name],
+      ["Effect", "The original, figures and corrections are erased now. This cannot be undone."],
+      ["Mail", "A bill from mail is not imported again. You can still save the same bill yourself."]],
+      () => deleteBill(id))));
   }
   async function approvalsPage(cursor) {
     const value = await api(scoped("/api/v1/approvals") + (cursor ? "&cursor=" + encodeURIComponent(cursor) : ""));

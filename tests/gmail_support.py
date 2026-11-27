@@ -204,3 +204,9 @@ class MemoryWork(MemoryRecords):
         self, fence: int, message_id: str, results: Sequence[dict[str, Any]]
     ) -> list[str] | None:
         return None
+
+    async def bill_deleted(self, fence: int, digest: str) -> bool | None:
+        return False
+
+    async def bill_erased(self, fence: int, digest: str) -> bool | None:
+        return True

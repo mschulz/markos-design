@@ -183,6 +183,12 @@ class SpacesObjects:
             raise BillObjectError("bill object store refused the write")
         return digest
 
+    def delete(self, owner: UUID, domain: str, digest: str, suffix: str) -> None:
+        response = self.request("DELETE", self.key(owner, domain, digest, suffix))
+        response.close()
+        if response.status_code not in {200, 204, 404}:
+            raise BillObjectError("bill object store refused the delete")
+
     def read(self, owner: UUID, domain: str, digest: str, suffix: str = ".txt") -> bytes:
         path = self.key(owner, domain, digest, suffix)
         body = self.fetch(path, LIMITS[suffix])

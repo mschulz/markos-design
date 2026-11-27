@@ -298,3 +298,47 @@ def test_cli_login_command_persists_only_explicit_private_session(
             assert not session_path.exists()
 
     asyncio.run(scenario())
+
+
+def test_cli_lists_and_deletes_a_bill_only_when_confirmed(
+    control: dict[str, Any], tmp_path: Path, capsys: Any
+) -> None:
+    from markos_runtime.knowledge.bills import SAMPLE
+
+    async def scenario() -> None:
+        async with web_server(control, tmp_path, bills=True, prepare_agent=False) as server:
+            client = await cli_client(server, tmp_path)
+            assert client.session is not None
+            body = {"schema_version": 1, "name": "cli", "text": SAMPLE}
+            saved = await asyncio.to_thread(client.request, "/api/v1/bills" + SCOPE, body)
+            args = [
+                "--origin",
+                server["origin"],
+                "--ca-file",
+                str(server["cert"]),
+                "--session-file",
+                str(client.session.path),
+                "--confirm-synthetic",
+            ]
+            scope = ["--owner-id", OWNER, "--domain", "personal"]
+
+            def run(*extra: str) -> Any:
+                assert main(args + list(extra) + scope) == 0
+                return json.loads(capsys.readouterr().out)
+
+            listed = await asyncio.to_thread(run, "bills")
+            assert [b["bill_id"] for b in listed["items"]] == [saved["bill_id"]]
+            preview = await asyncio.to_thread(run, "bill-delete", "--bill-id", saved["bill_id"])
+            assert preview == {
+                "action": "bill-delete",
+                "bill_id": saved["bill_id"],
+                "applied": False,
+            }
+            assert (await asyncio.to_thread(run, "bills"))["items"] != []
+            done = await asyncio.to_thread(
+                run, "bill-delete", "--bill-id", saved["bill_id"], "--confirm"
+            )
+            assert done == {"bill_id": saved["bill_id"], "deleted": True}
+            assert await asyncio.to_thread(run, "bills") == {"items": [], "erasures_pending": []}
+
+    asyncio.run(scenario())

@@ -85,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
         "tool-dispatches",
         "tool-audit",
         "tool-reconcile",
+        "bills",
+        "bill-delete",
     ]
     for name in commands:
         item = sub.add_parser(name)
@@ -120,6 +122,9 @@ def main(argv: list[str] | None = None) -> int:
             "tool-reconcile",
         }:
             item.add_argument("--confirm-digest")
+        if name == "bill-delete":
+            item.add_argument("--bill-id", type=UUID, required=True)
+            item.add_argument("--confirm", action="store_true", help="Delete; without it, preview")
         if name in {"messages", "send", "message-status", "cancel"}:
             item.add_argument("--conversation-id", type=UUID, required=True)
         if name in {"message-status", "cancel"}:
@@ -242,6 +247,16 @@ def main(argv: list[str] | None = None) -> int:
             from markos_runtime.client.governance import execute
 
             return execute(client, args, owner, query, load, output)
+        if command == "bills":
+            output(client.request(scoped("/api/v1/bills")))
+            return 0
+        if command == "bill-delete":
+            path = scoped("/api/v1/bills/" + str(args.bill_id) + "/delete")
+            if not args.confirm:
+                output({"action": command, "bill_id": str(args.bill_id), "applied": False})
+                return 0
+            output(client.request(path, {"schema_version": 1}))
+            return 0
         if command == "watch":
             if not 1 <= args.max_events <= 100 or not 1 <= args.seconds <= 600:
                 raise ClientError("invalid-stream-bound", 400)
