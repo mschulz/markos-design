@@ -54,6 +54,8 @@ from markos_runtime.control.store import (
 
 COOKIE = "__Host-markos-session"
 FLOW_COOKIE = "__Host-markos-flow"
+# Google returns here after sign-in. The route exists only with Google sign-in on.
+GOOGLE_CALLBACK_PATH = "/auth/google/callback"
 
 
 # First match wins, so subclasses come before their parents. Anything else is 503.
@@ -145,6 +147,7 @@ class SyntheticApi:
         self.codec = SecretCodec(key)
         self.identity = IdentityVerifier(store, issuer)
         self.mail_available = False
+        self.google_signin = False
 
     def context(self, raw: str) -> SessionContext:
         try:
@@ -339,9 +342,19 @@ def create_app(
     bill_objects: Any = None,
     mail_alerts: Any = None,
     mail_connect: Any = None,
+    google_signin: bool = False,
 ) -> Any:
     # Imports are optional and occur only after an explicit factory invocation.
     api = SyntheticApi(config, store, issuer, session_key, confirm_synthetic=confirm_synthetic)
+    # Google sign-in replaces the fixture code form. It needs the web pages and an issuer
+    # that offers the Google operations.
+    if google_signin and (
+        not isinstance(config, SyntheticWebApiConfig)
+        or not callable(getattr(issuer, "google_begin", None))
+        or not callable(getattr(issuer, "google_finish", None))
+    ):
+        raise ValueError("Google sign-in requires the web profile and a Google-capable issuer")
+    api.google_signin = google_signin
     from fastapi import FastAPI, Request  # type: ignore[import-not-found]
     from fastapi.responses import (  # type: ignore[import-not-found]
         JSONResponse,
@@ -362,7 +375,9 @@ def create_app(
 
     bills = None
     if isinstance(config, SyntheticBillApiConfig):
-        if not isinstance(bill_objects, BillObjects):
+        from markos_runtime.knowledge.spaces import SpacesObjects
+
+        if not isinstance(bill_objects, (BillObjects, SpacesObjects)):
             raise ValueError("explicit private bill object adapter required")
         bills = BillRoutes(api, bill_objects)
     elif bill_objects is not None:
@@ -530,7 +545,11 @@ def create_app(
             "application/pdf" if bills is not None and path == PDF_PATH else "application/json"
         ):
             raise ApiFault("invalid", 400)
-        if web is not None and (path.startswith("/app") or path == "/auth/fixture/authorize"):
+        if web is not None and (
+            path.startswith("/app")
+            or path == "/auth/fixture/authorize"
+            or (google_signin and path == GOOGLE_CALLBACK_PATH)
+        ):
             return await web.handle(request, data)
         if path == "/live" and method == "GET":
             return JSONResponse({"live": True})

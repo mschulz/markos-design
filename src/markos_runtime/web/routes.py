@@ -1,4 +1,4 @@
-"""Static shells and explicit fixture login; private data comes only from the shared API."""
+"""Static shells, fixture login and Google sign-in; private data comes only from the shared API."""
 
 import hmac
 import json
@@ -10,12 +10,15 @@ from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
-from markos_runtime.api.application import FLOW_COOKIE, ApiFault
+from markos_runtime.api.application import FLOW_COOKIE, GOOGLE_CALLBACK_PATH, ApiFault
 from markos_runtime.api.identity import TOKEN_PATTERN, opaque
 from markos_runtime.api.schema import EXPECTED_MIGRATIONS
 from markos_runtime.contracts.control import ControlValue
 
 FIXTURE_COOKIE = "__Host-markos-fixture"
+# Binds Google's callback to the browser that started the sign-in. Sealed, 10 minutes.
+GOOGLE_COOKIE = "__Host-markos-google"
+GOOGLE_CALLBACK_PARAMS = {"state", "code", "scope", "authuser", "prompt", "hd", "iss", "error"}
 
 
 class FixtureAuthorization(ControlValue):
@@ -28,10 +31,71 @@ class WebRoutes:
     def __init__(self, api: Any) -> None:
         self.api = api
 
+    async def _issuer(self, operation: str, *args: str) -> Any:
+        """One issuer call under the shared sign-in admission lease."""
+        if not await self.api.store._call("api_ready", Jsonb(EXPECTED_MIGRATIONS)):
+            raise ApiFault("unavailable", 503)
+        lease = await self.api.store._call("api_auth_claim")
+        if lease is None:
+            raise ApiFault("unavailable", 503)
+        try:
+            return await getattr(self.api.issuer, operation)(*args)
+        finally:
+            await self.api.store._call("api_auth_release", UUID(str(lease)))
+
+    async def google_start(self, params: dict[str, str]) -> Any:
+        from fastapi.responses import RedirectResponse  # type: ignore[import-not-found]
+
+        started = await self._issuer("google_begin", params["code_challenge"], params["nonce"])
+        binding = {
+            "google_state": started["state"],
+            "state": params["state"],
+            "mode": params["mode"],
+            "expires": int(time.time()) + 600,
+        }
+        response = RedirectResponse(started["url"], status_code=303)
+        response.set_cookie(
+            GOOGLE_COOKIE,
+            self.api.codec.seal(json.dumps(binding)),
+            secure=True,
+            httponly=True,
+            samesite="lax",
+            path="/",
+            max_age=600,
+        )
+        return response
+
+    async def google_callback(self, request: Any) -> tuple[str, str]:
+        """Checks Google's callback against the browser's cookie. Returns the mode and code."""
+        params = self.api.query(request, GOOGLE_CALLBACK_PARAMS)
+        try:
+            bound = json.loads(
+                self.api.codec.open(self.api.cookies(request).get(GOOGLE_COOKIE, ""))
+            )
+            if (
+                set(bound) != {"google_state", "state", "mode", "expires"}
+                or bound["expires"] <= time.time()
+                or bound["mode"] not in {"browser", "cli"}
+            ):
+                raise ValueError
+        except Exception:
+            raise ApiFault("unauthenticated", 401) from None
+        if (
+            "error" in params
+            or not params.get("code")
+            or not hmac.compare_digest(params.get("state", ""), bound["google_state"])
+        ):
+            raise ApiFault("unauthenticated", 401)
+        code = str(await self._issuer("google_finish", params["state"], params["code"]))
+        if bound["mode"] == "cli":
+            return "cli", code
+        return "browser", "/auth/callback?" + urlencode({"state": bound["state"], "code": code})
+
     async def handle(self, request: Any, body: bytes) -> Any:
         from fastapi.responses import (  # type: ignore[import-not-found]
             HTMLResponse,
             JSONResponse,
+            RedirectResponse,
             Response,
         )
         from jinja2 import (  # type: ignore[import-not-found]
@@ -72,8 +136,10 @@ class WebRoutes:
             "bill_knowledge": hasattr(self.api.config, "bill_profile"),
             "mail": getattr(self.api, "mail_available", False),
             "synthetic_governance": hasattr(self.api.config, "governance_profile"),
+            "code": "",
         }
         response_cookie = None
+        google = getattr(self.api, "google_signin", False)
         if path == "/app/authorize" and method == "GET":
             params = self.api.query(request, {"state", "nonce", "code_challenge", "mode"})
             if (
@@ -88,6 +154,8 @@ class WebRoutes:
                 self.api.cookies(request).get(FLOW_COOKIE, "")
             ):
                 raise ApiFault("unauthenticated", 401)
+            if google:
+                return await self.google_start(params)
             response_cookie = opaque()
             context.update(
                 page="authorize",
@@ -96,7 +164,18 @@ class WebRoutes:
                 ),
                 proof=self.api.codec.lookup("fixture-csrf", response_cookie),
             )
+        elif path == GOOGLE_CALLBACK_PATH and method == "GET" and google:
+            mode, target = await self.google_callback(request)
+            if mode == "browser":
+                response = RedirectResponse(target, status_code=303)
+                response.delete_cookie(
+                    GOOGLE_COOKIE, secure=True, httponly=True, samesite="lax", path="/"
+                )
+                return response
+            context.update(title="Sign-in code", page="code", code=target)
         elif path == "/auth/fixture/authorize" and method == "POST":
+            if google:
+                raise ApiFault("not-found", 404)
             if request.headers.get("origin") != self.api.config.api_origin:
                 raise ApiFault("forbidden", 403)
             if not await self.api.store._call("api_ready", Jsonb(EXPECTED_MIGRATIONS)):
@@ -148,6 +227,10 @@ class WebRoutes:
             files("markos_runtime.web").joinpath("assets", "shell.html").read_text()
         )
         response = HTMLResponse(template.render(**context))
+        if context["page"] == "code":
+            response.delete_cookie(
+                GOOGLE_COOKIE, secure=True, httponly=True, samesite="lax", path="/"
+            )
         if response_cookie:
             response.set_cookie(
                 FIXTURE_COOKIE,

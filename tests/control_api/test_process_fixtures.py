@@ -1,6 +1,7 @@
 """Real TLS subprocess fixtures keep synthetic identity and effect state across restarts."""
 
 import asyncio
+import base64
 import json
 import os
 import socket
@@ -25,11 +26,13 @@ def port() -> int:
         return int(listener.getsockname()[1])
 
 
-def test_persisted_issuer_and_mcp_launch_from_independent_package(tmp_path: Path) -> None:
+def test_persisted_issuer_and_mcp_launch_from_independent_package(
+    tmp_path: Path, control: dict[str, Any]
+) -> None:
     tmp_path.chmod(0o700)
     cert, key = certificate(tmp_path)
     issuer_port, tool_port = port(), port()
-    api, worker, admin, tool, control = (opaque() for _ in range(5))
+    api, worker, admin, tool, fixture_admin = (opaque() for _ in range(5))
     credential = opaque()
     owner = UUID("11111111-1111-4111-8111-111111111111")
     env = {
@@ -38,7 +41,10 @@ def test_persisted_issuer_and_mcp_launch_from_independent_package(tmp_path: Path
         "MARKOS_CONTROL_ISSUER_WORKER_TOKEN": worker,
         "MARKOS_CONTROL_ISSUER_ADMIN_TOKEN": admin,
         "MARKOS_CONTROL_TOOL_TOKEN": tool,
-        "MARKOS_CONTROL_FIXTURE_ADMIN_TOKEN": control,
+        "MARKOS_CONTROL_FIXTURE_ADMIN_TOKEN": fixture_admin,
+        # The issuer keeps its state in the disposable test database.
+        "MARKOS_CONTROL_DATABASE_DSN": control["issuer"],
+        "MARKOS_CONTROL_ISSUER_STATE_KEY": base64.urlsafe_b64encode(os.urandom(32)).decode(),
     }
     files = []
     health_ports = []

@@ -7,6 +7,7 @@ import re
 import stat
 import tempfile
 from pathlib import Path
+from typing import Protocol
 from uuid import UUID
 
 from markos_runtime.knowledge.bills import MAX_TEXT_BYTES
@@ -21,6 +22,14 @@ class BillObjectError(ValueError):
 
 class BillStorageFull(BillObjectError):
     """The private bill folder holds its maximum number of originals."""
+
+
+class BillStore(Protocol):
+    """Where bill originals live: BillObjects (a local folder) or SpacesObjects (a bucket)."""
+
+    def put(self, owner: UUID, domain: str, body: bytes, suffix: str = ".txt") -> str: ...
+
+    def read(self, owner: UUID, domain: str, digest: str, suffix: str = ".txt") -> bytes: ...
 
 
 class BillObjects:

@@ -2,7 +2,8 @@
 
 | Path | Contents |
 |---|---|
-| `migrations/` | PostgreSQL migrations `0001`–`0022`. Append only: never edit an applied file; the next is `0023`. Applied only through the migration-role API, never at service start. |
+| `migrations/` | PostgreSQL migrations `0001`–`0024`. Append only: never edit an applied file; the next is `0025`. Applied only through the migration-role API, never at service start. |
+| `seaweedfs/` | The synthetic access key for the disposable SeaweedFS S3 store that the Spaces adapter tests use. Test only. |
 | `rabbitmq/` | Broker definitions (no credentials), the test broker config and the pinned version profile. An administrator applies topology; runtime identities cannot. |
 | `compose.m0-test.yml` | Disposable CI lifecycle harness (restart, pressure and restore drills). |
 | `compose.m0-replay-test.yml` | Disposable CI broker-volume-loss drill. |

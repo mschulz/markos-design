@@ -130,6 +130,32 @@
       "title": "Google Endpoint",
       "type": "string"
     },
+    "google_signin": {
+      "default": false,
+      "title": "Google Signin",
+      "type": "boolean"
+    },
+    "google_signin_subjects": {
+      "anyOf": [
+        {
+          "maxProperties": 100,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[A-Za-z0-9_-]{1,255}$": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Google Signin Subjects"
+    },
     "health_port": {
       "maximum": 65535,
       "minimum": 1024,
@@ -151,6 +177,12 @@
     "issuer_endpoint": {
       "default": "https://127.0.0.1:19444/fixture",
       "title": "Issuer Endpoint",
+      "type": "string"
+    },
+    "issuer_state_key_secret_ref": {
+      "default": "MARKOS_CONTROL_ISSUER_STATE_KEY",
+      "pattern": "^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Issuer State Key Secret Ref",
       "type": "string"
     },
     "issuer_worker_secret_ref": {

@@ -53,14 +53,17 @@ def admin_dsn() -> str:
             "markos_migrator",
             "markos_runtime_client",
             "markos_control_gateway",
+            "markos_issuer_client",
             "m1b_gateway",
+            "m1b_issuer",
             "m0b_unmapped",
         ] + [role[0] for role in ROLES.values()]:
             if connection.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (name,)).fetchone():
                 continue
             login = (
                 "NOLOGIN"
-                if name in {"markos_runtime_client", "markos_control_gateway"}
+                if name
+                in {"markos_runtime_client", "markos_control_gateway", "markos_issuer_client"}
                 else "LOGIN"
             )
             connection.execute(
@@ -74,6 +77,7 @@ def admin_dsn() -> str:
                 sql.SQL("GRANT markos_runtime_client TO {}").format(sql.Identifier(name))
             )
         connection.execute("GRANT markos_control_gateway TO m1b_gateway")
+        connection.execute("GRANT markos_issuer_client TO m1b_issuer")
     return dsn
 
 
@@ -90,6 +94,9 @@ def database(admin_dsn: str) -> Iterator[dict[str, str]]:
     }
     dsns["gateway"] = make_conninfo(
         admin_dsn, dbname=name, user="m1b_gateway", password="synthetic-test-only"
+    )
+    dsns["issuer"] = make_conninfo(
+        admin_dsn, dbname=name, user="m1b_issuer", password="synthetic-test-only"
     )
     dsns["migration"] = make_conninfo(
         admin_dsn, dbname=name, user="markos_migrator", password="synthetic-test-only"

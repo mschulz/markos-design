@@ -238,6 +238,7 @@ async def bootstrap() -> None:
             "markos_migrator",
             "markos_runtime_client",
             "markos_control_gateway",
+            "markos_issuer_client",
             *LOGINS.values(),
         ]:
             if conn.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (name,)).fetchone():
@@ -250,7 +251,12 @@ async def bootstrap() -> None:
                     sql.Identifier(name),
                     sql.SQL(
                         "NOLOGIN"
-                        if name in {"markos_runtime_client", "markos_control_gateway"}
+                        if name
+                        in {
+                            "markos_runtime_client",
+                            "markos_control_gateway",
+                            "markos_issuer_client",
+                        }
                         else "LOGIN"
                     ),
                 )
