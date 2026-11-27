@@ -50,12 +50,15 @@ def load(model: type[ControlValue], path: str) -> ControlValue:
 def main(argv: list[str] | None = None) -> int:
     parser = Parser(
         prog="markos-control",
-        description="Synthetic workspace client. All operations use the shared HTTPS API.",
+        description="Workspace client. All operations use the shared HTTPS API.",
     )
     parser.add_argument("--origin", required=True)
-    parser.add_argument("--ca-file", type=Path, required=True)
+    parser.add_argument("--ca-file", type=Path, help="Synthetic preview CA; not with --production")
     parser.add_argument("--session-file", type=Path, required=True)
     parser.add_argument("--confirm-synthetic", action="store_true")
+    parser.add_argument(
+        "--production", action="store_true", help="Public origin, system trust, Google sign-in"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     commands = [
         "login",
@@ -155,6 +158,7 @@ def main(argv: list[str] | None = None) -> int:
             args.ca_file,
             session_file=args.session_file,
             confirm_synthetic=args.confirm_synthetic,
+            production=args.production,
         )
         command = args.command
         if command == "login":
@@ -182,7 +186,10 @@ def main(argv: list[str] | None = None) -> int:
                     }
                 )
             )
-            print("Open this local test sign-in page, then paste its one-use code:")
+            if args.production:
+                print("Open this page, sign in with Google, then paste its one-use code:")
+            else:
+                print("Open this local test sign-in page, then paste its one-use code:")
             print(url)
             if args.open_browser:
                 webbrowser.open(url, new=2, autoraise=True)
