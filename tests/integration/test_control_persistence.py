@@ -609,6 +609,7 @@ def test_migration_upgrade_preserves_populated_m0_and_checksums(
         with psycopg.connect(control["migration"], autocommit=True) as conn:
             conn.execute("DROP SCHEMA markos_control CASCADE")
             conn.execute("DROP SCHEMA markos_runtime CASCADE")
+            conn.execute("DROP SCHEMA markos_issuer CASCADE")
         async with await psycopg.AsyncConnection.connect(
             control["migration"], autocommit=True, row_factory=dict_row
         ) as conn:
@@ -636,7 +637,7 @@ def test_migration_upgrade_preserves_populated_m0_and_checksums(
             )
             assert conn.execute(
                 "SELECT count(*) FROM markos_runtime.schema_migrations"
-            ).fetchone() == (22,)
+            ).fetchone() == (23,)
 
     asyncio.run(scenario())
 
@@ -973,6 +974,7 @@ def test_upgrade_populated_control_preserves_sessions_and_held_work(
         with psycopg.connect(control["migration"], autocommit=True) as conn:
             conn.execute("DROP SCHEMA markos_control CASCADE")
             conn.execute("DROP SCHEMA markos_runtime CASCADE")
+            conn.execute("DROP SCHEMA markos_issuer CASCADE")
         async with await psycopg.AsyncConnection.connect(
             control["migration"], autocommit=True, row_factory=dict_row
         ) as conn:

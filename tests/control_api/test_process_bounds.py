@@ -13,10 +13,17 @@ import psycopg
 import pytest
 
 from markos_runtime.api.application import create_app
-from markos_runtime.api.identity import FixtureIssuer, challenge, opaque
+from markos_runtime.api.identity import (
+    FixtureIssuer,
+    IdentityDenied,
+    IdentityUnavailable,
+    SecretCodec,
+    challenge,
+    opaque,
+)
 from markos_runtime.control.api_config import SyntheticApiConfig
 from markos_runtime.control.store import ControlDenied
-from markos_runtime.control_lifecycle.issuer import DurableFixtureIssuer, private_json, save_private
+from markos_runtime.control_lifecycle.issuer import IssuerStore, StoredIssuer, save_private
 from markos_runtime.http_bounds import bounded_connection
 from tests.control_store_support import HarnessStore
 
@@ -140,35 +147,60 @@ def test_absolute_deadline_closes_drip_feed_reader_thread(phase: str) -> None:
     assert not server.is_alive()
 
 
-def test_issuer_restart_preserves_provider_session_rotation_and_revocation(tmp_path: Path) -> None:
+def test_issuer_restart_preserves_provider_session_rotation_and_revocation(
+    tmp_path: Path, control: dict[str, Any]
+) -> None:
+    import os
+
+    import jwt  # type: ignore[import-not-found]
+
     tmp_path.chmod(0o700)
     seed = tmp_path / "seed.json"
-    state = tmp_path / "issuer.json"
     credential = opaque()
     save_private(
         seed, {"schema_version": 1, "accounts": [{"subject": "both", "credential": credential}]}
     )
-    first = DurableFixtureIssuer(state, seed)
-    verifier = opaque()
-    code = first.authorize(credential, challenge(verifier), opaque())
-    first.commit()
-    second = DurableFixtureIssuer(state, seed)
-    token, refresh = asyncio.run(second.exchange(code, verifier))
-    second.commit()
-    session_id = next(iter(second._sessions))
-    key = second.kid
-    third = DurableFixtureIssuer(state, seed)
-    assert third.kid == key and asyncio.run(third.session_active("both", session_id))
-    assert asyncio.run(third.refresh(refresh))[0] != token
-    third.revoke(session_id)
-    third.rotate_key()
-    third.commit()
-    fourth = DurableFixtureIssuer(state, seed)
-    assert fourth.kid != key and not asyncio.run(fourth.session_active("both", session_id))
-    assert private_json(state)["schema_version"] == 1
-    state.chmod(0o644)
-    with pytest.raises(ValueError):
-        private_json(state)
+    key = os.urandom(32)
+
+    async def scenario() -> None:
+        async def issuer(store: IssuerStore, codec_key: bytes = key) -> StoredIssuer:
+            stored = StoredIssuer(store, SecretCodec(codec_key), seed)
+            await stored.start()
+            return stored
+
+        # Each block is a fresh process: nothing survives except PostgreSQL rows.
+        async with IssuerStore.connect(control["issuer"]) as store:
+            first = await issuer(store)
+            verifier = opaque()
+            code = await first.authorize(credential, challenge(verifier), opaque())
+        async with IssuerStore.connect(control["issuer"]) as store:
+            second = await issuer(store)
+            token, refresh = await second.exchange(code, verifier)
+            with pytest.raises(IdentityDenied):
+                await second.exchange(code, verifier)
+            kid = jwt.get_unverified_header(token)["kid"]
+            session_id = UUID(jwt.decode(token, options={"verify_signature": False})["sid"])
+        async with IssuerStore.connect(control["issuer"]) as store:
+            third = await issuer(store)
+            assert kid.encode() in await third.keys()
+            assert await third.session_active("both", session_id)
+            assert (await third.refresh(refresh))[0] != token
+            with pytest.raises(IdentityDenied):
+                await third.refresh(refresh)
+            await third.revoke(session_id)
+            await third.rotate_key()
+        async with IssuerStore.connect(control["issuer"]) as store:
+            fourth = await issuer(store)
+            assert kid.encode() not in await fourth.keys()
+            assert not await fourth.session_active("both", session_id)
+            # A different state key cannot open the stored signing key.
+            with pytest.raises(IdentityUnavailable):
+                await (await issuer(store, os.urandom(32))).keys()
+        # The runtime login cannot reach issuer state.
+        with psycopg.connect(control["publisher"]) as conn, pytest.raises(psycopg.Error):
+            conn.execute("SELECT markos_issuer.issuer_key()")
+
+    asyncio.run(scenario())
 
 
 def test_runtime_readiness_and_heartbeat_share_the_current_epoch(control: dict[str, Any]) -> None:

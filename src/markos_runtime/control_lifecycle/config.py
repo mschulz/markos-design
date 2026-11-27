@@ -50,6 +50,7 @@ class ControlServiceConfig(ControlValue):
     issuer_api_secret_ref: ControlSecretRef = "MARKOS_CONTROL_ISSUER_API_TOKEN"
     issuer_worker_secret_ref: ControlSecretRef = "MARKOS_CONTROL_ISSUER_WORKER_TOKEN"
     issuer_admin_secret_ref: ControlSecretRef = "MARKOS_CONTROL_ISSUER_ADMIN_TOKEN"
+    issuer_state_key_secret_ref: ControlSecretRef = "MARKOS_CONTROL_ISSUER_STATE_KEY"
     tool_secret_ref: ControlSecretRef = "MARKOS_CONTROL_TOOL_TOKEN"
     fixture_admin_secret_ref: ControlSecretRef = "MARKOS_CONTROL_FIXTURE_ADMIN_TOKEN"
     session_key_secret_ref: ControlSecretRef = "MARKOS_CONTROL_SESSION_KEY"

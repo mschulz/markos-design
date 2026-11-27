@@ -21,7 +21,7 @@ from markos_runtime.control.api_config import SyntheticBillApiConfig, SyntheticG
 from markos_runtime.control.conversation import ConversationWorker
 from markos_runtime.control.store import ControlStore
 from markos_runtime.control_lifecycle.config import ControlServiceConfig
-from markos_runtime.control_lifecycle.issuer import DurableFixtureIssuer, RemoteFixtureIssuer
+from markos_runtime.control_lifecycle.issuer import RemoteFixtureIssuer
 from markos_runtime.lifecycle.health import HealthServer, HealthState
 from markos_runtime.lifecycle.service import FatalServiceError, isolated_dsn, secret
 from markos_runtime.store.database import DurableStore, StorageError
@@ -116,11 +116,30 @@ class ControlService:
         await self.http.serve()
 
     async def fixtures(self) -> None:
+        async with AsyncExitStack() as stack:
+            await self._fixtures(stack)
+
+    async def _fixtures(self, stack: AsyncExitStack) -> None:
         cfg, env = self.config, self.environ
         if cfg.component == "issuer":
-            from markos_runtime.control_lifecycle.issuer import issuer_app
+            from markos_runtime.api.identity import SecretCodec
+            from markos_runtime.control_lifecycle.issuer import (
+                IssuerStore,
+                StoredIssuer,
+                issuer_app,
+            )
 
-            issuer = DurableFixtureIssuer(Path(cfg.fixture_state_file), Path(cfg.fixture_seed_file))
+            dsn = secret(env, cfg.database_secret_ref)
+            isolated_dsn(dsn, ("markos_test_", "markos_m1g"))
+            try:
+                codec = SecretCodec(
+                    base64.urlsafe_b64decode(secret(env, cfg.issuer_state_key_secret_ref))
+                )
+            except ValueError:
+                raise FatalServiceError("explicit issuer state key required") from None
+            issuer_store = await stack.enter_async_context(IssuerStore.connect(dsn))
+            issuer = StoredIssuer(issuer_store, codec, Path(cfg.fixture_seed_file))
+            await issuer.start()
             tokens = [
                 secret(env, x)
                 for x in (

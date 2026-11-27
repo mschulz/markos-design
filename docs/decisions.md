@@ -219,7 +219,7 @@ Not built: bill and mail-record deletion, object erasure and backup expiry.
 
 ## Migrations are append-only and checksummed
 
-`infrastructure/migrations/NNNN_name.sql`: 0001–0022 exist; next is 0023.
+`infrastructure/migrations/NNNN_name.sql`: 0001–0023 exist; next is 0024.
 
 - Never edit an applied migration. The ledger stores SQL checksums, and a changed
   file blocks migration and API readiness.
