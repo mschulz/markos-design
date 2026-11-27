@@ -49,7 +49,7 @@ Each step is reviewed and merged separately. Tests never call Google, Supabase o
 
 1. **M7-A plan:** this document.
 2. **M7-B Google sign-in in the issuer:** the issuer's Google sign-in, the ID token check, the subject mapping and issuer state in PostgreSQL. Tests use the fixture Google, extended to issue ID tokens signed with a local test key.
-3. **M7-C Spaces adapter:** the S3-compatible bill object adapter. Tests run against a local S3-compatible container in CI.
+3. **M7-C Spaces adapter:** the S3-compatible bill object adapter. Tests run against a disposable SeaweedFS S3 container in CI. MinIO's images can no longer be pulled.
 4. **M7-D production profile and Compose:** the profile schema, file-based secrets, the Supabase database settings, Caddy and `compose.production.yml`. CI boots the file with local stand-ins for Supabase, Spaces and Google, and checks that every fixture path is off.
 5. **M7-E provisioning runbook:** docs only. The steps the owner follows to create the VM, firewall, domain, Supabase project, Spaces bucket and secret files. Nothing is provisioned without the owner's go-ahead.
 
@@ -60,6 +60,6 @@ Bill and mail-record deletion, object erasure and backup expiry (from the retent
 1. **Domain name** for `<host>`. Caddy and the Google redirect URIs need it.
 2. **Region.** Proposed: DigitalOcean `syd1` and Supabase `ap-southeast-2` (Sydney), so the VM, database and bucket are close together.
 3. **Sizes and plans.** The VM size, the Supabase plan and the Spaces plan. The Supabase plan must not pause on inactivity and must include backups. The 4 vCPU / 8 GiB VM in `docs/deployment.md` is an unmeasured proposal.
-4. **S3 client library.** A small SigV4 client on `httpx2`, or `boto3`. Proposed: `httpx2`, so MarkOS keeps one HTTP library.
+4. **S3 client library.** Decided: a small SigV4 client on `httpx2`, so MarkOS keeps one HTTP library (M7-C).
 
 Checked at setup, not yet verified: that the Supabase `postgres` role can create the NOLOGIN groups and service logins, and whether Spaces supports object versioning or locks.
