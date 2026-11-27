@@ -369,7 +369,10 @@ class RemoteFixtureIssuer(FixtureIssuer):
         host = "issuer" if production else "127.0.0.1"
         try:
             port = loopback_https(
-                endpoint, paths=frozenset({"/fixture"}), hosts=frozenset({host}), exact=False
+                endpoint,
+                paths=frozenset({"/issuer" if production else "/fixture"}),
+                hosts=frozenset({host}),
+                exact=False,
             )
             if urlsplit(endpoint).netloc != f"{host}:{port}":
                 raise ValueError
@@ -405,7 +408,7 @@ class RemoteFixtureIssuer(FixtureIssuer):
             with bounded_connection(conn, time.monotonic() + limit):
                 conn.request(
                     "POST",
-                    "/fixture/" + operation,
+                    urlsplit(self.endpoint).path + "/" + operation,
                     body=raw,
                     headers={
                         "Authorization": "Bearer " + self.credential,
@@ -569,5 +572,6 @@ def issuer_app(
         except Exception:
             return JSONResponse({"error": "unavailable"}, status_code=503)
 
-    app.add_api_route("/fixture/{operation}", dispatch, methods=["POST"])
+    # `/fixture` in the synthetic profile, `/issuer` in production.
+    app.add_api_route(urlsplit(endpoint).path + "/{operation}", dispatch, methods=["POST"])
     return app

@@ -237,8 +237,9 @@ These are checked for the first time when this runbook runs:
 
 1. CLI sign-in against production (`--production`, step 8.5) has run only against
    a local check, never a real server.
-2. The production issuer keeps the issuer name `synthetic-issuer` and the endpoint
-   path `/fixture`. The control contracts and the production config require them.
+2. The production issuer keeps the issuer name `synthetic-issuer`. It is an
+   internal label stored in every account row, and users never see it. Renaming it
+   needs a migration that rewrites those rows, so it stays (owner decision, 2026-11-28).
 
 ## Stop and remove
 
