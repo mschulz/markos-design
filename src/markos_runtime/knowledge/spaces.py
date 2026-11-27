@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote, urlsplit
 from uuid import UUID
+from xml.etree import ElementTree
 
 import httpx2  # type: ignore[import-not-found,unused-ignore]
 
@@ -42,6 +43,7 @@ def authorization(
     access_key: str,
     secret_key: str,
     region: str,
+    query: str = "",
 ) -> str:
     """Return the SigV4 Authorization header.
 
@@ -54,7 +56,7 @@ def authorization(
         [
             method,
             quote(path, safe="/-_.~"),
-            "",
+            query,
             "".join(f"{name}:{values[name]}\n" for name in names),
             signed,
             values["x-amz-content-sha256"],
@@ -120,7 +122,7 @@ class SpacesObjects:
             raise BillObjectError("invalid bill source reference")
         return f"/{self.bucket}/{self.prefix}/{owner}/{domain}/{digest}{suffix}"
 
-    def request(self, method: str, path: str, body: bytes = b"") -> Any:
+    def request(self, method: str, path: str, body: bytes = b"", query: str = "") -> Any:
         headers = {
             "host": self.host,
             "x-amz-date": self.clock().astimezone(UTC).strftime("%Y%m%dT%H%M%SZ"),
@@ -136,8 +138,9 @@ class SpacesObjects:
             access_key=self.access_key,
             secret_key=self.secret_key,
             region=self.region,
+            query=query,
         )
-        url = self.base + quote(path, safe="/-_.~")
+        url = self.base + quote(path, safe="/-_.~") + ("?" + query if query else "")
         built = self.http.build_request(method, url, headers=headers, content=body or None)
         try:
             return self.http.send(built, stream=True)
@@ -188,6 +191,29 @@ class SpacesObjects:
         response.close()
         if response.status_code not in {200, 204, 404}:
             raise BillObjectError("bill object store refused the delete")
+
+    def log_tombstone(self, owner: UUID, domain: str, name: str, body: bytes) -> None:
+        """Write one deletion record outside the database, so a restore can reapply it."""
+        path = f"/{self.bucket}/{self.prefix}-tombstones/{owner}/{domain}/{name}.json"
+        response = self.request("PUT", path, body)
+        response.close()
+        if response.status_code != 200:
+            raise BillObjectError("tombstone log refused the write")
+
+    def tombstones(self) -> list[bytes]:
+        """Every logged deletion record. Fails rather than return a partial list."""
+        prefix = quote(self.prefix + "-tombstones/", safe="-_.~")
+        response = self.request("GET", f"/{self.bucket}", query=f"list-type=2&prefix={prefix}")
+        listing = response.read()
+        response.close()
+        if response.status_code != 200:
+            raise BillObjectError("tombstone log refused the listing")
+        root = ElementTree.fromstring(listing)
+        ns = {"s3": root.tag.split("}")[0].strip("{")}
+        if root.findtext("s3:IsTruncated", namespaces=ns) == "true":
+            raise BillObjectError("tombstone log has more than one page")
+        keys = [k.text or "" for k in root.findall("s3:Contents/s3:Key", ns)]
+        return [self.fetch(f"/{self.bucket}/{key}", 4096) or b"" for key in keys]
 
     def read(self, owner: UUID, domain: str, digest: str, suffix: str = ".txt") -> bytes:
         path = self.key(owner, domain, digest, suffix)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-28 — M7-G tombstone log and restore replay
+
+- Each bill or mail-record deletion also writes a small tombstone file to the object store (Spaces in production), outside the database. A failed write returns 503, and deleting again retries it.
+- Migration `0027_tombstone_log.sql`: bill erasure entries carry the Gmail pointer; deleting a mail record twice succeeds; `reapply_tombstones()` replays logged tombstones, and only the migration role can run it.
+- `provision.sh reapply-tombstones`: after restoring a Supabase backup, erases each logged bill original again and reapplies every tombstone.
+- Owner decision: the database relies on Supabase Pro's 7 daily backups. Spaces originals have no backup. Runbook step 10 covers the restore.
+
 ## 2026-11-28 — M7-F mail record deletion
 
 - Migration `0026_mail_record_deletion.sql`: deleting a mail record removes its labels, attachment references and bill outcomes, and keeps a tombstone with only the Gmail message ID. A resync never stores that message again. The deletion is audited under a hash, not the message ID.

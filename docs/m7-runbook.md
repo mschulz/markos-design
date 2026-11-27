@@ -183,6 +183,34 @@ sudo tar -C /etc/markos -czf - site.json tls secrets | gpg -c > ~/markos-recover
 Attach `markos-recovery.tgz.gpg` to a password manager entry, store the passphrase
 there too, then delete the local file.
 
+## 10. Restore the database
+
+Supabase Pro keeps 7 daily backups. Deleted rows leave Supabase's backups when the
+last backup that holds them expires, after at most 7 days. Bill originals in Spaces
+have no backup, so an erased original is gone for good.
+
+Each deletion also writes a small tombstone file to Spaces, under
+`bills-tombstones/`. After a restore, replay those files, so that deletions made
+after the backup stay deleted:
+
+1. Stop MarkOS:
+
+   ```console
+   sudo -E $C stop
+   ```
+
+2. In the Supabase dashboard, open **Database > Backups** and restore the backup you need.
+3. Reapply the tombstones. It prints how many it applied:
+
+   ```console
+   sudo -E infrastructure/provision.sh reapply-tombstones
+   ```
+
+4. Start MarkOS again, as in step 7.
+
+Data written after the backup is lost. This step only makes sure that deleted
+bills and mail records stay deleted.
+
 ## Not verified yet
 
 These are checked for the first time when this runbook runs:
@@ -200,6 +228,8 @@ These are checked for the first time when this runbook runs:
    and has a `--confirm-synthetic` flag, built for the synthetic preview.
 2. The production issuer keeps the issuer name `synthetic-issuer` and the endpoint
    path `/fixture`. The control contracts and the production config require them.
+3. `reapply-tombstones` reads one listing page of up to 1000 tombstone files. It
+   stops with an error if there are more.
 
 ## Stop and remove
 

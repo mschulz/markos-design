@@ -209,9 +209,12 @@ Owner decisions, 2026-11-27:
   label import or resync does not import the bill again.
 - **Deleting a mail record** removes its labels and attachment references. A
   tombstone keeps the Gmail message ID, so a resync does not store it again.
-- **Backups:** 7 daily and 4 weekly encrypted snapshots. Deleted bytes leave
-  backups when the last snapshot that holds them expires, at most about 5
-  weeks. A restore reapplies tombstones before real access, as above.
+- **Backups:** owner decision, 2026-11-28: the database relies on Supabase Pro's
+  7 daily backups, and Spaces originals have no backup. Each tombstone is also
+  logged to Spaces, and a restore replays that log (M7-G). The earlier plan was
+  7 daily and 4 weekly encrypted snapshots. Deleted rows leave Supabase's
+  backups after at most 7 days. A restore reapplies tombstones before real
+  access, as above.
 - **Logs:** 14 days. Logs never hold mail content or bill values.
 - **Audit:** minimal audit metadata kept 365 days, with no mail content.
 

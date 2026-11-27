@@ -56,7 +56,7 @@ Each step is reviewed and merged separately. Tests never call Google, Supabase o
    - **M7-D2b Compose:** Caddy and `compose.production.yml`. CI boots the file with a local TLS PostgreSQL in place of Supabase, and checks health and that every fixture path is off. Google and Spaces are contacted only on use, so the boot test does not need them. A real Spaces upload is checked in M7-E's smoke test. The broker client and topology audit trust only the private CA in production, never the system store.
 5. **M7-E provisioning runbook:** [m7-runbook.md](m7-runbook.md) lists the steps the owner follows to create the VM, firewall, domain, Supabase project and Spaces bucket. `infrastructure/provision.sh` runs `markos_runtime.provision` inside the runtime image to write TLS files, secrets, configs and broker definitions, and to set up database roles and migrations. CI's boot test uses the same module. Nothing is provisioned without the owner's go-ahead.
 
-Bill deletion and original erasure are done in K1-D (see [k1-bill-knowledge.md](k1-bill-knowledge.md#k1-d-bill-deletion)). Mail-record deletion is done in M7-F (migration `0026`). Backup expiry follows as a separate PR.
+Bill deletion and original erasure are done in K1-D (see [k1-bill-knowledge.md](k1-bill-knowledge.md#k1-d-bill-deletion)). Mail-record deletion is done in M7-F (migration `0026`). Backup expiry is done in M7-G: Supabase keeps 7 daily backups, each tombstone is also logged to Spaces, and `provision.sh reapply-tombstones` replays the log after a restore (see [m7-runbook.md](m7-runbook.md)).
 
 ## Open questions
 

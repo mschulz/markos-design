@@ -6,6 +6,7 @@ cookie bound to the signed-in session. The callback seals the refresh token for 
 before it reaches the database, so the gateway never stores a token it can open.
 """
 
+import asyncio
 import hmac
 import json
 import re
@@ -23,6 +24,7 @@ from markos_runtime.api.identity import TOKEN_PATTERN, IdentityDenied, challenge
 from markos_runtime.contracts.base import Domain
 from markos_runtime.contracts.control import ControlValue
 from markos_runtime.control.store import ControlConflict, ControlDenied
+from markos_runtime.knowledge.objects import BillObjectError
 from markos_runtime.mail.gmail import ConsentDenied, Grant
 from markos_runtime.mail.optin import MailboxView, MailOptIn
 from markos_runtime.mail.sealing import SealError, seal
@@ -115,11 +117,24 @@ class MailConnect:
         if record and method == "POST":
             await api.write(request, ctx, binding, raw)
             MailRequest.from_wire(body)
-            return JSONResponse(
-                await api.store._call(
-                    "delete_mail_record", ctx.session_id, ctx.lookup_hash, owner, domain, record[1]
-                )
+            result = await api.store._call(
+                "delete_mail_record", ctx.session_id, ctx.lookup_hash, owner, domain, record[1]
             )
+            if api.tombstone_log is not None:
+                entry = {"kind": "mail", "owner_id": str(owner), "domain": domain}
+                entry["message_id"] = record[1]
+                try:
+                    await asyncio.to_thread(
+                        api.tombstone_log.log_tombstone,
+                        owner,
+                        domain,
+                        "mail-" + record[1],
+                        json.dumps(entry, sort_keys=True).encode(),
+                    )
+                except (BillObjectError, OSError):
+                    # The record is gone. Deleting it again retries the log write.
+                    raise ApiFault("mail-tombstone-pending", 503) from None
+            return JSONResponse(result)
         if method != "POST" or path not in {
             MAIL_PATH + "/connect",
             MAIL_PATH + "/labels",

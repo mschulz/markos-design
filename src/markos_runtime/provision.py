@@ -487,6 +487,41 @@ async def database(
             )
 
 
+async def reapply_tombstones(etc: Path, site: Site) -> int:
+    """After a database restore, replay the tombstone log from Spaces. Returns entries applied."""
+    import psycopg
+    from psycopg.conninfo import make_conninfo
+    from psycopg.types.json import Jsonb
+
+    from markos_runtime.knowledge.spaces import SpacesObjects
+
+    spaces = SpacesObjects(
+        site.spaces.endpoint,
+        site.spaces.region,
+        site.spaces.bucket,
+        read_secret(etc, "spaces-access-key"),
+        read_secret(etc, "spaces-secret-key"),
+    )
+    entries = [json.loads(body) for body in spaces.tombstones()]
+    for entry in entries:
+        if entry["kind"] == "bill":
+            # The backup may predate the erasure, so erase again. A missing original is fine.
+            spaces.delete(
+                UUID(entry["owner_id"]), entry["domain"], entry["source_sha256"], entry["suffix"]
+            )
+    spaces.http.close()
+    migrator = make_conninfo(
+        read_secret(etc, "migrator-database-dsn"),
+        sslrootcert=str(etc / "tls" / "supabase-ca.pem"),
+    )
+    async with await psycopg.AsyncConnection.connect(migrator, autocommit=True) as conn:
+        row = await (
+            await conn.execute("SELECT markos_control.reapply_tombstones(%s)", (Jsonb(entries),))
+        ).fetchone()
+    assert row is not None
+    return int(row[0])
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="provision", description="Owner-run production setup. Never prints a secret."
@@ -501,6 +536,7 @@ def main(argv: list[str] | None = None) -> int:
     steps.add_parser("definitions", help="Write the broker definitions secret")
     db = steps.add_parser("database", help="Roles, migrations and identities on Supabase")
     db.add_argument("--migrations", type=Path, default=Path("/opt/migrations"))
+    steps.add_parser("reapply-tombstones", help="After a restore, replay deletions from Spaces")
     args = parser.parse_args(argv)
     etc: Path = args.etc
     try:
@@ -531,6 +567,9 @@ def main(argv: list[str] | None = None) -> int:
                 print("rabbitmq-definitions exists; nothing changed.", file=sys.stderr)
                 return 1
             print("Stored rabbitmq-definitions.")
+        elif args.step == "reapply-tombstones":
+            applied = asyncio.run(reapply_tombstones(etc, load_site(etc)))
+            print(f"Reapplied {applied} tombstones.")
         else:
             site = load_site(etc)
             admin = read_secret(etc, "supabase-admin-dsn")
