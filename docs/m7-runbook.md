@@ -169,6 +169,17 @@ Every service must show `healthy`. Caddy gets its certificate on the first reque
 2. Start a conversation and send a message. You get a reply.
 3. Upload a **synthetic** test bill, never a real one. It appears in the bill list.
 4. In the DigitalOcean console, check that one object appeared in the bucket.
+5. On your Mac, in this repo, sign in with the CLI. The session folder must be
+   private (mode 700):
+
+   ```console
+   mkdir -m 700 -p ~/.markos
+   M="uv run markos-control --production --origin https://<domain> --session-file $HOME/.markos/s.json"
+   $M login --open-browser
+   ```
+
+   Sign in with Google, then paste the one-use code the page shows. Then `$M me`
+   shows your account, and `$M bills` lists the test bill.
 
 Stop here if a step fails. Record the result in the PR that closes M7-E.
 
@@ -224,8 +235,8 @@ These are checked for the first time when this runbook runs:
 
 ## Known gaps
 
-1. CLI sign-in against production is untested. The CLI client requires `--ca-file`
-   and has a `--confirm-synthetic` flag, built for the synthetic preview.
+1. CLI sign-in against production (`--production`, step 8.5) has run only against
+   a local check, never a real server.
 2. The production issuer keeps the issuer name `synthetic-issuer` and the endpoint
    path `/fixture`. The control contracts and the production config require them.
 3. `reapply-tombstones` reads one listing page of up to 1000 tombstone files. It
