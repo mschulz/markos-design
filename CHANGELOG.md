@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-28 — M7 plan open questions
+
+- `docs/m7-production.md`: region, VM size and Supabase plan move from open questions to decided, matching the runbook. Domain and Spaces plan stay open.
+
 ## 2026-11-28 — M7-I tombstone listing pages
 
 - `reapply-tombstones` follows S3 listing pages, so it reads every tombstone file, not only the first 1000.
