@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-27 — M7-D2b production Compose file and boot test
+
+- `infrastructure/compose.production.yml` runs Caddy, RabbitMQ and the 7 MarkOS services, with mail behind `--profile mail`. Images are pinned. Each service has a health check, resource limits, a restart policy, a read-only root and no capabilities. Each secret is a file mounted only into the services that read it.
+- `infrastructure/caddy/Caddyfile`: Caddy is the only public listener. It serves HTTPS for `MARKOS_DOMAIN` and verifies the gateway's certificate against the private CA.
+- `infrastructure/rabbitmq/production.conf`: TLS-only listeners. Users, permissions and topology load from a definitions secret at boot.
+- Fix: under the production profile, the broker client and the topology audit now trust the private CA. Before, they trusted only the system store, so production services could not reach the broker. The fixture paths are unchanged.
+- New CI job "Production profile boot" boots the file against a TLS PostgreSQL stand-in for Supabase. It checks that every service is healthy, Caddy is the only listener, sign-in redirects to Google and fixture login returns 404. It does not contact Google or Spaces.
+
 ## 2026-11-27 — M7-D2a services run the production profile
 
 - New command `serve-control-production --confirm-production`. It loads only `control-process-production-v1` and reads secrets only from `/run/secrets`. The synthetic commands still refuse the production profile.

@@ -77,8 +77,13 @@ class BrokerSession:
     @classmethod
     @asynccontextmanager
     async def connect(
-        cls, dsn: str, *, limits: TransportLimits | None = None
+        cls,
+        dsn: str,
+        *,
+        limits: TransportLimits | None = None,
+        trust: ssl.SSLContext | None = None,
     ) -> AsyncIterator[Self]:
+        """Connect over TLS. `trust` replaces the default store, e.g. with a private CA."""
         profile = limits or TransportLimits()
         url = endpoint(dsn)
         factory = AbortableFactory()
@@ -95,7 +100,7 @@ class BrokerSession:
                 heartbeat=profile.heartbeat_seconds,
                 reconnect_interval=1,
                 fail_fast=True,
-                ssl_context=ssl.create_default_context(),
+                ssl_context=trust or ssl.create_default_context(),
                 connection_class=TrackedConnection,
             )
         except Exception:

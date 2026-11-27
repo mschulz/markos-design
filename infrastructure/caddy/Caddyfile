@@ -1,0 +1,19 @@
+# The only public listener: HTTPS for MARKOS_DOMAIN, forwarded to the private gateway.
+# Caddy gets the certificate from Let's Encrypt. CI sets MARKOS_CADDY_TLS to "tls internal".
+{
+	admin 127.0.0.1:2019
+}
+
+{$MARKOS_DOMAIN} {
+	{$MARKOS_CADDY_TLS:}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy https://gateway:18443 {
+		transport http {
+			tls_trust_pool file /etc/caddy/markos-ca.pem
+			tls_server_name gateway
+		}
+	}
+}

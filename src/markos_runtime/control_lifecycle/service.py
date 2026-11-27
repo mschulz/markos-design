@@ -454,13 +454,20 @@ class ControlService:
                     or not target.path[1:].startswith("markos-test")
                 ):
                     raise FatalServiceError("owned TLS broker required")
-                broker = await stack.enter_async_context(BrokerSession.connect(raw))
+                # Production trusts only the private CA for the broker, never the system store.
+                trust = None
+                if self.production:
+                    import ssl
+
+                    trust = ssl.create_default_context(cafile=cfg.ca_file)
+                broker = await stack.enter_async_context(BrokerSession.connect(raw, trust=trust))
                 if cfg.component in {"publisher", "completion-publisher"}:
                     audit = TopologyAudit(
                         cfg.audit_url,
                         secret(env, cfg.audit_user_secret_ref),
                         secret(env, cfg.audit_password_secret_ref),
                         broker.vhost,
+                        trust,
                     )
                     publisher = Publisher(
                         broker, await broker.channel(publisher=True), store, audit
