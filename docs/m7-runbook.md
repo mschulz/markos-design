@@ -239,8 +239,6 @@ These are checked for the first time when this runbook runs:
    a local check, never a real server.
 2. The production issuer keeps the issuer name `synthetic-issuer` and the endpoint
    path `/fixture`. The control contracts and the production config require them.
-3. `reapply-tombstones` reads one listing page of up to 1000 tombstone files. It
-   stops with an error if there are more.
 
 ## Stop and remove
 
