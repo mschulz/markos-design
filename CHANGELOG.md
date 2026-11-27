@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-28 — M7-F mail record deletion
+
+- Migration `0026_mail_record_deletion.sql`: deleting a mail record removes its labels, attachment references and bill outcomes, and keeps a tombstone with only the Gmail message ID. A resync never stores that message again. The deletion is audited under a hash, not the message ID.
+- A bill imported from the message is kept, with its own SHA-256 and Gmail pointer.
+- `GET /api/v1/mail/records` lists the newest 100 records. `POST /api/v1/mail/records/{message_id}/delete` deletes one. Both exist only when Gmail opt-in is configured.
+- Web app: a Mail records list on the Mail page, with a Delete button and a confirmation dialog. CLI: `mail-records`, and `mail-record-delete --message-id <id>` (preview unless `--confirm`).
+
 ## 2026-11-27 — K1-D bill deletion and original erasure
 
 - Migration `0025_bill_deletion.sql`: deleting a bill removes its record and corrections in one transaction and keeps only a tombstone (SHA-256, bill ID, file suffix, Gmail message pointer, erasure time). The deletion is audited.

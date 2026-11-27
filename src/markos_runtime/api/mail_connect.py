@@ -28,6 +28,7 @@ from markos_runtime.mail.optin import MailboxView, MailOptIn
 from markos_runtime.mail.sealing import SealError, seal
 
 MAIL_PATH = "/api/v1/mail"
+RECORDS_PATH = MAIL_PATH + "/records"
 CALLBACK_PATH = "/api/v1/mail/callback"
 MAIL_FLOW_COOKIE = "__Host-markos-mail-flow"
 FLOW_SECONDS = 600
@@ -105,6 +106,20 @@ class MailConnect:
         mail = MailOptIn(api.store)
         if path == MAIL_PATH and method == "GET":
             return JSONResponse(present(await mail.read(ctx, owner, domain)))
+        if path == RECORDS_PATH and method == "GET":
+            items = await api.store._call(
+                "mail_records", ctx.session_id, ctx.lookup_hash, owner, domain
+            )
+            return JSONResponse({"items": items})
+        record = re.fullmatch(RECORDS_PATH + r"/([0-9a-f]{1,32})/delete", path)
+        if record and method == "POST":
+            await api.write(request, ctx, binding, raw)
+            MailRequest.from_wire(body)
+            return JSONResponse(
+                await api.store._call(
+                    "delete_mail_record", ctx.session_id, ctx.lookup_hash, owner, domain, record[1]
+                )
+            )
         if method != "POST" or path not in {
             MAIL_PATH + "/connect",
             MAIL_PATH + "/labels",

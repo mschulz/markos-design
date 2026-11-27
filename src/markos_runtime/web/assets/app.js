@@ -171,6 +171,19 @@
       view.append(node("p", b.imported + " imported, " + b.duplicate + " already stored, " + b.waiting + " waiting, " + b.review + " to review, " + b.rejected + " not readable."));
       if (b.review) view.append(node("p", "Bills to review are from an unknown supplier or over the bill limit. They stay in Gmail."));
     }
+    const records = await api(scoped("/api/v1/mail/records"));
+    view.append(node("h2", "Mail records"), node("p", records.items.length ? "MarkOS keeps a pointer to each message. The email stays in Gmail." : "No mail records are stored."));
+    for (const item of records.items) {
+      const card = node("article");
+      card.append(node("p", new Date(item.received_at).toLocaleString() + " · " + item.labels.join(", ") + " · " + item.attachments + " attachments"));
+      if (item.bill_outcomes.length) card.append(node("p", "Bill import: " + item.bill_outcomes.join(", ")));
+      if (can("operator")) card.append(button("Delete record", () => review("Delete mail record", [["Received", new Date(item.received_at).toLocaleString()],
+        ["Effect", "The record, its labels and attachment references are deleted now. The email stays in Gmail."],
+        ["Bills", "A bill imported from this message is kept."], ["Resync", "This message is not stored again."]], async () => {
+          await api(scoped("/api/v1/mail/records/" + item.message_id + "/delete"), {schema_version: 1}); await mailPage(); message("Mail record deleted.");
+        })));
+      view.append(card);
+    }
     if (!can("administrator")) { view.append(node("p", "Only a workspace administrator can change the mail connection.")); return; }
     if (box.state === "disconnecting") return;
     const form = node("form"), labels = field(form, "Allowed Gmail label IDs, separated by commas", "mail-labels", "text", 1400);

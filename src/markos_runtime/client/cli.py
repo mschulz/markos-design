@@ -87,6 +87,8 @@ def main(argv: list[str] | None = None) -> int:
         "tool-reconcile",
         "bills",
         "bill-delete",
+        "mail-records",
+        "mail-record-delete",
     ]
     for name in commands:
         item = sub.add_parser(name)
@@ -124,6 +126,9 @@ def main(argv: list[str] | None = None) -> int:
             item.add_argument("--confirm-digest")
         if name == "bill-delete":
             item.add_argument("--bill-id", type=UUID, required=True)
+            item.add_argument("--confirm", action="store_true", help="Delete; without it, preview")
+        if name == "mail-record-delete":
+            item.add_argument("--message-id", required=True, help="ID from mail-records")
             item.add_argument("--confirm", action="store_true", help="Delete; without it, preview")
         if name in {"messages", "send", "message-status", "cancel"}:
             item.add_argument("--conversation-id", type=UUID, required=True)
@@ -255,6 +260,16 @@ def main(argv: list[str] | None = None) -> int:
             if not args.confirm:
                 output({"action": command, "bill_id": str(args.bill_id), "applied": False})
                 return 0
+            output(client.request(path, {"schema_version": 1}))
+            return 0
+        if command == "mail-records":
+            output(client.request(scoped("/api/v1/mail/records")))
+            return 0
+        if command == "mail-record-delete":
+            if not args.confirm:
+                output({"action": command, "message_id": args.message_id, "applied": False})
+                return 0
+            path = scoped("/api/v1/mail/records/" + args.message_id + "/delete")
             output(client.request(path, {"schema_version": 1}))
             return 0
         if command == "watch":
