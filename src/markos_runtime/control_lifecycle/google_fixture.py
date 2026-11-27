@@ -1,4 +1,4 @@
-"""Synthetic Google for the fixture process: OAuth, the Gmail API and Pub/Sub push signing keys.
+"""Synthetic Google for the fixture process: OAuth, sign-in, the Gmail API and push signing keys.
 
 It serves Google's paths under one loopback origin, so the real clients in `mail/google.py` run
 unchanged against it. All state is in memory and every mailbox, code and token is invented.
@@ -18,6 +18,9 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from markos_runtime.api.identity import strict_json
 
 SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
+SIGNIN_SCOPE = "openid email"
+# The fixture owner's Google subject ID. Tests change it to sign in as someone else.
+SUBJECT = "100000000000000000001"
 ADDRESS = "owner@example.invalid"
 GMAIL = "/gmail/v1/users/me"
 MAX_FORM_BYTES = 8192
@@ -41,7 +44,9 @@ class FixtureMailbox:
     oldest: int = 1000
     messages: dict[str, FixtureMessage] = field(default_factory=dict)
     changes: list[tuple[int, str]] = field(default_factory=list)
-    codes: dict[str, tuple[str, str]] = field(default_factory=dict)
+    # code -> (PKCE challenge, redirect URI, scope, sign-in nonce)
+    codes: dict[str, tuple[str, str, str, str | None]] = field(default_factory=dict)
+    subject: str = SUBJECT
     refresh: set[str] = field(default_factory=set)
     access: set[str] = field(default_factory=set)
     watched: list[list[str]] = field(default_factory=list)
@@ -93,6 +98,7 @@ def google_app(
     audience: str,
     account: str,
     admin_token: str,
+    signin_redirect_uri: str | None = None,
 ) -> Any:
     import jwt  # type: ignore[import-not-found]
     from cryptography.hazmat.primitives.asymmetric.rsa import (  # type: ignore[import-not-found,unused-ignore]
@@ -150,21 +156,26 @@ def google_app(
 
     async def authorize(request: Request) -> Any:
         params = dict(request.query_params)
+        # Mail consent asks for Gmail read access. Sign-in asks for openid and email with a nonce.
+        signin = params.get("scope") == SIGNIN_SCOPE and signin_redirect_uri is not None
+        target = signin_redirect_uri if signin else redirect_uri
         if (
             params.get("client_id") != client_id
-            or params.get("redirect_uri") != redirect_uri
+            or params.get("redirect_uri") != target
             or params.get("response_type") != "code"
-            or params.get("scope") != SCOPE
+            or params.get("scope") not in {SCOPE, SIGNIN_SCOPE}
             or params.get("code_challenge_method") != "S256"
             or not params.get("code_challenge")
             or not params.get("state")
+            or signin != bool(params.get("nonce"))
         ):
             return error(400, "invalid_request")
+        assert target is not None
         # The fixture owner always approves. A real owner sees Google's consent screen here.
         code = "4/fixture-" + secrets.token_urlsafe(24)
-        box.codes[code] = (params["code_challenge"], redirect_uri)
-        query = urlencode({"state": params["state"], "code": code, "scope": SCOPE})
-        return RedirectResponse(redirect_uri + "?" + query, status_code=303)
+        box.codes[code] = (params["code_challenge"], target, params["scope"], params.get("nonce"))
+        query = urlencode({"state": params["state"], "code": code, "scope": params["scope"]})
+        return RedirectResponse(target + "?" + query, status_code=303)
 
     async def token(request: Request) -> Any:
         values = await form(request)
@@ -180,6 +191,23 @@ def google_app(
                 or values.get("redirect_uri") != expected[1]
             ):
                 return error(400, "invalid_grant")
+            if expected[2] == SIGNIN_SCOPE:
+                now = int(time.time())
+                claims = {
+                    "iss": "https://accounts.google.com",
+                    "azp": client_id,
+                    "aud": client_id,
+                    "sub": box.subject,
+                    "email": ADDRESS,
+                    "email_verified": True,
+                    "nonce": expected[3],
+                    "iat": now,
+                    "exp": now + 3600,
+                }
+                signed = jwt.encode(claims, signing, algorithm="RS256", headers={"kid": kid})
+                return JSONResponse(
+                    {"access_token": issue_access(), "id_token": signed, "scope": SIGNIN_SCOPE}
+                )
             refresh = "1//fixture-" + secrets.token_urlsafe(24)
             box.refresh.add(refresh)
             return JSONResponse(
@@ -295,6 +323,11 @@ def google_app(
                 "subscription": "projects/markos-fixture/subscriptions/gmail-push",
             }
             return JSONResponse({"token": signed, "body": envelope})
+        if operation == "subject" and set(value) == {"operation", "subject"}:
+            if not isinstance(value["subject"], str) or not 1 <= len(value["subject"]) <= 255:
+                raise ValueError("subject required")
+            box.subject = value["subject"]
+            return JSONResponse({"subject": box.subject})
         if operation == "state" and set(value) == {"operation"}:
             return JSONResponse(
                 {

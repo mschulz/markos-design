@@ -11,6 +11,8 @@ from markos_runtime.contracts.base import ContractError, Domain, exact_int, loop
 from markos_runtime.contracts.control import ControlValue
 
 ControlSecretRef = Annotated[str, Field(pattern=r"^MARKOS_CONTROL_[A-Z][A-Z0-9_]{0,63}$")]
+GoogleSubject = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,255}$")]
+MarkosSubject = Annotated[str, Field(min_length=1, max_length=256)]
 
 
 class ControlServiceConfig(ControlValue):
@@ -67,6 +69,12 @@ class ControlServiceConfig(ControlValue):
     mail_database_secret_ref: ControlSecretRef = "MARKOS_CONTROL_MAIL_DATABASE_DSN"
     mail_token_key_secret_ref: ControlSecretRef = "MARKOS_CONTROL_MAIL_TOKEN_KEY"
     mail_worker_public_key: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{43}=$")
+    # Google sign-in is off unless the gateway sets google_signin and the issuer sets the map
+    # from Google subject ID to MarkOS subject. Google is the fixture Google.
+    google_signin: bool = False
+    google_signin_subjects: dict[GoogleSubject, MarkosSubject] | None = Field(
+        default=None, min_length=1, max_length=100
+    )
     push_account: str = Field(
         default="gmail-push@markos-fixture.iam.gserviceaccount.test",
         pattern=r"^[a-z0-9-]{1,64}@[a-z0-9-]{1,64}\.iam\.gserviceaccount\.test$",
@@ -136,6 +144,10 @@ class ControlServiceConfig(ControlValue):
             self.component == "gateway" and self.mail_enabled
         ):
             raise ValueError("a mail gateway requires the mail worker public key")
+        if self.google_signin and self.component != "gateway":
+            raise ValueError("the Google sign-in switch is for the gateway only")
+        if self.google_signin_subjects is not None and self.component != "issuer":
+            raise ValueError("the Google subject map is for the issuer only")
         expected = {
             "gateway": "control-gateway",
             "issuer": "control-gateway",
