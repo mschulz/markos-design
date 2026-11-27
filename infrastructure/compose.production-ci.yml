@@ -1,0 +1,41 @@
+# CI only: boots compose.production.yml against disposable stand-ins. Never deployed.
+# tests/production_boot/support.py writes MARKOS_ETC and drives this file.
+services:
+  # Stands in for Supabase: PostgreSQL 17 with TLS, under the configured database host.
+  supabase:
+    image: postgres:17.11
+    environment:
+      POSTGRES_PASSWORD: synthetic-test-only
+    # PostgreSQL refuses a key that its own user does not own, so copy it in as root first.
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        install -o postgres -g postgres -m 0600 /tls/db.key /tmp/db.key &&
+        exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tls/db.pem
+        -c ssl_key_file=/tmp/db.key
+    volumes:
+      - ${MARKOS_ETC:?explicit CI folder required}/standin/db.pem:/tls/db.pem:ro
+      - ${MARKOS_ETC:?explicit CI folder required}/standin/db.key:/tls/db.key:ro
+    ports: ['127.0.0.1:${MARKOS_CI_POSTGRES_PORT:?explicit port required}:5432']
+    networks:
+      default:
+        aliases: [db.markos-ci.test]
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  caddy:
+    environment:
+      MARKOS_CADDY_TLS: tls internal
+    ports: !override ['127.0.0.1:${MARKOS_CI_HTTPS_PORT:?explicit port required}:443']
+
+  gateway: {depends_on: {supabase: {condition: service_healthy}}}
+  issuer: {depends_on: {supabase: {condition: service_healthy}}}
+  publisher: {depends_on: {supabase: {condition: service_healthy}}}
+  completion-publisher: {depends_on: {supabase: {condition: service_healthy}}}
+  consumer: {depends_on: {supabase: {condition: service_healthy}}}
+  activity: {depends_on: {supabase: {condition: service_healthy}}}
+  worker: {depends_on: {supabase: {condition: service_healthy}}}

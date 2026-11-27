@@ -1,0 +1,234 @@
+# M7 production profile: one VM, Docker Compose, Supabase PostgreSQL off the VM.
+# Nothing here is provisioned. docs/m7-production.md has the design.
+#
+# Host layout under MARKOS_ETC (default /etc/markos), all owned by root:
+#   config/<service>.json  each service's ProductionServiceConfig, with health_port 8780
+#   tls/ca.pem, tls/server.pem  the private CA and the server certificate for the
+#     Compose names gateway, issuer and rabbitmq
+#   tls/supabase-ca.pem  the CA that every database DSN pins
+#   secrets/<name>  one file per secret, in a 0700 directory. Docker mounts each file
+#     into the services that need it, keeping the host owner and mode, so a MarkOS
+#     secret is owned by uid 10001 and a RabbitMQ secret by uid 999, mode 0400.
+name: markos
+
+x-markos: &markos
+  image: markos-runtime:${MARKOS_IMAGE_TAG:?explicit image tag required}
+  build:
+    context: ..
+    dockerfile: Dockerfile.control
+  init: true
+  user: '10001:10001'
+  read_only: true
+  tmpfs: ['/tmp:size=16m,noexec,nosuid']
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  restart: unless-stopped
+  mem_limit: 256m
+  cpus: 0.5
+  pids_limit: 64
+  ulimits:
+    nofile: {soft: 1024, hard: 1024}
+  stop_grace_period: 15s
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+  healthcheck:
+    test: ['CMD', '/opt/runtime/.venv/bin/python', '-m', 'markos_runtime', 'health', '--port', '8780']
+    interval: 10s
+    timeout: 5s
+    retries: 3
+    start_period: 30s
+  command: ['serve-control-production', '--confirm-production', '--config', '/etc/markos/config.json']
+
+services:
+  caddy:
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    environment:
+      MARKOS_DOMAIN: ${MARKOS_DOMAIN:?explicit domain required}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls/ca.pem:/etc/caddy/markos-ca.pem:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    read_only: true
+    tmpfs: ['/tmp:size=16m,noexec,nosuid']
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:2019/config/']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      gateway: {condition: service_healthy}
+
+  rabbitmq:
+    image: rabbitmq:4.4.0-management@sha256:7ddb7fd4630026bc84f72760f33629e8c1ef3bb106360fb385fae0dd4ef886f3
+    restart: unless-stopped
+    volumes:
+      - ./rabbitmq/production.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls/ca.pem:/etc/rabbitmq/tls/ca.pem:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls/server.pem:/etc/rabbitmq/tls/server.pem:ro
+      - rabbitmq-data:/var/lib/rabbitmq
+    secrets:
+      - {source: rabbitmq-definitions, target: rabbitmq-definitions.json}
+      - {source: rabbitmq-tls-key, target: rabbitmq-tls.key}
+    user: '999:999'
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 256
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  gateway:
+    <<: *markos
+    volumes:
+      - ${MARKOS_ETC:-/etc/markos}/config/gateway.json:/etc/markos/config.json:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls:/etc/markos/tls:ro
+    secrets:
+      - {source: tls-server-key, target: tls-server.key}
+      - {source: gateway-database-dsn, target: MARKOS_CONTROL_DATABASE_DSN}
+      - {source: issuer-api-token, target: MARKOS_CONTROL_ISSUER_API_TOKEN}
+      - {source: session-key, target: MARKOS_CONTROL_SESSION_KEY}
+      - {source: spaces-access-key, target: MARKOS_CONTROL_SPACES_ACCESS_KEY}
+      - {source: spaces-secret-key, target: MARKOS_CONTROL_SPACES_SECRET_KEY}
+    depends_on:
+      issuer: {condition: service_healthy}
+
+  issuer:
+    <<: *markos
+    volumes:
+      - ${MARKOS_ETC:-/etc/markos}/config/issuer.json:/etc/markos/config.json:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls:/etc/markos/tls:ro
+    secrets:
+      - {source: tls-server-key, target: tls-server.key}
+      - {source: issuer-database-dsn, target: MARKOS_CONTROL_DATABASE_DSN}
+      - {source: issuer-api-token, target: MARKOS_CONTROL_ISSUER_API_TOKEN}
+      - {source: issuer-worker-token, target: MARKOS_CONTROL_ISSUER_WORKER_TOKEN}
+      - {source: issuer-admin-token, target: MARKOS_CONTROL_ISSUER_ADMIN_TOKEN}
+      - {source: issuer-state-key, target: MARKOS_CONTROL_ISSUER_STATE_KEY}
+      - {source: google-client-secret, target: MARKOS_CONTROL_GOOGLE_CLIENT_SECRET}
+
+  publisher:
+    <<: *markos
+    volumes:
+      - ${MARKOS_ETC:-/etc/markos}/config/publisher.json:/etc/markos/config.json:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls:/etc/markos/tls:ro
+    secrets:
+      - {source: publisher-database-dsn, target: MARKOS_CONTROL_DATABASE_DSN}
+      - {source: broker-publisher-dsn, target: MARKOS_CONTROL_BROKER_DSN}
+      - {source: audit-user, target: MARKOS_CONTROL_AUDIT_USER}
+      - {source: audit-password, target: MARKOS_CONTROL_AUDIT_PASSWORD}
+    depends_on:
+      rabbitmq: {condition: service_healthy}
+
+  completion-publisher:
+    <<: *markos
+    volumes:
+      - ${MARKOS_ETC:-/etc/markos}/config/completion-publisher.json:/etc/markos/config.json:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls:/etc/markos/tls:ro
+    secrets:
+      - {source: worker-database-dsn, target: MARKOS_CONTROL_DATABASE_DSN}
+      - {source: broker-worker-dsn, target: MARKOS_CONTROL_BROKER_DSN}
+      - {source: audit-user, target: MARKOS_CONTROL_AUDIT_USER}
+      - {source: audit-password, target: MARKOS_CONTROL_AUDIT_PASSWORD}
+    depends_on:
+      rabbitmq: {condition: service_healthy}
+
+  consumer:
+    <<: *markos
+    volumes:
+      - ${MARKOS_ETC:-/etc/markos}/config/consumer.json:/etc/markos/config.json:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls:/etc/markos/tls:ro
+    secrets:
+      - {source: worker-database-dsn, target: MARKOS_CONTROL_DATABASE_DSN}
+      - {source: broker-worker-dsn, target: MARKOS_CONTROL_BROKER_DSN}
+    depends_on:
+      rabbitmq: {condition: service_healthy}
+
+  activity:
+    <<: *markos
+    volumes:
+      - ${MARKOS_ETC:-/etc/markos}/config/activity.json:/etc/markos/config.json:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls:/etc/markos/tls:ro
+    secrets:
+      - {source: activity-database-dsn, target: MARKOS_CONTROL_DATABASE_DSN}
+      - {source: broker-activity-dsn, target: MARKOS_CONTROL_BROKER_DSN}
+    depends_on:
+      rabbitmq: {condition: service_healthy}
+
+  worker:
+    <<: *markos
+    volumes:
+      - ${MARKOS_ETC:-/etc/markos}/config/worker.json:/etc/markos/config.json:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls:/etc/markos/tls:ro
+    secrets:
+      - {source: worker-database-dsn, target: MARKOS_CONTROL_DATABASE_DSN}
+      - {source: issuer-worker-token, target: MARKOS_CONTROL_ISSUER_WORKER_TOKEN}
+    depends_on:
+      issuer: {condition: service_healthy}
+
+  # Mail is off until the owner turns it on: `--profile mail`, plus mail settings on
+  # the gateway (a later change).
+  mail:
+    <<: *markos
+    profiles: [mail]
+    volumes:
+      - ${MARKOS_ETC:-/etc/markos}/config/mail.json:/etc/markos/config.json:ro
+      - ${MARKOS_ETC:-/etc/markos}/tls:/etc/markos/tls:ro
+    secrets:
+      - {source: mail-database-dsn, target: MARKOS_CONTROL_MAIL_DATABASE_DSN}
+      - {source: google-client-secret, target: MARKOS_CONTROL_GOOGLE_CLIENT_SECRET}
+      - {source: mail-token-key, target: MARKOS_CONTROL_MAIL_TOKEN_KEY}
+      - {source: spaces-access-key, target: MARKOS_CONTROL_SPACES_ACCESS_KEY}
+      - {source: spaces-secret-key, target: MARKOS_CONTROL_SPACES_SECRET_KEY}
+
+secrets:
+  tls-server-key: {file: '${MARKOS_ETC:-/etc/markos}/secrets/tls-server-key'}
+  rabbitmq-tls-key: {file: '${MARKOS_ETC:-/etc/markos}/secrets/rabbitmq-tls-key'}
+  rabbitmq-definitions: {file: '${MARKOS_ETC:-/etc/markos}/secrets/rabbitmq-definitions'}
+  gateway-database-dsn: {file: '${MARKOS_ETC:-/etc/markos}/secrets/gateway-database-dsn'}
+  issuer-database-dsn: {file: '${MARKOS_ETC:-/etc/markos}/secrets/issuer-database-dsn'}
+  publisher-database-dsn: {file: '${MARKOS_ETC:-/etc/markos}/secrets/publisher-database-dsn'}
+  worker-database-dsn: {file: '${MARKOS_ETC:-/etc/markos}/secrets/worker-database-dsn'}
+  activity-database-dsn: {file: '${MARKOS_ETC:-/etc/markos}/secrets/activity-database-dsn'}
+  mail-database-dsn: {file: '${MARKOS_ETC:-/etc/markos}/secrets/mail-database-dsn'}
+  broker-publisher-dsn: {file: '${MARKOS_ETC:-/etc/markos}/secrets/broker-publisher-dsn'}
+  broker-worker-dsn: {file: '${MARKOS_ETC:-/etc/markos}/secrets/broker-worker-dsn'}
+  broker-activity-dsn: {file: '${MARKOS_ETC:-/etc/markos}/secrets/broker-activity-dsn'}
+  audit-user: {file: '${MARKOS_ETC:-/etc/markos}/secrets/audit-user'}
+  audit-password: {file: '${MARKOS_ETC:-/etc/markos}/secrets/audit-password'}
+  issuer-api-token: {file: '${MARKOS_ETC:-/etc/markos}/secrets/issuer-api-token'}
+  issuer-worker-token: {file: '${MARKOS_ETC:-/etc/markos}/secrets/issuer-worker-token'}
+  issuer-admin-token: {file: '${MARKOS_ETC:-/etc/markos}/secrets/issuer-admin-token'}
+  issuer-state-key: {file: '${MARKOS_ETC:-/etc/markos}/secrets/issuer-state-key'}
+  session-key: {file: '${MARKOS_ETC:-/etc/markos}/secrets/session-key'}
+  spaces-access-key: {file: '${MARKOS_ETC:-/etc/markos}/secrets/spaces-access-key'}
+  spaces-secret-key: {file: '${MARKOS_ETC:-/etc/markos}/secrets/spaces-secret-key'}
+  google-client-secret: {file: '${MARKOS_ETC:-/etc/markos}/secrets/google-client-secret'}
+  mail-token-key: {file: '${MARKOS_ETC:-/etc/markos}/secrets/mail-token-key'}
+
+volumes:
+  caddy-data:
+  caddy-config:
+  rabbitmq-data:

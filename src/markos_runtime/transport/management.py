@@ -3,9 +3,10 @@
 import asyncio
 import base64
 import json
+import ssl
 from typing import Any
 from urllib.parse import quote, urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 
 from markos_runtime.contracts.base import EventType
 from markos_runtime.contracts.wire import routing_key
@@ -20,7 +21,14 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 class TopologyAudit:
-    def __init__(self, base_url: str, username: str, password: str, vhost: str) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        username: str,
+        password: str,
+        vhost: str,
+        trust: ssl.SSLContext | None = None,
+    ) -> None:
         url = urlsplit(base_url)
         if (
             url.scheme not in {"https", "http"}
@@ -37,6 +45,7 @@ class TopologyAudit:
             raise TransportError("explicit management identity required")
         self.base = base_url.rstrip("/")
         self.vhost = vhost
+        self._trust = trust
         self._authorization = (
             "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
         )
@@ -46,7 +55,8 @@ class TopologyAudit:
             self.base + "/api/" + path, headers={"Authorization": self._authorization}
         )
         try:
-            with build_opener(NoRedirect()).open(request, timeout=5) as response:
+            opener = build_opener(NoRedirect(), HTTPSHandler(context=self._trust))
+            with opener.open(request, timeout=5) as response:
                 body = response.read(262145)
             if len(body) > 262144:
                 raise ValueError
