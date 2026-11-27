@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-28 — M7 domain
+
+- Owner decision: MarkOS runs at `markos.mcguyver.com`. The runbook and plan record it.
+
 ## 2026-11-28 — M7-J production issuer path
 
 - In production, the gateway and worker reach the issuer at `https://issuer:19080/issuer`, not `/fixture`. The issuer serves its operations under its configured endpoint path. The synthetic profile keeps `/fixture`, so the existing preview configs stay valid.

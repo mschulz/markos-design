@@ -12,7 +12,7 @@ Owner decisions, 2026-11-27:
 
 | Item | Choice |
 |---|---|
-| Domain | `<domain>`, chosen at provisioning time. Replace it everywhere below. |
+| Domain | `markos.mcguyver.com` (2026-11-28). It is written `<domain>` below. DNS is at GoDaddy. Leave the `mcguyver.com` records unchanged. |
 | Region | DigitalOcean `syd1`. Supabase `ap-southeast-2` (Sydney). |
 | VM | 2 vCPU / 4 GiB, Ubuntu 24.04. The Compose limits total about 2.5 GiB. |
 | Database | Supabase Pro. It does not pause when idle and has daily backups. |
