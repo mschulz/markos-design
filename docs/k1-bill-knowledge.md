@@ -200,6 +200,18 @@ The owner approved these on 2026-11-26.
 
 Deleting bills, retention and privacy policy, a hosted object store, Gmail ingestion (M2), and model-written answers. These stay unresolved, as listed below.
 
+## K1-D: bill deletion
+
+Deletion follows the decision *Deletion beats retention and leaves only a tombstone*.
+
+1. `delete_bill` removes the bill record and its corrections in one transaction. It keeps a tombstone with the SHA-256, bill ID, file suffix and Gmail message pointer, and writes an audit row. It needs the same authority as a correction.
+2. The gateway then erases the original from the object store and marks the tombstone erased. A missing object counts as erased.
+3. If erasure fails, the response is `503 bill-erasure-pending`. Repeating the delete retries it, and also erases up to 20 other pending originals.
+4. While erasure is pending, a manual import of the same original is refused, so an erasure never removes a new bill's original. After erasure, a manual re-import is allowed.
+5. The mail worker never imports a deleted Gmail bill again. It checks the tombstone before it stores a PDF. If a deletion lands during an import, it erases the PDF it stored.
+
+Out of scope: mail-record deletion and backup expiry. A backup taken before deletion still holds the bill until it expires.
+
 ## Bill arithmetic rules
 
 These rules hold for every stored report and for the effective view after corrections. Each rule names the tests that enforce it. Acceptance examples are in `tests/test_acceptance.py`. The owner approves their expected answers, and changes need the owner's approval.

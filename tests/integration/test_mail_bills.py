@@ -1,10 +1,11 @@
-"""Migration 0022 on synthetic PostgreSQL: bills from the owner's bill label."""
+"""Migrations 0022 and 0025 on synthetic PostgreSQL: bills from the owner's bill label."""
 
 import asyncio
 import hashlib
 from pathlib import Path
 from typing import Any
 
+import psycopg
 import pytest
 
 pytest.importorskip("pypdf")
@@ -18,9 +19,18 @@ from markos_runtime.mail.optin import BillCounts  # noqa: E402
 from markos_runtime.mail.store import MailStore  # noqa: E402
 from markos_runtime.mail.worker import PassResult, run_once  # noqa: E402
 from markos_runtime.store import StorageError  # noqa: E402
+from tests.control_store_support import HarnessStore  # noqa: E402
 from tests.gmail_support import FakeGmail  # noqa: E402
 from tests.integration.test_mail_store import grant_mail, rows  # noqa: E402
-from tests.mail_optin_support import BILLS, OWN, as_owner, connect_mailbox  # noqa: E402
+from tests.mail_optin_support import (  # noqa: E402
+    ADMIN,
+    BILLS,
+    OWN,
+    as_owner,
+    connect_mailbox,
+    enrol,
+    session,
+)
 from tests.pdf_support import amber_pdf, make_pdf, origin_pdf  # noqa: E402
 
 OTHER_LABEL = "Label_other"
@@ -42,12 +52,22 @@ def folder(tmp_path: Path) -> BillObjects:
     return BillObjects(root)
 
 
+class RacingStore(MailStore):
+    """The owner deletes the bill just after the worker's tombstone check."""
+
+    async def bill_deleted(self, fence: int, digest: str) -> bool | None:
+        return False
+
+
 def passes(
-    database: dict[str, str], gmail: FakeGmail, objects: BillObjects | None
+    database: dict[str, str],
+    gmail: FakeGmail,
+    objects: BillObjects | None,
+    kind: type[MailStore] = MailStore,
 ) -> list[PassResult]:
     async def run() -> list[PassResult]:
         done = []
-        async with MailStore.connect(database["publisher"]) as store:
+        async with kind.connect(database["publisher"]) as store:
             # Gmail's alert for the newest change. It makes the poll due now.
             await store.note_alert(gmail.history_id)
             for _ in range(10):
@@ -189,3 +209,63 @@ def test_bill_results_need_the_current_lease_and_every_pdf(database: dict[str, s
             assert await store.finish_bill(claim.fence, message, both) is None
 
     asyncio.run(run())
+
+
+def delete_bill(database: dict[str, str], objects: BillObjects, bill_id: Any) -> None:
+    """The owner deletes a bill through the gateway functions, as the bill route does."""
+    enrol(database)
+    # Deleting a bill needs the operator role, which the mail administrator lacks.
+    with psycopg.connect(database["migration"], autocommit=True) as conn:
+        conn.execute(
+            "UPDATE markos_control.memberships SET roles=ARRAY['administrator','operator'] "
+            "WHERE principal_id=%s AND owner_id=%s",
+            (ADMIN, OWN),
+        )
+
+    async def run() -> None:
+        async with HarnessStore.connect(database["gateway"]) as store:
+            ctx = await session(store)
+            scope = (ctx.session_id, ctx.lookup_hash, OWN, "personal")
+            for item in await store._call("delete_bill", *scope, bill_id):
+                objects.delete(OWN, "personal", item["source_sha256"], item["suffix"])
+                await store._call("bill_erased", *scope, item["source_sha256"])
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("kind", [MailStore, RacingStore])
+def test_a_deleted_mail_bill_is_never_imported_again(
+    database: dict[str, str], tmp_path: Path, kind: type[MailStore]
+) -> None:
+    grant_mail(database, "m0b_pub")
+    connect_mailbox(database)
+    bill_label(database, BILLS)
+    objects = folder(tmp_path)
+    amber = amber_pdf()
+    digest = hashlib.sha256(amber).hexdigest()
+    original = tmp_path / "bills" / str(OWN) / "personal" / (digest + ".pdf")
+    gmail = FakeGmail()
+    gmail.deliver([BILLS], attachments=[pdf("1")], bodies=[amber])
+    assert [o for r in passes(database, gmail, objects) for o in r.bills] == ["imported"]
+    ((bill_id, message),) = rows(
+        database, "SELECT bill_id,mail_message_id FROM markos_control.bill_records"
+    )
+    delete_bill(database, objects, bill_id)
+    assert not original.exists()
+    assert rows(database, "SELECT count(*) FROM markos_control.bill_records") == [(0,)]
+
+    # The same PDF in a new email is recorded as deleted, and its original stays erased.
+    gmail.deliver([BILLS], attachments=[pdf("1")], bodies=[amber])
+    outcomes = [o for r in passes(database, gmail, objects, kind) for o in r.bills]
+    assert outcomes == ["deleted"]
+    assert not original.exists()
+    assert rows(database, "SELECT count(*) FROM markos_control.bill_records") == [(0,)]
+    assert rows(
+        database,
+        "SELECT source_sha256,mail_message_id,erased_at IS NOT NULL "
+        "FROM markos_control.bill_tombstones",
+    ) == [(digest, message, True)]
+    assert rows(
+        database,
+        "SELECT outcome,source_sha256 FROM markos_runtime.mail_bill_outcomes ORDER BY recorded_at",
+    ) == [("imported", digest), ("deleted", None)]

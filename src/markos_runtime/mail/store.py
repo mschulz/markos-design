@@ -135,3 +135,13 @@ class MailStore(DurableStore):
         query = "SELECT markos_runtime.finish_mail_bill(%s,%s,%s) AS result"
         done = await self._one(query, (fence, message_id, Jsonb(list(results))))
         return None if done is None else [str(outcome) for outcome in done]
+
+    async def bill_deleted(self, fence: int, digest: str) -> bool | None:
+        query = "SELECT markos_runtime.mail_bill_deleted(%s,%s) AS result"
+        found = await self._one(query, (fence, digest))
+        return None if found is None else bool(found)
+
+    async def bill_erased(self, fence: int, digest: str) -> bool | None:
+        query = "SELECT markos_runtime.mail_bill_erased(%s,%s) AS result"
+        done = await self._one(query, (fence, digest))
+        return None if done is None else bool(done)

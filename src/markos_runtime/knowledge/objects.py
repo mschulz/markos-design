@@ -31,6 +31,10 @@ class BillStore(Protocol):
 
     def read(self, owner: UUID, domain: str, digest: str, suffix: str = ".txt") -> bytes: ...
 
+    def delete(self, owner: UUID, domain: str, digest: str, suffix: str) -> None:
+        """Erase one original. An original that is already gone counts as erased."""
+        ...
+
 
 class BillObjects:
     def __init__(self, root: Path) -> None:
@@ -83,6 +87,21 @@ class BillObjects:
                 finally:
                     temporary.unlink(missing_ok=True)
         return digest
+
+    def delete(self, owner: UUID, domain: str, digest: str, suffix: str) -> None:
+        if not re.fullmatch(r"[a-f0-9]{64}", digest) or suffix not in LIMITS:
+            raise BillObjectError("invalid bill source reference")
+        folder = self.folder(owner, domain)
+        descriptor = os.open(folder / ".lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(descriptor, "rb") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            (folder / (digest + suffix)).unlink(missing_ok=True)
+            # The removal is durable only when the folder entry is flushed.
+            handle = os.open(folder, os.O_RDONLY)
+            try:
+                os.fsync(handle)
+            finally:
+                os.close(handle)
 
     def read(self, owner: UUID, domain: str, digest: str, suffix: str = ".txt") -> bytes:
         if not re.fullmatch(r"[a-f0-9]{64}", digest):
