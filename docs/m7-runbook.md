@@ -27,15 +27,21 @@ Owner decisions, 2026-11-27:
 
 ## 1. Google sign-in client
 
-1. In Google Cloud, use the project from M2-E, which is in Personal mode.
-   Only the account that created it can sign in.
-2. Create an OAuth client of type **Web application**.
-3. Add the redirect URI `https://<domain>/auth/google/callback`.
-4. Record the client ID. Keep the client secret for step 6.
-5. Find your Google subject ID (`sub`). One way: sign in to the
-   [OAuth 2.0 Playground](https://developers.google.com/oauthplayground) with scope
-   `openid`. Exchange the code, then read `sub` from the ID token. Your email address
-   is not used. Only `sub` maps to MarkOS.
+1. In Google Cloud, create a project (done 2026-11-28: `markos-516100`). Open
+   `https://console.cloud.google.com/auth/overview?project=<project-id>`. Use the
+   project ID, not the name: another account owns the ID `markos`.
+2. Click **Get started**. Set the app name `MarkOS` and your email address. Choose
+   **External**.
+3. Under **Audience**, leave the status at **Testing**. Your own address is the only
+   test user, so only you can sign in.
+4. Under **Clients**, create a **Web application** client with the redirect URI
+   `https://<domain>/auth/google/callback`.
+5. Record the client ID. Keep the client secret for step 6.
+6. Find your Google subject ID (`sub`). In the
+   [OAuth 2.0 Playground](https://developers.google.com/oauthplayground), authorize
+   the scopes `openid email`. Exchange the code, then send a request to
+   `https://openidconnect.googleapis.com/v1/userinfo`. The response shows `sub`. Your
+   email address is not used. Only `sub` maps to MarkOS.
 
 ## 2. Supabase
 
@@ -231,7 +237,8 @@ These are checked for the first time when this runbook runs:
    `postgres` is a superuser.
 2. That the containers can reach the Supabase host (step 2.5).
 3. That Spaces offers access keys limited to one bucket (step 3.2).
-4. That the OAuth Playground shows `sub` as described (step 1.5).
+4. That the `sub` from the OAuth Playground (step 1.6) matches the `sub` in
+   MarkOS's own sign-in. Both should be the account's Google ID.
 
 ## Known gaps
 
