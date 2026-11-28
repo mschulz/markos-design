@@ -60,11 +60,11 @@ Bill deletion and original erasure are done in K1-D (see [k1-bill-knowledge.md](
 
 ## Open questions
 
-1. **Domain name** for `<host>`. Caddy and the Google redirect URIs need it.
-2. **Spaces plan.** The standard Spaces subscription is proposed. Its current price is not checked yet.
+1. **Spaces plan.** The standard Spaces subscription is proposed. Its current price is not checked yet.
 
 Decided (see [m7-runbook.md](m7-runbook.md#choices)):
 
+- **Domain:** `markos.mcguyver.com`, 2026-11-28. A subdomain, so the existing `mcguyver.com` records stay.
 - **Region:** DigitalOcean `syd1` and Supabase `ap-southeast-2` (Sydney), 2026-11-27.
 - **VM:** 2 vCPU / 4 GiB, Ubuntu 24.04, 2026-11-27. The 4 vCPU / 8 GiB VM in `docs/deployment.md` was an unmeasured proposal.
 - **Database:** Supabase Pro, 2026-11-27. It does not pause when idle and keeps 7 daily backups (M7-G).
